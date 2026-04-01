@@ -1,33 +1,6 @@
 import pLimit from "p-limit";
 import pRetry, { AbortError } from "p-retry";
 
-/**
- * Batch Processing Utilities
- *
- * Generic batch processing with built-in rate limiting and automatic retries.
- * Use for any task that requires processing multiple items through an LLM or external API.
- *
- * USAGE:
- * ```typescript
- * import { batchProcess } from "@workspace/integrations-anthropic-ai/batch";
- * import { anthropic } from "@workspace/integrations-anthropic-ai";
- *
- * const results = await batchProcess(
- *   artworks,
- *   async (artwork) => {
- *     const message = await anthropic.messages.create({
- *       model: "claude-sonnet-4-6",
- *       max_tokens: 8192,
- *       messages: [{ role: "user", content: `Categorize: ${artwork.name}` }],
- *     });
- *     const block = message.content[0];
- *     return block.type === "text" ? block.text : "";
- *   },
- *   { concurrency: 2, retries: 5 }
- * );
- * ```
- */
-
 export interface BatchOptions {
   concurrency?: number;
   retries?: number;
