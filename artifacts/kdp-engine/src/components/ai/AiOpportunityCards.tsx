@@ -130,6 +130,8 @@ export function AiOpportunityCards({ onApply, puzzleType }: AiOpportunityCardsPr
                   className="w-full text-xs h-7 border-violet-300 text-violet-700 hover:bg-violet-50 mt-auto"
                   onClick={() =>
                     onApply({
+                      title: card.title,
+                      subtitle: card.subtitle,
                       puzzleType: card.puzzleType,
                       niche: card.niche,
                       difficulty: card.difficulty,
@@ -137,8 +139,7 @@ export function AiOpportunityCards({ onApply, puzzleType }: AiOpportunityCardsPr
                       largePrint: card.largePrint,
                       coverStyle: card.coverStyle,
                       theme: card.theme,
-                      title: card.title,
-                      subtitle: card.subtitle,
+                      backDescription: card.whySells,
                     })
                   }
                 >
