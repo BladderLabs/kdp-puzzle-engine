@@ -1,16 +1,8 @@
-// ============================================================
-// HTML BUILDERS — ported faithfully from KDP Engine v5
-// Original buildInteriorHTML and buildCoverHTML preserved.
-// New puzzle types added (Maze, Number Search, Cryptogram).
-// ============================================================
-
 import {
   shuf, makeWordSearch, makeSudoku, makeMaze, makeNumberSearch, makeCryptogram,
   DEFWORDS,
 } from "./puzzles";
 
-// ── HTML escaping — applied to every user-controlled string before
-//    interpolation into HTML, preventing script/tag injection in Puppeteer.
 export function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -20,7 +12,6 @@ export function escapeHtml(s: string): string {
     .replace(/'/g, "&#x27;");
 }
 
-// ── Original gutter calculation (unchanged) ──
 export function gutterIn(p: number): number {
   return p <= 150 ? 0.375 : p <= 300 ? 0.5 : p <= 500 ? 0.625 : 0.75;
 }
@@ -50,7 +41,6 @@ export interface BuildResult {
 }
 
 export function buildInteriorHTML(opts: BuildOpts): BuildResult {
-  // Escape every user-supplied string before any HTML interpolation
   const T = escapeHtml(opts.title);
   const ST = escapeHtml(opts.subtitle || "");
   const AU = escapeHtml(opts.author || "");
@@ -61,7 +51,6 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
   const yr = new Date().getFullYear();
   const vol = opts.series === "3-Volume" ? "Volume 1 of 3" : opts.volumeNumber && opts.volumeNumber > 1 ? `Volume ${opts.volumeNumber}` : "";
 
-  // Original size/font parameters (unchanged)
   const wpp = LP ? 16 : 20, gsz = LP ? 13 : 15;
   const wC = LP ? 32 : 27, wF = LP ? 16 : 13;
   const sC = LP ? 50 : 44, sF = LP ? 22 : 18;
@@ -91,7 +80,6 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     }
   }
 
-  // Answers per page (original values for WS/Sudoku; new for others)
   const aPer = PT === "Word Search" ? (LP ? 9 : 12)
     : PT === "Sudoku" ? (LP ? 6 : 8)
     : PT === "Maze" ? (LP ? 4 : 6)
@@ -107,7 +95,6 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
   const gut = Math.max(0.5, gutterIn(totP));
   const pS = 5, aS = pS + PC;
 
-  // ── HTML head (original) ──
   let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${T}</title>` +
     
     `<style>*{margin:0;padding:0;box-sizing:border-box;}@page{size:${trimW}in ${trimH}in;margin:0;}` +
@@ -118,7 +105,6 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     `.ft{position:absolute;bottom:0.25in;left:${gut}in;right:0.4in;display:flex;justify-content:space-between;font-family:'Source Code Pro',monospace;font-size:9px;color:#bbb;border-top:1px solid #e0e0e0;padding-top:4px;}` +
     `</style></head><body>`;
 
-  // ── Title page (original) ──
   html += `<div class="pg in"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:9in;text-align:center;">` +
     `<div style="font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:4px;color:#888;text-transform:uppercase;margin-bottom:20px;">${PT} Collection</div>` +
     `<div style="font-family:Lora,serif;font-size:34px;font-weight:700;color:#222;margin-bottom:10px;">${T}</div>` +
@@ -129,7 +115,6 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     (AU ? `<div style="font-family:Lora,serif;font-size:12px;color:#888;margin-top:12px;">${AU}</div>` : "") +
     `</div></div>`;
 
-  // ── How to Play (updated for new types) ──
   const htxtMap: Record<string, string> = {
     "Word Search": "Each puzzle contains a grid of letters with hidden words. Words can run horizontally, vertically, or diagonally — both forward and backward. Find every word in the bank below each grid.",
     "Sudoku": "Fill empty cells so every row, column, and 3&times;3 box contains digits 1-9 exactly once.",
@@ -157,7 +142,6 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     (LP ? `<div style="margin-top:20px;font-family:Source Code Pro,monospace;font-size:10px;letter-spacing:2px;color:#888;text-align:center;">LARGE PRINT EDITION</div>` : "") +
     `</div><div class="ft"><span>${T}</span><span>3</span></div></div>`;
 
-  // ── Table of Contents (original) ──
   let tocR = "";
   const mx = Math.min(PC, 42);
   for (let i = 0; i < mx; i++)
@@ -170,7 +154,6 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     `<div style="margin-top:20px;font-family:'Source Code Pro',monospace;font-size:10px;color:#333;letter-spacing:2px;font-weight:600;">ANSWER KEY &mdash; PAGE ${aS}</div></div>` +
     `<div class="ft"><span>${T}</span><span>4</span></div></div>`;
 
-  // ── Puzzle pages ──
   for (let i = 0; i < PC; i++) {
     const pN = pS + i;
     const lb = "#" + String(i + 1).padStart(2, "0");
@@ -248,7 +231,6 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
 
     } else if (PT === "Cryptogram") {
       const cg = pz as { cipher: string; plain: string };
-      // Display cipher with underscores for solving
       const cipherDisplay = cg.cipher.split("").map(ch =>
         ch >= "A" && ch <= "Z" ? `<span style="display:inline-block;text-align:center;width:${LP ? 22 : 18}px;">${ch}<br/><span style="display:block;border-bottom:1px solid #333;margin:0 2px;">&nbsp;</span></span>` : (ch === " " ? `<span style="display:inline-block;width:${LP ? 10 : 8}px;">&nbsp;</span>` : ch)
       ).join("");
@@ -256,7 +238,6 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     }
   }
 
-  // ── Answer Key ──
   let akP = aS;
 
   if (PT === "Word Search" || PT === "Number Search") {
@@ -376,7 +357,6 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
   return { html, totalPages: totP, trimW, trimH };
 }
 
-// ── Cover HTML (full wrap) — original logic + 2 new styles/themes ──
 interface CoverTheme {
   bg: string;
   ac: string;
@@ -424,7 +404,6 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const fullH = bleed + trimH + bleed;
   const spineX = bleed + trimW, frontX = spineX + spineW;
 
-  // Escape every user-supplied string before any HTML interpolation
   const title = escapeHtml(opts.title || "Book Title");
   const sub = escapeHtml(opts.subtitle || "");
   const author = escapeHtml(opts.author || "");

@@ -1,9 +1,3 @@
-// ============================================================
-// NICHE INTELLIGENCE MODULE — 30+ curated KDP niches
-// Each niche has 50+ themed words, 5 title templates,
-// 8 KDP keywords, a back-blurb, and recommended settings.
-// ============================================================
-
 export interface NicheData {
   key: string;
   label: string;

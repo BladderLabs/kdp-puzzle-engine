@@ -1,24 +1,12 @@
-// ============================================================
-// PUPPETEER PDF GENERATION — ported faithfully from KDP Engine v5
-// Security hardening: all network requests are intercepted and
-// aborted during rendering to prevent SSRF from any source.
-// ============================================================
-
 import puppeteer, { Browser } from "puppeteer";
 
 let browserInstance: Browser | null = null;
 
-export async function getBrowser(): Promise<Browser> {
+async function getBrowser(): Promise<Browser> {
   if (!browserInstance || !browserInstance.connected) {
     browserInstance = await puppeteer.launch({
       headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-web-security",
-        "--disable-features=IsolateOrigins,site-per-process",
-      ],
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
     });
   }
   return browserInstance;
@@ -32,9 +20,8 @@ export async function htmlToPdf(
   const browser = await getBrowser();
   const page = await browser.newPage();
   try {
-    // Block ALL outbound network requests during rendering.
-    // This prevents SSRF regardless of the HTML content —
-    // only data: and about: URIs are allowed (inline content only).
+    // Block all outbound network requests during rendering.
+    // HTML is always server-generated, but this provides defense-in-depth.
     await page.setRequestInterception(true);
     page.on("request", (req) => {
       const proto = new URL(req.url()).protocol;

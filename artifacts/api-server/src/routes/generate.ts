@@ -46,11 +46,6 @@ router.post("/generate", async (req, res) => {
   }
 });
 
-/**
- * /pdf/interior — Accepts the same book config as /generate.
- * HTML is generated server-side; no user-controlled HTML is ever
- * passed to Puppeteer, preventing SSRF-style abuse.
- */
 router.post("/pdf/interior", async (req, res) => {
   try {
     const opts = toOpts(GenerateBookBody.parse(req.body));
@@ -69,10 +64,6 @@ router.post("/pdf/interior", async (req, res) => {
   }
 });
 
-/**
- * /pdf/cover — Accepts the same book config as /generate.
- * HTML and dimensions are computed server-side.
- */
 router.post("/pdf/cover", async (req, res) => {
   try {
     const opts = toOpts(GenerateBookBody.parse(req.body));

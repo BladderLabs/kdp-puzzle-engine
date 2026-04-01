@@ -1,8 +1,3 @@
-// ============================================================
-// PUZZLE GENERATORS — ported faithfully from KDP Engine v5
-// All original logic preserved. New generators added below.
-// ============================================================
-
 export function shuf<T>(a: T[]): T[] {
   const b = [...a];
   for (let i = b.length - 1; i > 0; i--) {
@@ -12,7 +7,6 @@ export function shuf<T>(a: T[]): T[] {
   return b;
 }
 
-// ── Word Search (original) ──
 export interface WordSearchResult {
   grid: string[][];
   placed: string[];
@@ -63,7 +57,6 @@ export function makeWordSearch(words: string[], size: number): WordSearchResult 
   return { grid, placed, pSet };
 }
 
-// ── Sudoku (original) ──
 export interface SudokuResult {
   puzzle: number[][];
   solution: number[][];
@@ -135,7 +128,6 @@ export function makeSudoku(diff: string): SudokuResult {
   return { puzzle, solution };
 }
 
-// ── Maze (NEW — recursive backtracker) ──
 export interface MazeResult {
   grid: number[][];
   rows: number;
@@ -168,7 +160,6 @@ export function makeMaze(rows: number, cols: number): MazeResult {
   return { grid, rows, cols };
 }
 
-// ── Number Search (NEW — like word search with digit sequences) ──
 export interface NumberSearchResult {
   grid: string[][];
   placed: string[];
@@ -228,7 +219,6 @@ export function makeNumberSearch(size: number): NumberSearchResult {
   return { grid, placed, pSet };
 }
 
-// ── Cryptogram (NEW — substitution cipher) ──
 export interface CryptogramResult {
   cipher: string;
   plain: string;
@@ -278,5 +268,4 @@ export function makeCryptogram(): CryptogramResult {
   return { cipher, plain, key };
 }
 
-// ── Default word bank (original) ──
 export const DEFWORDS = "PUZZLE,SEARCH,WORDS,BRAIN,THINK,SOLVE,GAME,PLAY,FIND,HIDDEN,LETTER,GRID,CLUE,ANSWER,MATCH,LEVEL,SCORE,BONUS,TIMER,CHALLENGE,FOCUS,RELAX,SHARP,MIND".split(",");
