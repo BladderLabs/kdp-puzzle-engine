@@ -180,7 +180,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         g += "</tr>";
       }
       g += "</table>";
-      const ch = ws.placed.map(w => `<span style="display:inline-block;font-family:'Source Code Pro',monospace;font-size:${LP ? 11 : 10}px;background:#f5f3ee;border:1px solid #ddd;border-radius:3px;padding:3px 8px;margin:2px;">${w}</span>`).join("");
+      const ch = ws.placed.map(w => `<span style="display:inline-block;font-family:'Source Code Pro',monospace;font-size:${LP ? 11 : 10}px;background:#f5f3ee;border:1px solid #ddd;border-radius:3px;padding:3px 8px;margin:2px;">${escapeHtml(w)}</span>`).join("");
       html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Word Search</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#333;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#aaa;">WORD SEARCH &middot; ${DF.toUpperCase()}</span></div>${g}<div style="text-align:center;margin-top:8px;">${ch}</div></div><div class="ft"><span>${T}</span><span>${pN}</span></div></div>`;
 
     } else if (PT === "Sudoku") {
@@ -237,7 +237,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         g += "</tr>";
       }
       g += "</table>";
-      const ch = ns.placed.map(s => `<span style="display:inline-block;font-family:'Source Code Pro',monospace;font-size:${LP ? 11 : 10}px;background:#f5f3ee;border:1px solid #ddd;border-radius:3px;padding:3px 8px;margin:2px;">${s}</span>`).join("");
+      const ch = ns.placed.map(s => `<span style="display:inline-block;font-family:'Source Code Pro',monospace;font-size:${LP ? 11 : 10}px;background:#f5f3ee;border:1px solid #ddd;border-radius:3px;padding:3px 8px;margin:2px;">${escapeHtml(String(s))}</span>`).join("");
       html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Number Search</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#333;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#aaa;">NUMBER SEARCH &middot; ${DF.toUpperCase()}</span></div>${g}<div style="text-align:center;margin-top:8px;">${ch}</div></div><div class="ft"><span>${T}</span><span>${pN}</span></div></div>`;
 
     } else if (PT === "Cryptogram") {
@@ -408,6 +408,8 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const ac = opts.customAccent || th.ac;
   const tx = opts.customText || th.tx;
 
+  // Paper dimensions are always 8.5"x11" (preserved from v5 — the "Large Print" flag
+  // controls typography/grid density only, not physical page size).
   const bleed = 0.125, trimW = 8.5, trimH = 11;
   const thick = opts.paperType === "cream" ? 0.0025 : 0.002252;
   const spineW = totalPages * thick + 0.06;
