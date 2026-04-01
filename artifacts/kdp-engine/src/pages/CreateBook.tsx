@@ -1,12 +1,17 @@
+import { useEffect } from "react";
 import { useCreateBook } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { BookForm, BookFormValues } from "@/components/book/BookForm";
+import { AiOpportunityCards } from "@/components/ai/AiOpportunityCards";
+import { AskAiSidebar } from "@/components/ai/AskAiSidebar";
+import { useRef } from "react";
 
 export function CreateBook() {
   const createBook = useCreateBook();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const applyRef = useRef<((values: Partial<BookFormValues>) => void) | null>(null);
 
   const onSubmit = async (values: BookFormValues) => {
     try {
@@ -26,7 +31,18 @@ export function CreateBook() {
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <h1 className="text-3xl font-bold">New Project</h1>
-      <BookForm onSubmit={onSubmit} isSubmitting={createBook.isPending} />
+
+      <AiOpportunityCards
+        onApply={(values) => applyRef.current?.(values)}
+      />
+
+      <BookForm
+        onSubmit={onSubmit}
+        isSubmitting={createBook.isPending}
+        onApplyRef={applyRef}
+      />
+
+      <AskAiSidebar context="New Book Creation" />
     </div>
   );
 }

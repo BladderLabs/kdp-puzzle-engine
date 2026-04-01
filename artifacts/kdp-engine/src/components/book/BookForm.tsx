@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { NicheAssistant } from "./NicheAssistant";
 import { PreviewPane } from "./PreviewPane";
+import { ScoreTitleButton } from "@/components/ai/ScoreTitleButton";
+import { NicheIdeasPanel } from "@/components/ai/NicheIdeasPanel";
 import type { NicheResult } from "@workspace/api-client-react";
 const PUZZLE_TYPES = ["Word Search", "Sudoku", "Maze", "Number Search", "Cryptogram"] as const;
 const DIFFICULTIES = ["Easy", "Medium", "Hard"] as const;
@@ -40,9 +42,10 @@ interface BookFormProps {
   initialValues?: Partial<BookFormValues>;
   onSubmit: (values: BookFormValues) => void;
   isSubmitting?: boolean;
+  onApplyRef?: React.MutableRefObject<((values: Partial<BookFormValues>) => void) | null>;
 }
 
-export function BookForm({ initialValues, onSubmit, isSubmitting }: BookFormProps) {
+export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: BookFormProps) {
   const form = useForm<BookFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -68,6 +71,8 @@ export function BookForm({ initialValues, onSubmit, isSubmitting }: BookFormProp
   const paperType = form.watch("paperType");
   const largePrint = form.watch("largePrint");
   const wordsStr = form.watch("words") || "";
+  const titleValue = form.watch("title") || "";
+  const nicheValue = form.watch("niche") || "";
 
   const applyNicheData = (data: NicheResult) => {
     if (data.words?.length) form.setValue("words", data.words.join("\n"));
@@ -77,6 +82,19 @@ export function BookForm({ initialValues, onSubmit, isSubmitting }: BookFormProp
     if (data.recommendedCount) form.setValue("puzzleCount", data.recommendedCount);
     if (data.niche) form.setValue("niche", data.niche);
   };
+
+  const applyPartialValues = (values: Partial<BookFormValues>) => {
+    (Object.keys(values) as (keyof BookFormValues)[]).forEach(key => {
+      const val = values[key];
+      if (val !== undefined) form.setValue(key, val as never);
+    });
+  };
+
+  useEffect(() => {
+    if (onApplyRef) {
+      onApplyRef.current = applyPartialValues;
+    }
+  }, [onApplyRef]);
 
   // Mirrors aPer logic from html-builders.ts exactly
   const aPer = puzzleType === "Word Search" ? (largePrint ? 9 : 12)
@@ -107,6 +125,7 @@ export function BookForm({ initialValues, onSubmit, isSubmitting }: BookFormProp
                         <FormLabel>Title</FormLabel>
                         <FormControl><Input {...field} /></FormControl>
                         <FormMessage />
+                        <ScoreTitleButton title={titleValue} puzzleType={puzzleType} niche={nicheValue} />
                       </FormItem>
                     )}
                   />
@@ -328,6 +347,7 @@ export function BookForm({ initialValues, onSubmit, isSubmitting }: BookFormProp
       </div>
 
       <div className="xl:col-span-4 space-y-6">
+        <NicheIdeasPanel puzzleType={puzzleType} onSelectNiche={(key) => form.setValue("niche", key)} />
         <NicheAssistant puzzleType={puzzleType} onApply={applyNicheData} />
         <PreviewPane 
           puzzleType={puzzleType} 

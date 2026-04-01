@@ -3,6 +3,7 @@ import { useParams, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { BookForm, BookFormValues } from "@/components/book/BookForm";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AskAiSidebar } from "@/components/ai/AskAiSidebar";
 
 export function EditBook() {
   const { id } = useParams();
@@ -40,6 +41,7 @@ export function EditBook() {
     <div className="max-w-7xl mx-auto space-y-6">
       <h1 className="text-3xl font-bold">Edit Project: {book.title}</h1>
       <BookForm initialValues={initialValues} onSubmit={onSubmit} isSubmitting={updateBook.isPending} />
+      <AskAiSidebar context={`Editing: ${book.title} (${book.puzzleType})`} />
     </div>
   );
 }

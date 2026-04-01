@@ -6,6 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./anthropicConversation";
+export * from "./anthropicConversationWithMessages";
+export * from "./anthropicError";
+export * from "./anthropicMessage";
 export * from "./book";
 export * from "./bookConfig";
 export * from "./bookConfigCoverStyle";
@@ -13,7 +17,10 @@ export * from "./bookConfigDifficulty";
 export * from "./bookConfigPaperType";
 export * from "./bookConfigPuzzleType";
 export * from "./bookConfigTheme";
+export * from "./bookIdeasRequest";
+export * from "./bookIdeasResult";
 export * from "./coverDims";
+export * from "./createAnthropicConversationBody";
 export * from "./createBookBody";
 export * from "./cryptogramData";
 export * from "./cryptogramDataKey";
@@ -21,14 +28,22 @@ export * from "./errorResponse";
 export * from "./generateResult";
 export * from "./healthStatus";
 export * from "./mazeData";
+export * from "./nicheIdea";
+export * from "./nicheIdeasRequest";
+export * from "./nicheIdeasResult";
 export * from "./nicheInfo";
 export * from "./nicheRequest";
 export * from "./nicheResult";
 export * from "./numberSearchData";
 export * from "./numberSearchDataPSet";
+export * from "./opportunityCard";
+export * from "./opportunityCardSalesPotential";
 export * from "./previewRequest";
 export * from "./previewResult";
 export * from "./puzzleData";
+export * from "./scoreTitleRequest";
+export * from "./scoreTitleResult";
+export * from "./sendAnthropicMessageBody";
 export * from "./sudokuData";
 export * from "./wordSearchData";
 export * from "./wordSearchDataPSet";

@@ -352,3 +352,139 @@ export const ListNichesResponseItem = zod.object({
   puzzleType: zod.string(),
 });
 export const ListNichesResponse = zod.array(ListNichesResponseItem);
+
+/**
+ * @summary List all conversations
+ */
+export const ListAnthropicConversationsResponseItem = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  createdAt: zod.coerce.date(),
+});
+export const ListAnthropicConversationsResponse = zod.array(
+  ListAnthropicConversationsResponseItem,
+);
+
+/**
+ * @summary Create a new conversation
+ */
+export const CreateAnthropicConversationBody = zod.object({
+  title: zod.string(),
+});
+
+/**
+ * @summary Get conversation with messages
+ */
+export const GetAnthropicConversationParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetAnthropicConversationResponse = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  createdAt: zod.coerce.date(),
+  messages: zod.array(
+    zod.object({
+      id: zod.number(),
+      conversationId: zod.number(),
+      role: zod.string(),
+      content: zod.string(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+/**
+ * @summary Delete a conversation
+ */
+export const DeleteAnthropicConversationParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary List messages in a conversation
+ */
+export const ListAnthropicMessagesParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ListAnthropicMessagesResponseItem = zod.object({
+  id: zod.number(),
+  conversationId: zod.number(),
+  role: zod.string(),
+  content: zod.string(),
+  createdAt: zod.coerce.date(),
+});
+export const ListAnthropicMessagesResponse = zod.array(
+  ListAnthropicMessagesResponseItem,
+);
+
+/**
+ * @summary Send a message and receive an AI response (SSE stream)
+ */
+export const SendAnthropicMessageParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const SendAnthropicMessageBody = zod.object({
+  content: zod.string(),
+});
+
+/**
+ * @summary Get AI-generated opportunity cards for KDP puzzle books
+ */
+export const GetBookIdeasBody = zod.object({
+  puzzleType: zod.string().optional(),
+});
+
+export const GetBookIdeasResponse = zod.object({
+  cards: zod.array(
+    zod.object({
+      puzzleType: zod.string(),
+      niche: zod.string(),
+      nicheLabel: zod.string(),
+      salesPotential: zod.enum(["Hot", "Rising", "Stable"]),
+      coverStyle: zod.string(),
+      difficulty: zod.string(),
+      puzzleCount: zod.number(),
+      pricePoint: zod.number(),
+      largePrint: zod.boolean(),
+      theme: zod.string(),
+      whySells: zod.string(),
+      title: zod.string(),
+      subtitle: zod.string(),
+    }),
+  ),
+});
+
+/**
+ * @summary Score a book title and get rewrite suggestions
+ */
+export const ScoreTitleBody = zod.object({
+  title: zod.string(),
+  puzzleType: zod.string().optional(),
+  niche: zod.string().optional(),
+});
+
+export const ScoreTitleResponse = zod.object({
+  score: zod.number(),
+  feedback: zod.string(),
+  suggestions: zod.array(zod.string()),
+});
+
+/**
+ * @summary Get top niche ideas for a given puzzle type
+ */
+export const GetNicheIdeasBody = zod.object({
+  puzzleType: zod.string(),
+});
+
+export const GetNicheIdeasResponse = zod.object({
+  ideas: zod.array(
+    zod.object({
+      niche: zod.string(),
+      nicheLabel: zod.string(),
+      whySells: zod.string(),
+    }),
+  ),
+});

@@ -211,3 +211,95 @@ export interface NicheInfo {
   label: string;
   puzzleType: string;
 }
+
+export interface AnthropicConversation {
+  id: number;
+  title: string;
+  createdAt: string;
+}
+
+export interface AnthropicMessage {
+  id: number;
+  conversationId: number;
+  role: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface CreateAnthropicConversationBody {
+  title: string;
+}
+
+export interface SendAnthropicMessageBody {
+  content: string;
+}
+
+export interface AnthropicConversationWithMessages {
+  id: number;
+  title: string;
+  createdAt: string;
+  messages: AnthropicMessage[];
+}
+
+export interface AnthropicError {
+  error: string;
+}
+
+export interface BookIdeasRequest {
+  puzzleType?: string;
+}
+
+export type OpportunityCardSalesPotential =
+  (typeof OpportunityCardSalesPotential)[keyof typeof OpportunityCardSalesPotential];
+
+export const OpportunityCardSalesPotential = {
+  Hot: "Hot",
+  Rising: "Rising",
+  Stable: "Stable",
+} as const;
+
+export interface OpportunityCard {
+  puzzleType: string;
+  niche: string;
+  nicheLabel: string;
+  salesPotential: OpportunityCardSalesPotential;
+  coverStyle: string;
+  difficulty: string;
+  puzzleCount: number;
+  pricePoint: number;
+  largePrint: boolean;
+  theme: string;
+  whySells: string;
+  title: string;
+  subtitle: string;
+}
+
+export interface BookIdeasResult {
+  cards: OpportunityCard[];
+}
+
+export interface ScoreTitleRequest {
+  title: string;
+  puzzleType?: string;
+  niche?: string;
+}
+
+export interface ScoreTitleResult {
+  score: number;
+  feedback: string;
+  suggestions: string[];
+}
+
+export interface NicheIdeasRequest {
+  puzzleType: string;
+}
+
+export interface NicheIdea {
+  niche: string;
+  nicheLabel: string;
+  whySells: string;
+}
+
+export interface NicheIdeasResult {
+  ideas: NicheIdea[];
+}
