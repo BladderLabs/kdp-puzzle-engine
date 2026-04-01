@@ -1,12 +1,31 @@
 import puppeteer, { Browser } from "puppeteer";
+import { execSync } from "child_process";
 
 let browserInstance: Browser | null = null;
 
+function findChromiumExecutable(): string {
+  try {
+    const path = execSync("which chromium 2>/dev/null || which chromium-browser 2>/dev/null", {
+      encoding: "utf-8",
+    }).trim();
+    if (path) return path;
+  } catch {}
+  return "";
+}
+
 async function getBrowser(): Promise<Browser> {
   if (!browserInstance || !browserInstance.connected) {
+    const executablePath = findChromiumExecutable() || undefined;
     browserInstance = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+      executablePath,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--single-process",
+      ],
     });
   }
   return browserInstance;
@@ -20,8 +39,6 @@ export async function htmlToPdf(
   const browser = await getBrowser();
   const page = await browser.newPage();
   try {
-    // Block all outbound network requests during rendering.
-    // HTML is always server-generated, but this provides defense-in-depth.
     await page.setRequestInterception(true);
     page.on("request", (req) => {
       const proto = new URL(req.url()).protocol;
