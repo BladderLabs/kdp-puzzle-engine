@@ -180,7 +180,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PdfInteriorRequest"
+              $ref: "#/components/schemas/BookConfig"
       responses:
         "200":
           description: PDF binary
@@ -200,7 +200,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PdfCoverRequest"
+              $ref: "#/components/schemas/BookConfig"
       responses:
         "200":
           description: PDF binary
@@ -623,30 +623,6 @@ components:
         - titles
         - keywords
         - backBlurb
-
-    PdfInteriorRequest:
-      type: object
-      properties:
-        html:
-          type: string
-        pages:
-          type: integer
-      required:
-        - html
-
-    PdfCoverRequest:
-      type: object
-      properties:
-        html:
-          type: string
-        fullW:
-          type: number
-        fullH:
-          type: number
-      required:
-        - html
-        - fullW
-        - fullH
 
     NicheInfo:
       type: object

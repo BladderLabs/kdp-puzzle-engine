@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams } from "wouter";
-import { useGetBook, useGenerateBook, getGetBookQueryKey } from "@workspace/api-client-react";
+import { useGetBook, getGetBookQueryKey } from "@workspace/api-client-react";
 import type { BookConfigPuzzleType, BookConfigDifficulty, BookConfigPaperType, BookConfigTheme, BookConfigCoverStyle } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -13,10 +13,9 @@ export function GenerateBook() {
   const { data: book, isLoading } = useGetBook(bookId, {
     query: { enabled: !!bookId, queryKey: getGetBookQueryKey(bookId) },
   });
-  const generateBook = useGenerateBook();
   const { toast } = useToast();
 
-  const [status, setStatus] = useState<"idle" | "generating" | "pdf_interior" | "pdf_cover" | "done" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "pdf_interior" | "pdf_cover" | "done" | "error">("idle");
   const [progress, setProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -34,35 +33,32 @@ export function GenerateBook() {
   const handleGenerate = async () => {
     if (!book) return;
     setErrorMsg("");
+
+    // Book config sent to server — HTML is generated server-side, never sent from client
+    const bookConfig = {
+      title: book.title,
+      subtitle: book.subtitle ?? undefined,
+      author: book.author ?? undefined,
+      puzzleType: book.puzzleType as BookConfigPuzzleType,
+      puzzleCount: book.puzzleCount ?? 100,
+      difficulty: (book.difficulty as BookConfigDifficulty) ?? "Medium",
+      largePrint: book.largePrint ?? false,
+      paperType: (book.paperType as BookConfigPaperType) ?? "white",
+      theme: (book.theme as BookConfigTheme) ?? "midnight",
+      coverStyle: (book.coverStyle as BookConfigCoverStyle) ?? "classic",
+      backDescription: book.backDescription ?? undefined,
+      words: book.words ?? [],
+      volumeNumber: book.volumeNumber ?? 1,
+    };
+
     try {
-      setStatus("generating");
-      setProgress(20);
-
-      const result = await generateBook.mutateAsync({
-        data: {
-          title: book.title,
-          subtitle: book.subtitle ?? undefined,
-          author: book.author ?? undefined,
-          puzzleType: (book.puzzleType as BookConfigPuzzleType),
-          puzzleCount: book.puzzleCount ?? undefined,
-          difficulty: (book.difficulty as BookConfigDifficulty) ?? undefined,
-          largePrint: book.largePrint ?? undefined,
-          paperType: (book.paperType as BookConfigPaperType) ?? undefined,
-          theme: (book.theme as BookConfigTheme) ?? undefined,
-          coverStyle: (book.coverStyle as BookConfigCoverStyle) ?? undefined,
-          backDescription: book.backDescription ?? undefined,
-          words: book.words ?? undefined,
-          volumeNumber: book.volumeNumber ?? undefined,
-        },
-      });
-
       setStatus("pdf_interior");
-      setProgress(55);
+      setProgress(20);
 
       const interiorRes = await fetch("/api/pdf/interior", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ html: result.interiorHtml, pages: result.totalPages }),
+        body: JSON.stringify(bookConfig),
       });
       if (!interiorRes.ok) {
         const msg = await interiorRes.text();
@@ -72,16 +68,12 @@ export function GenerateBook() {
       downloadBlob(interiorBlob, `${book.title}-interior.pdf`);
 
       setStatus("pdf_cover");
-      setProgress(80);
+      setProgress(60);
 
       const coverRes = await fetch("/api/pdf/cover", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          html: result.coverHtml,
-          fullW: result.coverDims.fullW,
-          fullH: result.coverDims.fullH,
-        }),
+        body: JSON.stringify(bookConfig),
       });
       if (!coverRes.ok) {
         const msg = await coverRes.text();
@@ -126,7 +118,8 @@ export function GenerateBook() {
   const totP = 3 + pc + Math.ceil(pc / aPer);
   const spineW = totP * thick + 0.06;
 
-  const canGenerate = status === "idle" || status === "done" || status === "error";
+  const isGenerating = status === "pdf_interior" || status === "pdf_cover";
+  const canGenerate = !isGenerating;
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
@@ -178,8 +171,7 @@ export function GenerateBook() {
             <div className="space-y-2">
               <Progress value={progress} data-testid="generate-progress" />
               <p className="text-sm text-muted-foreground text-center">
-                {status === "generating" && "Generating puzzles... this may take 1-2 minutes for large books."}
-                {status === "pdf_interior" && "Rendering interior PDF via Puppeteer..."}
+                {status === "pdf_interior" && "Generating puzzles and rendering interior PDF... this may take 1-2 minutes for large books."}
                 {status === "pdf_cover" && "Rendering full-wrap cover PDF..."}
                 {status === "done" && "All files downloaded successfully."}
                 {status === "error" && `Error: ${errorMsg}`}
@@ -191,7 +183,7 @@ export function GenerateBook() {
             size="lg"
             className="w-full text-lg h-16"
             onClick={handleGenerate}
-            disabled={!canGenerate || generateBook.isPending}
+            disabled={!canGenerate}
             data-testid="generate-button"
           >
             {status === "done" ? "Generate Again" : "Generate Interior + Cover PDFs"}

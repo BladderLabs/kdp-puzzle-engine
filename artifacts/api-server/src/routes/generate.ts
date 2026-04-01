@@ -1,29 +1,33 @@
 import { Router, type IRouter } from "express";
 import { GenerateBookBody, PreviewPuzzlesBody } from "@workspace/api-zod";
-import { buildInteriorHTML, buildCoverHTML } from "../lib/html-builders";
+import { buildInteriorHTML, buildCoverHTML, type BuildOpts } from "../lib/html-builders";
 import { makeWordSearch, makeSudoku, makeMaze, makeNumberSearch, makeCryptogram, shuf, DEFWORDS } from "../lib/puzzles";
 import { htmlToPdf } from "../lib/pdf";
 
 const router: IRouter = Router();
 
+/** Convert a validated GenerateBookBody into BuildOpts */
+function toOpts(data: ReturnType<typeof GenerateBookBody.parse>): BuildOpts {
+  return {
+    title: data.title,
+    subtitle: data.subtitle ?? undefined,
+    author: data.author ?? undefined,
+    puzzleType: data.puzzleType ?? "Word Search",
+    puzzleCount: data.puzzleCount ?? 100,
+    difficulty: data.difficulty ?? "Medium",
+    largePrint: data.largePrint !== false,
+    paperType: data.paperType ?? "white",
+    theme: data.theme ?? "midnight",
+    coverStyle: data.coverStyle ?? "classic",
+    backDescription: data.backDescription ?? undefined,
+    words: Array.isArray(data.words) ? (data.words as string[]) : [],
+    volumeNumber: data.volumeNumber ?? 1,
+  };
+}
+
 router.post("/generate", async (req, res) => {
   try {
-    const data = GenerateBookBody.parse(req.body);
-    const opts = {
-      title: data.title,
-      subtitle: data.subtitle ?? undefined,
-      author: data.author ?? undefined,
-      puzzleType: data.puzzleType ?? "Word Search",
-      puzzleCount: data.puzzleCount ?? 100,
-      difficulty: data.difficulty ?? "Medium",
-      largePrint: data.largePrint !== false,
-      paperType: data.paperType ?? "white",
-      theme: data.theme ?? "midnight",
-      coverStyle: data.coverStyle ?? "classic",
-      backDescription: data.backDescription ?? undefined,
-      words: (data.words as string[] | undefined) ?? [],
-      volumeNumber: data.volumeNumber ?? 1,
-    };
+    const opts = toOpts(GenerateBookBody.parse(req.body));
     const interior = buildInteriorHTML(opts);
     const cover = buildCoverHTML(opts, interior.totalPages);
     res.json({
@@ -42,12 +46,17 @@ router.post("/generate", async (req, res) => {
   }
 });
 
+/**
+ * /pdf/interior — Accepts the same book config as /generate.
+ * HTML is generated server-side; no user-controlled HTML is ever
+ * passed to Puppeteer, preventing SSRF-style abuse.
+ */
 router.post("/pdf/interior", async (req, res) => {
   try {
-    const { html, pages } = req.body as { html: string; pages: number };
-    if (!html) { res.status(400).json({ error: "html required" }); return; }
-    req.log.info(`Rendering interior PDF: ${pages} pages`);
-    const pdf = await htmlToPdf(html, 8.5, 11);
+    const opts = toOpts(GenerateBookBody.parse(req.body));
+    const interior = buildInteriorHTML(opts);
+    req.log.info(`Rendering interior PDF: ${interior.totalPages} pages, type=${opts.puzzleType}`);
+    const pdf = await htmlToPdf(interior.html, 8.5, 11);
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": 'attachment; filename="interior.pdf"',
@@ -60,12 +69,17 @@ router.post("/pdf/interior", async (req, res) => {
   }
 });
 
+/**
+ * /pdf/cover — Accepts the same book config as /generate.
+ * HTML and dimensions are computed server-side.
+ */
 router.post("/pdf/cover", async (req, res) => {
   try {
-    const { html, fullW, fullH } = req.body as { html: string; fullW: number; fullH: number };
-    if (!html) { res.status(400).json({ error: "html required" }); return; }
-    req.log.info(`Rendering cover PDF: ${fullW}x${fullH}`);
-    const pdf = await htmlToPdf(html, fullW, fullH);
+    const opts = toOpts(GenerateBookBody.parse(req.body));
+    const interior = buildInteriorHTML(opts);
+    const cover = buildCoverHTML(opts, interior.totalPages);
+    req.log.info(`Rendering cover PDF: ${cover.fullW.toFixed(3)}"x${cover.fullH.toFixed(3)}", type=${opts.puzzleType}`);
+    const pdf = await htmlToPdf(cover.html, cover.fullW, cover.fullH);
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": 'attachment; filename="cover.pdf"',
@@ -84,7 +98,8 @@ router.post("/puzzles/preview", (req, res) => {
     const pt = (data.puzzleType as string) || "Word Search";
     const diff = (data.difficulty as string) || "Medium";
     const lp = data.largePrint !== false;
-    const words = ((data.words as string[]) || DEFWORDS).filter(w => w.trim().length >= 3);
+    const rawWords = Array.isArray(data.words) ? (data.words as string[]) : [];
+    const words = rawWords.filter(w => w.trim().length >= 3);
     const count = Math.min((data.count as number) || 2, 3);
     const gsz = lp ? 13 : 15;
 

@@ -29,7 +29,7 @@ export function PreviewPane({ puzzleType, difficulty, largePrint, words }: Previ
         difficulty,
         largePrint,
         words: debouncedWords,
-        count: 1,
+        count: 2,
       },
     });
   }, [puzzleType, difficulty, largePrint, debouncedWords]);

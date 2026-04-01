@@ -26,8 +26,6 @@ import type {
   NicheInfo,
   NicheRequest,
   NicheResult,
-  PdfCoverRequest,
-  PdfInteriorRequest,
   PreviewRequest,
   PreviewResult,
 } from "./api.schemas";
@@ -693,14 +691,14 @@ export const getRenderInteriorPdfUrl = () => {
 };
 
 export const renderInteriorPdf = async (
-  pdfInteriorRequest: PdfInteriorRequest,
+  bookConfig: BookConfig,
   options?: RequestInit,
 ): Promise<Blob> => {
   return customFetch<Blob>(getRenderInteriorPdfUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(pdfInteriorRequest),
+    body: JSON.stringify(bookConfig),
   });
 };
 
@@ -711,14 +709,14 @@ export const getRenderInteriorPdfMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof renderInteriorPdf>>,
     TError,
-    { data: BodyType<PdfInteriorRequest> },
+    { data: BodyType<BookConfig> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof renderInteriorPdf>>,
   TError,
-  { data: BodyType<PdfInteriorRequest> },
+  { data: BodyType<BookConfig> },
   TContext
 > => {
   const mutationKey = ["renderInteriorPdf"];
@@ -732,7 +730,7 @@ export const getRenderInteriorPdfMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof renderInteriorPdf>>,
-    { data: BodyType<PdfInteriorRequest> }
+    { data: BodyType<BookConfig> }
   > = (props) => {
     const { data } = props ?? {};
 
@@ -745,7 +743,7 @@ export const getRenderInteriorPdfMutationOptions = <
 export type RenderInteriorPdfMutationResult = NonNullable<
   Awaited<ReturnType<typeof renderInteriorPdf>>
 >;
-export type RenderInteriorPdfMutationBody = BodyType<PdfInteriorRequest>;
+export type RenderInteriorPdfMutationBody = BodyType<BookConfig>;
 export type RenderInteriorPdfMutationError = ErrorType<unknown>;
 
 /**
@@ -758,14 +756,14 @@ export const useRenderInteriorPdf = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof renderInteriorPdf>>,
     TError,
-    { data: BodyType<PdfInteriorRequest> },
+    { data: BodyType<BookConfig> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof renderInteriorPdf>>,
   TError,
-  { data: BodyType<PdfInteriorRequest> },
+  { data: BodyType<BookConfig> },
   TContext
 > => {
   return useMutation(getRenderInteriorPdfMutationOptions(options));
@@ -779,14 +777,14 @@ export const getRenderCoverPdfUrl = () => {
 };
 
 export const renderCoverPdf = async (
-  pdfCoverRequest: PdfCoverRequest,
+  bookConfig: BookConfig,
   options?: RequestInit,
 ): Promise<Blob> => {
   return customFetch<Blob>(getRenderCoverPdfUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(pdfCoverRequest),
+    body: JSON.stringify(bookConfig),
   });
 };
 
@@ -797,14 +795,14 @@ export const getRenderCoverPdfMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof renderCoverPdf>>,
     TError,
-    { data: BodyType<PdfCoverRequest> },
+    { data: BodyType<BookConfig> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof renderCoverPdf>>,
   TError,
-  { data: BodyType<PdfCoverRequest> },
+  { data: BodyType<BookConfig> },
   TContext
 > => {
   const mutationKey = ["renderCoverPdf"];
@@ -818,7 +816,7 @@ export const getRenderCoverPdfMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof renderCoverPdf>>,
-    { data: BodyType<PdfCoverRequest> }
+    { data: BodyType<BookConfig> }
   > = (props) => {
     const { data } = props ?? {};
 
@@ -831,7 +829,7 @@ export const getRenderCoverPdfMutationOptions = <
 export type RenderCoverPdfMutationResult = NonNullable<
   Awaited<ReturnType<typeof renderCoverPdf>>
 >;
-export type RenderCoverPdfMutationBody = BodyType<PdfCoverRequest>;
+export type RenderCoverPdfMutationBody = BodyType<BookConfig>;
 export type RenderCoverPdfMutationError = ErrorType<unknown>;
 
 /**
@@ -844,14 +842,14 @@ export const useRenderCoverPdf = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof renderCoverPdf>>,
     TError,
-    { data: BodyType<PdfCoverRequest> },
+    { data: BodyType<BookConfig> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof renderCoverPdf>>,
   TError,
-  { data: BodyType<PdfCoverRequest> },
+  { data: BodyType<BookConfig> },
   TContext
 > => {
   return useMutation(getRenderCoverPdfMutationOptions(options));

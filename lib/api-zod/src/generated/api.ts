@@ -197,17 +197,78 @@ export const GenerateBookResponse = zod.object({
  * @summary Render interior HTML to PDF via Puppeteer
  */
 export const RenderInteriorPdfBody = zod.object({
-  html: zod.string(),
-  pages: zod.number().optional(),
+  title: zod.string(),
+  subtitle: zod.string().optional(),
+  author: zod.string().optional(),
+  puzzleType: zod.enum([
+    "Word Search",
+    "Sudoku",
+    "Maze",
+    "Number Search",
+    "Cryptogram",
+  ]),
+  puzzleCount: zod.number().optional(),
+  difficulty: zod.enum(["Easy", "Medium", "Hard"]).optional(),
+  largePrint: zod.boolean().optional(),
+  paperType: zod.enum(["white", "cream"]).optional(),
+  theme: zod
+    .enum([
+      "midnight",
+      "forest",
+      "crimson",
+      "ocean",
+      "violet",
+      "slate",
+      "rose",
+      "ember",
+    ])
+    .optional(),
+  coverStyle: zod
+    .enum(["classic", "geometric", "luxury", "bold", "minimal", "retro"])
+    .optional(),
+  backDescription: zod.string().optional(),
+  words: zod.array(zod.string()).optional(),
+  series: zod.string().optional(),
+  volumeNumber: zod.number().optional(),
 });
 
 /**
  * @summary Render full-wrap cover HTML to PDF via Puppeteer
  */
 export const RenderCoverPdfBody = zod.object({
-  html: zod.string(),
-  fullW: zod.number(),
-  fullH: zod.number(),
+  title: zod.string(),
+  subtitle: zod.string().optional(),
+  author: zod.string().optional(),
+  puzzleType: zod.enum([
+    "Word Search",
+    "Sudoku",
+    "Maze",
+    "Number Search",
+    "Cryptogram",
+  ]),
+  puzzleCount: zod.number().optional(),
+  difficulty: zod.enum(["Easy", "Medium", "Hard"]).optional(),
+  largePrint: zod.boolean().optional(),
+  paperType: zod.enum(["white", "cream"]).optional(),
+  theme: zod
+    .enum([
+      "midnight",
+      "forest",
+      "crimson",
+      "ocean",
+      "violet",
+      "slate",
+      "rose",
+      "ember",
+    ])
+    .optional(),
+  coverStyle: zod
+    .enum(["classic", "geometric", "luxury", "bold", "minimal", "retro"])
+    .optional(),
+  backDescription: zod.string().optional(),
+  words: zod.array(zod.string()).optional(),
+  series: zod.string().optional(),
+  volumeNumber: zod.number().optional(),
 });
 
 /**

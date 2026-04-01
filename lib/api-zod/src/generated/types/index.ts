@@ -26,8 +26,6 @@ export * from "./nicheRequest";
 export * from "./nicheResult";
 export * from "./numberSearchData";
 export * from "./numberSearchDataPSet";
-export * from "./pdfCoverRequest";
-export * from "./pdfInteriorRequest";
 export * from "./previewRequest";
 export * from "./previewResult";
 export * from "./puzzleData";

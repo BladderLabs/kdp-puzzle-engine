@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { NicheAssistant } from "./NicheAssistant";
 import { PreviewPane } from "./PreviewPane";
+import type { NicheResult } from "@workspace/api-client-react";
 const PUZZLE_TYPES = ["Word Search", "Sudoku", "Maze", "Number Search", "Cryptogram"] as const;
 const DIFFICULTIES = ["Easy", "Medium", "Hard"] as const;
 const THEMES = ["midnight", "forest", "crimson", "ocean", "violet", "slate", "rose", "ember"] as const;
@@ -65,18 +66,24 @@ export function BookForm({ initialValues, onSubmit, isSubmitting }: BookFormProp
   const puzzleType = form.watch("puzzleType");
   const puzzleCount = form.watch("puzzleCount") || 50;
   const paperType = form.watch("paperType");
+  const largePrint = form.watch("largePrint");
   const wordsStr = form.watch("words") || "";
 
-  const applyNicheData = (data: any) => {
+  const applyNicheData = (data: NicheResult) => {
     if (data.words?.length) form.setValue("words", data.words.join("\n"));
     if (data.titles?.length) form.setValue("title", data.titles[0]);
     if (data.backBlurb) form.setValue("backDescription", data.backBlurb);
     if (data.recommendedDifficulty) form.setValue("difficulty", data.recommendedDifficulty);
     if (data.recommendedCount) form.setValue("puzzleCount", data.recommendedCount);
-    form.setValue("niche", data.niche);
+    if (data.niche) form.setValue("niche", data.niche);
   };
 
-  const aPer = 1; // Assuming 1 puzzle per page for simplicity, original uses logic
+  // Mirrors aPer logic from html-builders.ts exactly
+  const aPer = puzzleType === "Word Search" ? (largePrint ? 9 : 12)
+    : puzzleType === "Sudoku" ? (largePrint ? 6 : 8)
+    : puzzleType === "Maze" ? (largePrint ? 4 : 6)
+    : puzzleType === "Number Search" ? (largePrint ? 9 : 12)
+    : (largePrint ? 6 : 8); // Cryptogram
   const totP = 3 + puzzleCount + Math.ceil(puzzleCount / aPer);
   const thick = paperType === "cream" ? 0.0025 : 0.002252;
   const spineW = totP * thick + 0.06;
