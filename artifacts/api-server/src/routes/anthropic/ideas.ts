@@ -1,10 +1,12 @@
 import { Router, type IRouter } from "express";
+import { z } from "zod";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { listNiches } from "../../lib/niches";
 
 const router: IRouter = Router();
 
 const NICHE_LIST = listNiches().map(n => `${n.key} (${n.label}, ${n.puzzleType})`).join(", ");
+const NICHE_KEYS = new Set(listNiches().map(n => n.key));
 
 const KDP_EXPERT_CONTEXT = `You are an expert Amazon KDP puzzle book market analyst. The platform has these built-in niches: ${NICHE_LIST}.
 
@@ -14,10 +16,57 @@ Themes: midnight, forest, crimson, ocean, violet, slate, rose, ember
 Typical KDP pricing: $5.99–$9.99 for puzzle books (large print commands $1–2 premium)
 Typical puzzle counts: 50–100 for most books`;
 
+const BookIdeasRequestSchema = z.object({
+  puzzleType: z.string().optional(),
+});
+
+const OpportunityCardSchema = z.object({
+  puzzleType: z.string(),
+  niche: z.string(),
+  nicheLabel: z.string(),
+  salesPotential: z.enum(["Hot", "Rising", "Stable"]),
+  coverStyle: z.string(),
+  difficulty: z.string(),
+  puzzleCount: z.number().int().positive(),
+  pricePoint: z.number().positive(),
+  largePrint: z.boolean(),
+  theme: z.string(),
+  whySells: z.string(),
+  title: z.string(),
+  subtitle: z.string(),
+});
+
+const ScoreTitleRequestSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  puzzleType: z.string().optional(),
+  niche: z.string().optional(),
+});
+
+const ScoreTitleResponseSchema = z.object({
+  score: z.number().int().min(1).max(10),
+  feedback: z.string(),
+  suggestions: z.array(z.string()).length(3),
+});
+
+const NicheIdeasRequestSchema = z.object({
+  puzzleType: z.string().min(1, "Puzzle type is required"),
+});
+
+const NicheIdeaSchema = z.object({
+  niche: z.string(),
+  nicheLabel: z.string(),
+  whySells: z.string(),
+});
+
+function parseModelJson(text: string): unknown {
+  const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+  return JSON.parse(cleaned);
+}
+
 router.post("/ai/book-ideas", async (req, res) => {
   try {
-    const { puzzleType } = req.body as { puzzleType?: string };
-
+    const parsed = BookIdeasRequestSchema.safeParse(req.body);
+    const puzzleType = parsed.success ? parsed.data.puzzleType : undefined;
     const filterHint = puzzleType ? ` Focus especially on "${puzzleType}" puzzle type ideas.` : "";
 
     const prompt = `${KDP_EXPERT_CONTEXT}
@@ -56,8 +105,9 @@ puzzleType must be one of: Word Search, Sudoku, Maze, Number Search, Cryptogram`
     });
 
     const text = message.content[0].type === "text" ? message.content[0].text : "[]";
-    const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-    const cards = JSON.parse(cleaned);
+    const raw = parseModelJson(text);
+
+    const cards = z.array(OpportunityCardSchema).parse(raw).filter(c => NICHE_KEYS.has(c.niche));
 
     res.json({ cards });
   } catch (err) {
@@ -68,7 +118,12 @@ puzzleType must be one of: Word Search, Sudoku, Maze, Number Search, Cryptogram`
 
 router.post("/ai/score-title", async (req, res) => {
   try {
-    const { title, puzzleType, niche } = req.body as { title: string; puzzleType?: string; niche?: string };
+    const parsed = ScoreTitleRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+      return;
+    }
+    const { title, puzzleType, niche } = parsed.data;
 
     const context = [puzzleType && `Puzzle type: ${puzzleType}`, niche && `Niche: ${niche}`]
       .filter(Boolean).join(", ");
@@ -98,8 +153,8 @@ Respond with ONLY JSON, no markdown:
     });
 
     const text = message.content[0].type === "text" ? message.content[0].text : "{}";
-    const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-    const result = JSON.parse(cleaned);
+    const raw = parseModelJson(text);
+    const result = ScoreTitleResponseSchema.parse(raw);
 
     res.json(result);
   } catch (err) {
@@ -110,7 +165,12 @@ Respond with ONLY JSON, no markdown:
 
 router.post("/ai/niche-ideas", async (req, res) => {
   try {
-    const { puzzleType } = req.body as { puzzleType: string };
+    const parsed = NicheIdeasRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+      return;
+    }
+    const { puzzleType } = parsed.data;
 
     const prompt = `${KDP_EXPERT_CONTEXT}
 
@@ -136,8 +196,8 @@ niche must be exact keys from the provided list.`;
     });
 
     const text = message.content[0].type === "text" ? message.content[0].text : "{}";
-    const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-    const result = JSON.parse(cleaned);
+    const raw = parseModelJson(text);
+    const result = z.object({ ideas: z.array(NicheIdeaSchema) }).parse(raw);
 
     res.json(result);
   } catch (err) {

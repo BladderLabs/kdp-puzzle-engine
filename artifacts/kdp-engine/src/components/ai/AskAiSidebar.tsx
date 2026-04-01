@@ -20,6 +20,7 @@ export function AskAiSidebar({ context }: AskAiSidebarProps) {
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [streamBuffer, setStreamBuffer] = useState("");
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -29,16 +30,38 @@ export function AskAiSidebar({ context }: AskAiSidebarProps) {
     }
   }, [messages, streamBuffer]);
 
-  const ensureConversation = async (): Promise<number> => {
-    if (conversationId) return conversationId;
-    const res = await fetch("/api/anthropic/conversations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: context ? `KDP: ${context}` : "KDP Assistant" }),
-    });
-    const data = await res.json();
-    setConversationId(data.id);
-    return data.id;
+  useEffect(() => {
+    if (!open) return;
+    if (conversationId !== null) return;
+    void initConversation();
+  }, [open]);
+
+  const initConversation = async () => {
+    setLoadingHistory(true);
+    try {
+      const res = await fetch("/api/anthropic/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: context ? `KDP: ${context}` : "KDP Assistant" }),
+      });
+      const conv = await res.json();
+      setConversationId(conv.id);
+
+      const histRes = await fetch(`/api/anthropic/conversations/${conv.id}`);
+      if (histRes.ok) {
+        const histData = await histRes.json();
+        const stored: Message[] = (histData.messages ?? []).map(
+          (m: { role: string; content: string }) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content,
+          })
+        );
+        if (stored.length > 0) setMessages(stored);
+      }
+    } catch {
+    } finally {
+      setLoadingHistory(false);
+    }
   };
 
   const sendMessage = async () => {
@@ -51,7 +74,17 @@ export function AskAiSidebar({ context }: AskAiSidebarProps) {
     setStreamBuffer("");
 
     try {
-      const convId = await ensureConversation();
+      const convId = conversationId ?? await (async () => {
+        const res = await fetch("/api/anthropic/conversations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: context ? `KDP: ${context}` : "KDP Assistant" }),
+        });
+        const data = await res.json();
+        setConversationId(data.id);
+        return data.id as number;
+      })();
+
       const controller = new AbortController();
       abortRef.current = controller;
 
@@ -66,16 +99,16 @@ export function AskAiSidebar({ context }: AskAiSidebarProps) {
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = "";
+      let buf = "";
       let fullText = "";
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() || "";
 
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
@@ -95,7 +128,10 @@ export function AskAiSidebar({ context }: AskAiSidebarProps) {
       }
     } catch (err) {
       if ((err as Error).name !== "AbortError") {
-        setMessages(prev => [...prev, { role: "assistant", content: "Sorry, something went wrong. Please try again." }]);
+        setMessages(prev => [
+          ...prev,
+          { role: "assistant", content: "Sorry, something went wrong. Please try again." },
+        ]);
       }
     } finally {
       setStreaming(false);
@@ -137,7 +173,12 @@ export function AskAiSidebar({ context }: AskAiSidebarProps) {
       <CardContent className="flex flex-col gap-2 p-3 pt-0 flex-1 min-h-0">
         <ScrollArea className="flex-1 pr-1" ref={scrollRef as React.Ref<HTMLDivElement>}>
           <div className="space-y-2 pb-1">
-            {messages.length === 0 && (
+            {loadingHistory && (
+              <p className="text-xs text-muted-foreground text-center py-4 animate-pulse">
+                Loading history…
+              </p>
+            )}
+            {!loadingHistory && messages.length === 0 && (
               <p className="text-xs text-muted-foreground text-center py-4">
                 Ask anything about KDP publishing, pricing, or niches.
               </p>
@@ -170,12 +211,12 @@ export function AskAiSidebar({ context }: AskAiSidebarProps) {
             onKeyDown={handleKeyDown}
             placeholder="Ask about pricing, niches, keywords..."
             className="text-xs resize-none h-16 min-h-0"
-            disabled={streaming}
+            disabled={streaming || loadingHistory}
           />
           <Button
             size="sm"
             onClick={sendMessage}
-            disabled={!input.trim() || streaming}
+            disabled={!input.trim() || streaming || loadingHistory}
             className="self-end bg-violet-600 hover:bg-violet-700 shrink-0"
           >
             Send
