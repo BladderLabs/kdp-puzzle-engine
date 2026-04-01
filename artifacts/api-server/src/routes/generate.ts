@@ -55,8 +55,8 @@ router.post("/pdf/interior", async (req, res) => {
   try {
     const opts = toOpts(GenerateBookBody.parse(req.body));
     const interior = buildInteriorHTML(opts);
-    req.log.info(`Rendering interior PDF: ${interior.totalPages} pages, type=${opts.puzzleType}`);
-    const pdf = await htmlToPdf(interior.html, 8.5, 11);
+    req.log.info(`Rendering interior PDF: ${interior.totalPages} pages, type=${opts.puzzleType}, size=${interior.trimW}x${interior.trimH}`);
+    const pdf = await htmlToPdf(interior.html, interior.trimW, interior.trimH);
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": 'attachment; filename="interior.pdf"',

@@ -45,6 +45,8 @@ export interface BuildOpts {
 export interface BuildResult {
   html: string;
   totalPages: number;
+  trimW: number;
+  trimH: number;
 }
 
 export function buildInteriorHTML(opts: BuildOpts): BuildResult {
@@ -96,6 +98,10 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     : PT === "Number Search" ? (LP ? 9 : 12)
     : (LP ? 6 : 8); // Cryptogram
 
+  // Physical trim size: Large Print = 8.5"x11", Standard = 6"x9"
+  const trimW = LP ? 8.5 : 6;
+  const trimH = LP ? 11 : 9;
+
   const aP = Math.ceil(PC / aPer);
   const totP = 3 + PC + aP;
   const gut = Math.max(0.5, gutterIn(totP));
@@ -104,8 +110,8 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
   // ── HTML head (original) ──
   let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${T}</title>` +
     
-    `<style>*{margin:0;padding:0;box-sizing:border-box;}@page{size:8.5in 11in;margin:0;}` +
-    `.pg{width:8.5in;min-height:11in;page-break-after:always;position:relative;overflow:hidden;}` +
+    `<style>*{margin:0;padding:0;box-sizing:border-box;}@page{size:${trimW}in ${trimH}in;margin:0;}` +
+    `.pg{width:${trimW}in;min-height:${trimH}in;page-break-after:always;position:relative;overflow:hidden;}` +
     `.pg:last-child{page-break-after:auto;}` +
     `.in{padding:0.55in 0.4in 0.6in ${gut}in;background:#fff;}` +
     `.hd{display:flex;justify-content:space-between;font-family:'Source Code Pro',monospace;font-size:8px;color:#aaa;border-bottom:1px solid #e0e0e0;padding-bottom:4px;margin-bottom:8px;}` +
@@ -367,7 +373,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
   }
 
   html += "</body></html>";
-  return { html, totalPages: totP };
+  return { html, totalPages: totP, trimW, trimH };
 }
 
 // ── Cover HTML (full wrap) — original logic + 2 new styles/themes ──
@@ -408,9 +414,10 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const ac = opts.customAccent || th.ac;
   const tx = opts.customText || th.tx;
 
-  // Paper dimensions are always 8.5"x11" (preserved from v5 — the "Large Print" flag
-  // controls typography/grid density only, not physical page size).
-  const bleed = 0.125, trimW = 8.5, trimH = 11;
+  // Physical trim size matches interior: Large Print = 8.5"x11", Standard = 6"x9"
+  const bleed = 0.125;
+  const trimW = opts.largePrint !== false ? 8.5 : 6;
+  const trimH = opts.largePrint !== false ? 11 : 9;
   const thick = opts.paperType === "cream" ? 0.0025 : 0.002252;
   const spineW = totalPages * thick + 0.06;
   const fullW = bleed + trimW + spineW + trimW + bleed;
