@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
-import { useForm, UseFormReturn } from "react-hook-form";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardDescription } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,9 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { NicheAssistant } from "./NicheAssistant";
 import { PreviewPane } from "./PreviewPane";
-import { ScoreTitleButton } from "@/components/ai/ScoreTitleButton";
-import { NicheIdeasPanel } from "@/components/ai/NicheIdeasPanel";
 import type { NicheResult } from "@workspace/api-client-react";
+
 const PUZZLE_TYPES = ["Word Search", "Sudoku", "Maze", "Number Search", "Cryptogram"] as const;
 const DIFFICULTIES = ["Easy", "Medium", "Hard"] as const;
 const THEMES = ["midnight", "forest", "crimson", "ocean", "violet", "slate", "rose", "ember"] as const;
@@ -31,7 +30,7 @@ const formSchema = z.object({
   theme: z.string().default("midnight"),
   coverStyle: z.string().default("classic"),
   backDescription: z.string().optional(),
-  words: z.string().optional(), // We'll split this by newline before saving
+  words: z.string().optional(),
   niche: z.string().optional(),
   volumeNumber: z.coerce.number().optional(),
 });
@@ -71,8 +70,6 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
   const paperType = form.watch("paperType");
   const largePrint = form.watch("largePrint");
   const wordsStr = form.watch("words") || "";
-  const titleValue = form.watch("title") || "";
-  const nicheValue = form.watch("niche") || "";
 
   const applyNicheData = (data: NicheResult) => {
     if (data.words?.length) form.setValue("words", data.words.join("\n"));
@@ -96,265 +93,203 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
     }
   }, [onApplyRef]);
 
-  // Mirrors aPer logic from html-builders.ts exactly
   const aPer = puzzleType === "Word Search" ? (largePrint ? 9 : 12)
     : puzzleType === "Sudoku" ? (largePrint ? 6 : 8)
     : puzzleType === "Maze" ? (largePrint ? 4 : 6)
     : puzzleType === "Number Search" ? (largePrint ? 9 : 12)
-    : (largePrint ? 6 : 8); // Cryptogram
+    : (largePrint ? 6 : 8);
   const totP = 3 + puzzleCount + Math.ceil(puzzleCount / aPer);
   const thick = paperType === "cream" ? 0.0025 : 0.002252;
   const spineW = totP * thick + 0.06;
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-      <div className="xl:col-span-8 space-y-6">
+    <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 items-start">
+      {/* ── Main form ── */}
+      <div className="xl:col-span-2">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)}>
             <Card>
-              <CardHeader>
-                <CardTitle>Book Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Title</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
-                        <FormMessage />
-                        <ScoreTitleButton title={titleValue} puzzleType={puzzleType} niche={nicheValue} />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="subtitle"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Subtitle</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="author"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Author</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="volumeNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Volume Number</FormLabel>
-                        <FormControl><Input type="number" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </CardContent>
-            </Card>
+              <CardContent className="pt-5 space-y-5">
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Interior Configuration</CardTitle>
-                <div className="text-sm text-muted-foreground bg-muted p-2 rounded mt-2">
-                  Est. Pages: {totP} | Spine Width: {spineW.toFixed(3)}"
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
+                {/* Row 1 — Title + Subtitle */}
                 <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="puzzleType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Puzzle Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            {PUZZLE_TYPES.map(t => (
-                              <SelectItem key={t} value={t}>{t}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="puzzleCount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Puzzle Count</FormLabel>
-                        <FormControl><Input type="number" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="difficulty"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Difficulty</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            {DIFFICULTIES.map(t => (
-                              <SelectItem key={t} value={t}>{t}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="paperType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Paper Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            <SelectItem value="white">White</SelectItem>
-                            <SelectItem value="cream">Cream</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <FormField control={form.control} name="title" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title <span className="text-destructive">*</span></FormLabel>
+                      <FormControl><Input placeholder="100 Word Search Puzzles" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="subtitle" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Subtitle</FormLabel>
+                      <FormControl><Input placeholder="Large Print Edition" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="largePrint"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">Large Print (8.5" x 11")</FormLabel>
-                        <CardDescription>Standard size is 6" x 9"</CardDescription>
+                {/* Row 2 — Author + Volume */}
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="author" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Author</FormLabel>
+                      <FormControl><Input placeholder="Your name or pen name" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="volumeNumber" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Volume #</FormLabel>
+                      <FormControl><Input type="number" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
+
+                <div className="border-t" />
+
+                {/* Row 3 — Puzzle Type + Count + Difficulty */}
+                <div className="grid grid-cols-3 gap-4">
+                  <FormField control={form.control} name="puzzleType" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Puzzle Type</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {PUZZLE_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="puzzleCount" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Puzzle Count</FormLabel>
+                      <FormControl><Input type="number" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="difficulty" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Difficulty</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {DIFFICULTIES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
+
+                {/* Row 4 — Paper + Large Print */}
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="paperType" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Paper</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          <SelectItem value="white">White</SelectItem>
+                          <SelectItem value="cream">Cream</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="largePrint" render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border px-4 py-3 mt-0.5">
+                      <div>
+                        <FormLabel className="text-sm font-medium">Large Print</FormLabel>
+                        <CardDescription className="text-xs">8.5" × 11" (standard is 6" × 9")</CardDescription>
                       </div>
                       <FormControl>
                         <Switch checked={field.value} onCheckedChange={field.onChange} />
                       </FormControl>
                     </FormItem>
-                  )}
-                />
-
-                {(puzzleType === "Word Search" || puzzleType === "Cryptogram") && (
-                  <FormField
-                    control={form.control}
-                    name="words"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{puzzleType === "Cryptogram" ? "Sentences" : "Word List"} (One per line)</FormLabel>
-                        <FormControl>
-                          <Textarea className="h-40 font-mono text-sm" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Cover Configuration</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="theme"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Color Theme</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            {THEMES.map(t => (
-                              <SelectItem key={t} value={t}>{t}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="coverStyle"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Cover Style</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            {COVER_STYLES.map(t => (
-                              <SelectItem key={t} value={t}>{t}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  )} />
                 </div>
-                <FormField
-                  control={form.control}
-                  name="backDescription"
-                  render={({ field }) => (
+
+                {/* Row 5 — Page & spine estimate */}
+                <div className="text-xs text-muted-foreground bg-muted/50 rounded px-3 py-2">
+                  Est. {totP} pages · Spine width {spineW.toFixed(3)}"
+                </div>
+
+                {/* Word list (Word Search / Cryptogram only) */}
+                {(puzzleType === "Word Search" || puzzleType === "Cryptogram") && (
+                  <FormField control={form.control} name="words" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Back Cover Description</FormLabel>
+                      <FormLabel>{puzzleType === "Cryptogram" ? "Sentences" : "Word List"} — one per line</FormLabel>
                       <FormControl>
-                        <Textarea className="h-24" {...field} />
+                        <Textarea className="h-36 font-mono text-sm" placeholder={"PUZZLE\nBRAIN\nSOLVE\n..."} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
-                  )}
-                />
+                  )} />
+                )}
+
+                <div className="border-t" />
+
+                {/* Row 6 — Cover: Theme + Style */}
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="theme" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cover Theme</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {THEMES.map(t => <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="coverStyle" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cover Style</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {COVER_STYLES.map(t => <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
+
+                {/* Back description */}
+                <FormField control={form.control} name="backDescription" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Back Cover Description</FormLabel>
+                    <FormControl>
+                      <Textarea className="h-20" placeholder="Short description printed on the back cover…" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                <Button type="submit" disabled={isSubmitting} size="lg" className="w-full text-base">
+                  {isSubmitting ? "Saving…" : "Save Project →"}
+                </Button>
+
               </CardContent>
             </Card>
-
-            <Button type="submit" disabled={isSubmitting} size="lg" className="w-full">
-              {isSubmitting ? "Saving..." : "Save Project"}
-            </Button>
           </form>
         </Form>
       </div>
 
-      <div className="xl:col-span-4 space-y-6">
-        <NicheIdeasPanel puzzleType={puzzleType} onSelectNiche={(key) => form.setValue("niche", key)} />
-        <NicheAssistant puzzleType={puzzleType} onApply={applyNicheData} />
-        <PreviewPane 
-          puzzleType={puzzleType} 
-          difficulty={form.watch("difficulty")} 
-          largePrint={form.watch("largePrint")} 
-          words={wordsStr.split("\n").filter(w => w.trim().length > 0)} 
+      {/* ── Right sidebar ── */}
+      <div className="xl:col-span-1 space-y-4">
+        <PreviewPane
+          puzzleType={puzzleType}
+          difficulty={form.watch("difficulty")}
+          largePrint={form.watch("largePrint")}
+          words={wordsStr.split("\n").filter(w => w.trim().length > 0)}
         />
+        <NicheAssistant puzzleType={puzzleType} onApply={applyNicheData} />
       </div>
     </div>
   );
