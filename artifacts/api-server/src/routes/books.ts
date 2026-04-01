@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { db, booksTable } from "@workspace/db";
 import {
   CreateBookBody,
@@ -14,7 +14,7 @@ const router: IRouter = Router();
 
 router.get("/books", async (req, res) => {
   try {
-    const books = await db.select().from(booksTable).orderBy(booksTable.updatedAt);
+    const books = await db.select().from(booksTable).orderBy(desc(booksTable.updatedAt));
     res.json(books.map(b => ({ ...b, words: b.words ?? [] })));
   } catch (err) {
     req.log.error({ err }, "Failed to list books");
