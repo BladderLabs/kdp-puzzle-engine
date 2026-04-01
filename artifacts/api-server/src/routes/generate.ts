@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { GenerateBookBody, PreviewPuzzlesBody } from "@workspace/api-zod";
-import { buildInteriorHTML, buildCoverHTML, type BuildOpts } from "../lib/html-builders";
+import { buildInteriorHTML, buildCoverHTML, computeTotalPages, type BuildOpts } from "../lib/html-builders";
 import { makeWordSearch, makeSudoku, makeMaze, makeNumberSearch, makeCryptogram, shuf, DEFWORDS } from "../lib/puzzles";
 import { htmlToPdf } from "../lib/pdf";
 
@@ -67,8 +67,8 @@ router.post("/pdf/interior", async (req, res) => {
 router.post("/pdf/cover", async (req, res) => {
   try {
     const opts = toOpts(GenerateBookBody.parse(req.body));
-    const interior = buildInteriorHTML(opts);
-    const cover = buildCoverHTML(opts, interior.totalPages);
+    const totalPages = computeTotalPages(opts);
+    const cover = buildCoverHTML(opts, totalPages);
     req.log.info(`Rendering cover PDF: ${cover.fullW.toFixed(3)}"x${cover.fullH.toFixed(3)}", type=${opts.puzzleType}`);
     const pdf = await htmlToPdf(cover.html, cover.fullW, cover.fullH);
     res.set({

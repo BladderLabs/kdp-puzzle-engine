@@ -3,6 +3,19 @@ import {
   DEFWORDS,
 } from "./puzzles";
 
+/** Compute total page count from config without generating any puzzles. */
+export function computeTotalPages(opts: BuildOpts): number {
+  const PT = opts.puzzleType || "Word Search";
+  const PC = opts.puzzleCount || 100;
+  const LP = opts.largePrint !== false;
+  const aPer = PT === "Word Search" ? (LP ? 9 : 12)
+    : PT === "Sudoku" ? (LP ? 6 : 8)
+    : PT === "Maze" ? (LP ? 4 : 6)
+    : PT === "Number Search" ? (LP ? 9 : 12)
+    : (LP ? 6 : 8);
+  return 3 + PC + Math.ceil(PC / aPer);
+}
+
 export function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
