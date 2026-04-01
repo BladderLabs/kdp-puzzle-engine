@@ -9,6 +9,17 @@ import {
   DEFWORDS,
 } from "./puzzles";
 
+// ── HTML escaping — applied to every user-controlled string before
+//    interpolation into HTML, preventing script/tag injection in Puppeteer.
+export function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 // ── Original gutter calculation (unchanged) ──
 export function gutterIn(p: number): number {
   return p <= 150 ? 0.375 : p <= 300 ? 0.5 : p <= 500 ? 0.625 : 0.75;
@@ -37,8 +48,10 @@ export interface BuildResult {
 }
 
 export function buildInteriorHTML(opts: BuildOpts): BuildResult {
-  const T = opts.title;
-  const ST = opts.subtitle || "";
+  // Escape every user-supplied string before any HTML interpolation
+  const T = escapeHtml(opts.title);
+  const ST = escapeHtml(opts.subtitle || "");
+  const AU = escapeHtml(opts.author || "");
   const PT = opts.puzzleType || "Word Search";
   const PC = opts.puzzleCount || 100;
   const DF = opts.difficulty || "Medium";
@@ -90,7 +103,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
 
   // ── HTML head (original) ──
   let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${T}</title>` +
-    `<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">` +
+    
     `<style>*{margin:0;padding:0;box-sizing:border-box;}@page{size:8.5in 11in;margin:0;}` +
     `.pg{width:8.5in;min-height:11in;page-break-after:always;position:relative;overflow:hidden;}` +
     `.pg:last-child{page-break-after:auto;}` +
@@ -107,7 +120,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     `<div style="width:56px;height:1px;background:#ccc;margin-bottom:20px;"></div>` +
     `<div style="font-family:'Source Code Pro',monospace;font-size:9px;color:#999;line-height:2;">` +
     `&copy; ${yr} All Rights Reserved &middot; Published via Amazon KDP<br/>Puzzle content generated with AI assistance${vol ? "<br/>" + vol : ""}</div>` +
-    (opts.author ? `<div style="font-family:Lora,serif;font-size:12px;color:#888;margin-top:12px;">${opts.author}</div>` : "") +
+    (AU ? `<div style="font-family:Lora,serif;font-size:12px;color:#888;margin-top:12px;">${AU}</div>` : "") +
     `</div></div>`;
 
   // ── How to Play (updated for new types) ──
@@ -402,16 +415,16 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const fullH = bleed + trimH + bleed;
   const spineX = bleed + trimW, frontX = spineX + spineW;
 
-  const title = opts.title || "Book Title";
-  const sub = opts.subtitle || "";
-  const author = opts.author || "";
+  // Escape every user-supplied string before any HTML interpolation
+  const title = escapeHtml(opts.title || "Book Title");
+  const sub = escapeHtml(opts.subtitle || "");
+  const author = escapeHtml(opts.author || "");
+  const backDesc = escapeHtml(opts.backDescription || `Enjoy ${opts.puzzleCount || 100} carefully crafted puzzles. Large print formatting for comfortable solving. Complete answer key included.`);
   const meta = `${opts.puzzleCount || 100} ${opts.puzzleType || "Word Search"} Puzzles | ${opts.difficulty || "Medium"} | Large Print`;
 
   const deco = `<div style="position:absolute;top:12%;right:8%;width:120px;height:120px;border:2px solid ${ac}22;border-radius:50%;"></div>` +
     `<div style="position:absolute;bottom:15%;left:6%;width:80px;height:80px;border:2px solid ${ac}18;border-radius:50%;"></div>` +
     `<div style="position:absolute;top:35%;right:12%;width:50px;height:50px;border:1.5px solid ${ac}15;transform:rotate(45deg);"></div>`;
-
-  const backDesc = opts.backDescription || `Enjoy ${opts.puzzleCount || 100} carefully crafted puzzles. Large print formatting for comfortable solving. Complete answer key included.`;
 
   const back = `<div style="position:absolute;left:${bleed}in;top:${bleed}in;width:${trimW}in;height:${trimH}in;background:${bg};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5in 1in;text-align:center;box-sizing:border-box;">` +
     `<div style="font-family:Lora,serif;font-size:16px;color:${tx}cc;line-height:1.8;margin-bottom:40px;">${backDesc}</div>` +
@@ -445,7 +458,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
     front = `<div style="${fb}text-align:center;padding:1in;">${deco}<div style="position:relative;z-index:1;">${opts.puzzleType ? `<div style="font-family:'Source Code Pro',monospace;font-size:11px;letter-spacing:6px;text-transform:uppercase;color:${ac};margin-bottom:24px;">${opts.puzzleType}</div>` : ""}<div style="width:56px;height:2px;background:${ac};margin:0 auto 32px;"></div><div style="font-size:46px;font-weight:700;color:${ac};line-height:1.15;margin-bottom:18px;padding:0 0.3in;">${title}</div><div style="font-size:16px;font-style:italic;color:${tx}aa;margin-bottom:28px;">${sub}</div><div style="width:56px;height:2px;background:${ac};margin:0 auto 22px;"></div>${author ? `<div style="font-family:'Source Code Pro',monospace;font-size:12px;letter-spacing:2px;color:${tx}99;margin-bottom:16px;">${author}</div>` : ""}<div style="font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:3px;color:${tx}77;">${meta}</div></div></div>`;
   }
 
-  const coverHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet"><style>*{margin:0;padding:0;box-sizing:border-box;}@page{size:${fullW.toFixed(4)}in ${fullH.toFixed(4)}in;margin:0;}body{width:${fullW.toFixed(4)}in;height:${fullH.toFixed(4)}in;overflow:hidden;position:relative;background:${bg};print-color-adjust:exact;-webkit-print-color-adjust:exact;}</style></head><body>${back}${spine}${front}</body></html>`;
+  const coverHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box;}@page{size:${fullW.toFixed(4)}in ${fullH.toFixed(4)}in;margin:0;}body{width:${fullW.toFixed(4)}in;height:${fullH.toFixed(4)}in;overflow:hidden;position:relative;background:${bg};print-color-adjust:exact;-webkit-print-color-adjust:exact;}</style></head><body>${back}${spine}${front}</body></html>`;
 
   return { html: coverHtml, fullW, fullH, spineW };
 }
