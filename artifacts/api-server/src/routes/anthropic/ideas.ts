@@ -25,6 +25,7 @@ const OpportunityCardSchema = z.object({
   niche: z.string(),
   nicheLabel: z.string(),
   salesPotential: z.enum(["Hot", "Rising", "Stable"]),
+  score: z.number().int().min(1).max(10),
   coverStyle: z.string(),
   difficulty: z.string(),
   puzzleCount: z.number().int().positive(),
@@ -82,6 +83,7 @@ Respond with ONLY a JSON array, no markdown, no explanation:
     "niche": "seniors",
     "nicheLabel": "Seniors & Large Print",
     "salesPotential": "Hot",
+    "score": 9,
     "coverStyle": "classic",
     "difficulty": "Easy",
     "puzzleCount": 100,
@@ -95,6 +97,7 @@ Respond with ONLY a JSON array, no markdown, no explanation:
 ]
 
 salesPotential must be one of: Hot, Rising, Stable
+score must be an integer 1–10 reflecting real Amazon KDP market opportunity (10 = massive evergreen demand, 1 = very niche)
 niche must be one of the exact keys from the provided niche list
 puzzleType must be one of: Word Search, Sudoku, Maze, Number Search, Cryptogram`;
 
