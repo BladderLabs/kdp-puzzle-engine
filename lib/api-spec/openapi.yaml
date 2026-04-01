@@ -170,6 +170,46 @@ paths:
               schema:
                 $ref: "#/components/schemas/GenerateResult"
 
+  /pdf/interior:
+    post:
+      operationId: renderInteriorPdf
+      tags: [generate]
+      summary: Render interior HTML to PDF via Puppeteer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PdfInteriorRequest"
+      responses:
+        "200":
+          description: PDF binary
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+  /pdf/cover:
+    post:
+      operationId: renderCoverPdf
+      tags: [generate]
+      summary: Render full-wrap cover HTML to PDF via Puppeteer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PdfCoverRequest"
+      responses:
+        "200":
+          description: PDF binary
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
   /puzzles/preview:
     post:
       operationId: previewPuzzles
@@ -583,6 +623,30 @@ components:
         - titles
         - keywords
         - backBlurb
+
+    PdfInteriorRequest:
+      type: object
+      properties:
+        html:
+          type: string
+        pages:
+          type: integer
+      required:
+        - html
+
+    PdfCoverRequest:
+      type: object
+      properties:
+        html:
+          type: string
+        fullW:
+          type: number
+        fullH:
+          type: number
+      required:
+        - html
+        - fullW
+        - fullH
 
     NicheInfo:
       type: object

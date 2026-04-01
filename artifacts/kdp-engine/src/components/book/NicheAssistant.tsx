@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
 
+import type { NicheResult, NicheInfo } from "@workspace/api-client-react";
+
 interface NicheAssistantProps {
   puzzleType: string;
-  onApply: (data: any) => void;
+  onApply: (data: NicheResult) => void;
 }
 
 export function NicheAssistant({ puzzleType, onApply }: NicheAssistantProps) {
@@ -16,7 +18,7 @@ export function NicheAssistant({ puzzleType, onApply }: NicheAssistantProps) {
   const getNicheData = useGetNicheData();
   const [selectedNiche, setSelectedNiche] = useState<string>("");
 
-  const filteredNiches = niches?.filter(n => n.puzzleType === puzzleType) || [];
+  const filteredNiches: NicheInfo[] = niches?.filter((n: NicheInfo) => n.puzzleType === puzzleType) ?? [];
 
   const handleLoad = async () => {
     if (!selectedNiche) return;
@@ -72,7 +74,7 @@ export function NicheAssistant({ puzzleType, onApply }: NicheAssistantProps) {
             <div className="text-xs text-muted-foreground mt-2">
               <strong>Keywords to use in KDP:</strong>
               <div className="mt-1 flex flex-wrap gap-1">
-                {getNicheData.data.keywords.map((k,i) => (
+                {getNicheData.data.keywords.map((k: string, i: number) => (
                   <span key={i} className="bg-background px-1.5 py-0.5 rounded border">{k}</span>
                 ))}
               </div>

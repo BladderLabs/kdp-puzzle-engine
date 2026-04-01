@@ -194,6 +194,23 @@ export const GenerateBookResponse = zod.object({
 });
 
 /**
+ * @summary Render interior HTML to PDF via Puppeteer
+ */
+export const RenderInteriorPdfBody = zod.object({
+  html: zod.string(),
+  pages: zod.number().optional(),
+});
+
+/**
+ * @summary Render full-wrap cover HTML to PDF via Puppeteer
+ */
+export const RenderCoverPdfBody = zod.object({
+  html: zod.string(),
+  fullW: zod.number(),
+  fullH: zod.number(),
+});
+
+/**
  * @summary Generate 2-3 sample puzzles as JSON for live browser preview
  */
 export const PreviewPuzzlesBody = zod.object({

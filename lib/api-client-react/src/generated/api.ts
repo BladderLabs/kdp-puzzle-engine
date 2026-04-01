@@ -26,6 +26,8 @@ import type {
   NicheInfo,
   NicheRequest,
   NicheResult,
+  PdfCoverRequest,
+  PdfInteriorRequest,
   PreviewRequest,
   PreviewResult,
 } from "./api.schemas";
@@ -681,6 +683,178 @@ export const useGenerateBook = <
   TContext
 > => {
   return useMutation(getGenerateBookMutationOptions(options));
+};
+
+/**
+ * @summary Render interior HTML to PDF via Puppeteer
+ */
+export const getRenderInteriorPdfUrl = () => {
+  return `/api/pdf/interior`;
+};
+
+export const renderInteriorPdf = async (
+  pdfInteriorRequest: PdfInteriorRequest,
+  options?: RequestInit,
+): Promise<Blob> => {
+  return customFetch<Blob>(getRenderInteriorPdfUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(pdfInteriorRequest),
+  });
+};
+
+export const getRenderInteriorPdfMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof renderInteriorPdf>>,
+    TError,
+    { data: BodyType<PdfInteriorRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof renderInteriorPdf>>,
+  TError,
+  { data: BodyType<PdfInteriorRequest> },
+  TContext
+> => {
+  const mutationKey = ["renderInteriorPdf"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof renderInteriorPdf>>,
+    { data: BodyType<PdfInteriorRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return renderInteriorPdf(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RenderInteriorPdfMutationResult = NonNullable<
+  Awaited<ReturnType<typeof renderInteriorPdf>>
+>;
+export type RenderInteriorPdfMutationBody = BodyType<PdfInteriorRequest>;
+export type RenderInteriorPdfMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Render interior HTML to PDF via Puppeteer
+ */
+export const useRenderInteriorPdf = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof renderInteriorPdf>>,
+    TError,
+    { data: BodyType<PdfInteriorRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof renderInteriorPdf>>,
+  TError,
+  { data: BodyType<PdfInteriorRequest> },
+  TContext
+> => {
+  return useMutation(getRenderInteriorPdfMutationOptions(options));
+};
+
+/**
+ * @summary Render full-wrap cover HTML to PDF via Puppeteer
+ */
+export const getRenderCoverPdfUrl = () => {
+  return `/api/pdf/cover`;
+};
+
+export const renderCoverPdf = async (
+  pdfCoverRequest: PdfCoverRequest,
+  options?: RequestInit,
+): Promise<Blob> => {
+  return customFetch<Blob>(getRenderCoverPdfUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(pdfCoverRequest),
+  });
+};
+
+export const getRenderCoverPdfMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof renderCoverPdf>>,
+    TError,
+    { data: BodyType<PdfCoverRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof renderCoverPdf>>,
+  TError,
+  { data: BodyType<PdfCoverRequest> },
+  TContext
+> => {
+  const mutationKey = ["renderCoverPdf"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof renderCoverPdf>>,
+    { data: BodyType<PdfCoverRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return renderCoverPdf(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RenderCoverPdfMutationResult = NonNullable<
+  Awaited<ReturnType<typeof renderCoverPdf>>
+>;
+export type RenderCoverPdfMutationBody = BodyType<PdfCoverRequest>;
+export type RenderCoverPdfMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Render full-wrap cover HTML to PDF via Puppeteer
+ */
+export const useRenderCoverPdf = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof renderCoverPdf>>,
+    TError,
+    { data: BodyType<PdfCoverRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof renderCoverPdf>>,
+  TError,
+  { data: BodyType<PdfCoverRequest> },
+  TContext
+> => {
+  return useMutation(getRenderCoverPdfMutationOptions(options));
 };
 
 /**

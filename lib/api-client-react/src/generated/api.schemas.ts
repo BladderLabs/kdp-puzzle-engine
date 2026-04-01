@@ -206,6 +206,17 @@ export interface NicheResult {
   recommendedCount?: number;
 }
 
+export interface PdfInteriorRequest {
+  html: string;
+  pages?: number;
+}
+
+export interface PdfCoverRequest {
+  html: string;
+  fullW: number;
+  fullH: number;
+}
+
 export interface NicheInfo {
   key: string;
   label: string;
