@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "KDP Puzzle Engine"
+version = "1.0.0"
+id = "artifacts/kdp-engine"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24210
+
+[services.development]
+run = "pnpm --filter @workspace/kdp-engine run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/kdp-engine", "run", "build" ]
+publicDir = "artifacts/kdp-engine/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24210"
+BASE_PATH = "/"

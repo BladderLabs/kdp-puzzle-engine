@@ -1,0 +1,132 @@
+import { Router, type IRouter } from "express";
+import { eq } from "drizzle-orm";
+import { db, booksTable } from "@workspace/db";
+import {
+  CreateBookBody,
+  UpdateBookBody,
+  GetBookParams,
+  UpdateBookParams,
+  DeleteBookParams,
+  CloneBookParams,
+} from "@workspace/api-zod";
+
+const router: IRouter = Router();
+
+router.get("/books", async (req, res) => {
+  try {
+    const books = await db.select().from(booksTable).orderBy(booksTable.updatedAt);
+    res.json(books.map(b => ({ ...b, words: b.words ?? [] })));
+  } catch (err) {
+    req.log.error({ err }, "Failed to list books");
+    res.status(500).json({ error: "Failed to list books" });
+  }
+});
+
+router.post("/books", async (req, res) => {
+  try {
+    const data = CreateBookBody.parse(req.body);
+    const [book] = await db.insert(booksTable).values({
+      title: data.title,
+      subtitle: data.subtitle ?? null,
+      author: data.author ?? null,
+      puzzleType: data.puzzleType ?? "Word Search",
+      puzzleCount: data.puzzleCount ?? 100,
+      difficulty: data.difficulty ?? "Medium",
+      largePrint: data.largePrint ?? true,
+      paperType: data.paperType ?? "white",
+      theme: data.theme ?? "midnight",
+      coverStyle: data.coverStyle ?? "classic",
+      backDescription: data.backDescription ?? null,
+      words: (data.words as string[]) ?? [],
+      niche: data.niche ?? null,
+      volumeNumber: data.volumeNumber ?? 1,
+    }).returning();
+    res.status(201).json({ ...book, words: book.words ?? [] });
+  } catch (err) {
+    req.log.error({ err }, "Failed to create book");
+    res.status(400).json({ error: "Failed to create book" });
+  }
+});
+
+router.get("/books/:id", async (req, res) => {
+  try {
+    const { id } = GetBookParams.parse({ id: Number(req.params.id) });
+    const [book] = await db.select().from(booksTable).where(eq(booksTable.id, id));
+    if (!book) { res.status(404).json({ error: "Book not found" }); return; }
+    res.json({ ...book, words: book.words ?? [] });
+  } catch (err) {
+    req.log.error({ err }, "Failed to get book");
+    res.status(500).json({ error: "Failed to get book" });
+  }
+});
+
+router.put("/books/:id", async (req, res) => {
+  try {
+    const { id } = UpdateBookParams.parse({ id: Number(req.params.id) });
+    const data = UpdateBookBody.parse(req.body);
+    const [book] = await db.update(booksTable).set({
+      title: data.title,
+      subtitle: data.subtitle ?? null,
+      author: data.author ?? null,
+      puzzleType: data.puzzleType ?? "Word Search",
+      puzzleCount: data.puzzleCount ?? 100,
+      difficulty: data.difficulty ?? "Medium",
+      largePrint: data.largePrint ?? true,
+      paperType: data.paperType ?? "white",
+      theme: data.theme ?? "midnight",
+      coverStyle: data.coverStyle ?? "classic",
+      backDescription: data.backDescription ?? null,
+      words: (data.words as string[]) ?? [],
+      niche: data.niche ?? null,
+      volumeNumber: data.volumeNumber ?? 1,
+      updatedAt: new Date(),
+    }).where(eq(booksTable.id, id)).returning();
+    if (!book) { res.status(404).json({ error: "Book not found" }); return; }
+    res.json({ ...book, words: book.words ?? [] });
+  } catch (err) {
+    req.log.error({ err }, "Failed to update book");
+    res.status(500).json({ error: "Failed to update book" });
+  }
+});
+
+router.delete("/books/:id", async (req, res) => {
+  try {
+    const { id } = DeleteBookParams.parse({ id: Number(req.params.id) });
+    await db.delete(booksTable).where(eq(booksTable.id, id));
+    res.status(204).end();
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete book");
+    res.status(500).json({ error: "Failed to delete book" });
+  }
+});
+
+router.post("/books/:id/clone", async (req, res) => {
+  try {
+    const { id } = CloneBookParams.parse({ id: Number(req.params.id) });
+    const [source] = await db.select().from(booksTable).where(eq(booksTable.id, id));
+    if (!source) { res.status(404).json({ error: "Book not found" }); return; }
+    const nextVol = (source.volumeNumber ?? 1) + 1;
+    const [clone] = await db.insert(booksTable).values({
+      title: source.title,
+      subtitle: source.subtitle,
+      author: source.author,
+      puzzleType: source.puzzleType,
+      puzzleCount: source.puzzleCount,
+      difficulty: source.difficulty,
+      largePrint: source.largePrint,
+      paperType: source.paperType,
+      theme: source.theme,
+      coverStyle: source.coverStyle,
+      backDescription: source.backDescription,
+      words: source.words ?? [],
+      niche: source.niche,
+      volumeNumber: nextVol,
+    }).returning();
+    res.status(201).json({ ...clone, words: clone.words ?? [] });
+  } catch (err) {
+    req.log.error({ err }, "Failed to clone book");
+    res.status(500).json({ error: "Failed to clone book" });
+  }
+});
+
+export default router;

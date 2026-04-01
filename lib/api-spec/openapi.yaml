@@ -1,22 +1,27 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: KDP Puzzle Engine API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: books
+    description: Book project management
+  - name: generate
+    description: PDF and puzzle generation
+  - name: niche
+    description: Niche intelligence
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +29,200 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /books:
+    get:
+      operationId: listBooks
+      tags: [books]
+      summary: List all saved book projects
+      responses:
+        "200":
+          description: List of book projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Book"
+
+    post:
+      operationId: createBook
+      tags: [books]
+      summary: Save a new book project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBookBody"
+      responses:
+        "201":
+          description: Created book
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+
+  /books/{id}:
+    get:
+      operationId: getBook
+      tags: [books]
+      summary: Get a book project by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Book project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    put:
+      operationId: updateBook
+      tags: [books]
+      summary: Update a book project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBookBody"
+      responses:
+        "200":
+          description: Updated book
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: deleteBook
+      tags: [books]
+      summary: Delete a book project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /books/{id}/clone:
+    post:
+      operationId: cloneBook
+      tags: [books]
+      summary: Clone a book project as a new volume
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Cloned book
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+
+  /generate:
+    post:
+      operationId: generateBook
+      tags: [generate]
+      summary: Generate interior and cover HTML for a book
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookConfig"
+      responses:
+        "200":
+          description: Generated HTML and metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateResult"
+
+  /puzzles/preview:
+    post:
+      operationId: previewPuzzles
+      tags: [generate]
+      summary: Generate 2-3 sample puzzles as JSON for live browser preview
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PreviewRequest"
+      responses:
+        "200":
+          description: Sample puzzle data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreviewResult"
+
+  /niche-assistant:
+    post:
+      operationId: getNicheData
+      tags: [niche]
+      summary: Get themed words, title ideas, and KDP keywords for a niche
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NicheRequest"
+      responses:
+        "200":
+          description: Niche intelligence data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NicheResult"
+
+  /niches:
+    get:
+      operationId: listNiches
+      tags: [niche]
+      summary: List all available niches
+      responses:
+        "200":
+          description: List of niche keys and labels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NicheInfo"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +233,367 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    BookConfig:
+      type: object
+      properties:
+        title:
+          type: string
+        subtitle:
+          type: string
+        author:
+          type: string
+        puzzleType:
+          type: string
+          enum: [Word Search, Sudoku, Maze, Number Search, Cryptogram]
+        puzzleCount:
+          type: integer
+        difficulty:
+          type: string
+          enum: [Easy, Medium, Hard]
+        largePrint:
+          type: boolean
+        paperType:
+          type: string
+          enum: [white, cream]
+        theme:
+          type: string
+          enum: [midnight, forest, crimson, ocean, violet, slate, rose, ember]
+        coverStyle:
+          type: string
+          enum: [classic, geometric, luxury, bold, minimal, retro]
+        backDescription:
+          type: string
+        words:
+          type: array
+          items:
+            type: string
+        series:
+          type: string
+        volumeNumber:
+          type: integer
+      required:
+        - title
+        - puzzleType
+
+    CreateBookBody:
+      type: object
+      properties:
+        title:
+          type: string
+        subtitle:
+          type: string
+        author:
+          type: string
+        puzzleType:
+          type: string
+        puzzleCount:
+          type: integer
+        difficulty:
+          type: string
+        largePrint:
+          type: boolean
+        paperType:
+          type: string
+        theme:
+          type: string
+        coverStyle:
+          type: string
+        backDescription:
+          type: string
+        words:
+          type: array
+          items:
+            type: string
+        niche:
+          type: string
+        volumeNumber:
+          type: integer
+      required:
+        - title
+        - puzzleType
+
+    Book:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        subtitle:
+          type: string
+        author:
+          type: string
+        puzzleType:
+          type: string
+        puzzleCount:
+          type: integer
+        difficulty:
+          type: string
+        largePrint:
+          type: boolean
+        paperType:
+          type: string
+        theme:
+          type: string
+        coverStyle:
+          type: string
+        backDescription:
+          type: string
+        words:
+          type: array
+          items:
+            type: string
+        niche:
+          type: string
+        volumeNumber:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - puzzleType
+        - createdAt
+        - updatedAt
+
+    GenerateResult:
+      type: object
+      properties:
+        interiorHtml:
+          type: string
+        totalPages:
+          type: integer
+        coverHtml:
+          type: string
+        coverDims:
+          $ref: "#/components/schemas/CoverDims"
+      required:
+        - interiorHtml
+        - totalPages
+        - coverHtml
+        - coverDims
+
+    CoverDims:
+      type: object
+      properties:
+        fullW:
+          type: number
+        fullH:
+          type: number
+        spineW:
+          type: number
+      required:
+        - fullW
+        - fullH
+        - spineW
+
+    PreviewRequest:
+      type: object
+      properties:
+        puzzleType:
+          type: string
+        difficulty:
+          type: string
+        largePrint:
+          type: boolean
+        words:
+          type: array
+          items:
+            type: string
+        count:
+          type: integer
+      required:
+        - puzzleType
+
+    PreviewResult:
+      type: object
+      properties:
+        puzzles:
+          type: array
+          items:
+            $ref: "#/components/schemas/PuzzleData"
+        puzzleType:
+          type: string
+      required:
+        - puzzles
+        - puzzleType
+
+    PuzzleData:
+      type: object
+      properties:
+        type:
+          type: string
+        wordSearch:
+          $ref: "#/components/schemas/WordSearchData"
+        sudoku:
+          $ref: "#/components/schemas/SudokuData"
+        maze:
+          $ref: "#/components/schemas/MazeData"
+        numberSearch:
+          $ref: "#/components/schemas/NumberSearchData"
+        cryptogram:
+          $ref: "#/components/schemas/CryptogramData"
+
+    WordSearchData:
+      type: object
+      properties:
+        grid:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+        placed:
+          type: array
+          items:
+            type: string
+        pSet:
+          type: object
+          additionalProperties:
+            type: boolean
+      required:
+        - grid
+        - placed
+        - pSet
+
+    SudokuData:
+      type: object
+      properties:
+        puzzle:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+        solution:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+      required:
+        - puzzle
+        - solution
+
+    MazeData:
+      type: object
+      properties:
+        grid:
+          type: array
+          items:
+            type: array
+            items:
+              type: integer
+        rows:
+          type: integer
+        cols:
+          type: integer
+      required:
+        - grid
+        - rows
+        - cols
+
+    NumberSearchData:
+      type: object
+      properties:
+        grid:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+        placed:
+          type: array
+          items:
+            type: string
+        pSet:
+          type: object
+          additionalProperties:
+            type: boolean
+      required:
+        - grid
+        - placed
+        - pSet
+
+    CryptogramData:
+      type: object
+      properties:
+        cipher:
+          type: string
+        plain:
+          type: string
+        key:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+        - cipher
+        - plain
+        - key
+
+    NicheRequest:
+      type: object
+      properties:
+        niche:
+          type: string
+      required:
+        - niche
+
+    NicheResult:
+      type: object
+      properties:
+        niche:
+          type: string
+        label:
+          type: string
+        words:
+          type: array
+          items:
+            type: string
+        titles:
+          type: array
+          items:
+            type: string
+        keywords:
+          type: array
+          items:
+            type: string
+        backBlurb:
+          type: string
+        recommendedDifficulty:
+          type: string
+        recommendedCount:
+          type: integer
+      required:
+        - niche
+        - label
+        - words
+        - titles
+        - keywords
+        - backBlurb
+
+    NicheInfo:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        puzzleType:
+          type: string
+      required:
+        - key
+        - label
+        - puzzleType
