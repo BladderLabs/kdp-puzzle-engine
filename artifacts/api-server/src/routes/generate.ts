@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { GenerateBookBody, PreviewPuzzlesBody } from "@workspace/api-zod";
+import { GenerateBookBody, PreviewPuzzlesBody, CoverPreviewBody } from "@workspace/api-zod";
 import { buildInteriorHTML, buildCoverHTML, computeTotalPages, type BuildOpts } from "../lib/html-builders";
 import { makeWordSearch, makeSudoku, makeMaze, makeNumberSearch, makeCryptogram, shuf, DEFWORDS } from "../lib/puzzles";
 import { htmlToPdf } from "../lib/pdf";
@@ -140,21 +140,21 @@ router.post("/pdf/cover", async (req, res) => {
  */
 router.post("/cover-preview", (req, res) => {
   try {
-    const b = req.body as Record<string, unknown>;
+    const b = CoverPreviewBody.parse(req.body);
     const opts: BuildOpts = {
-      title: typeof b.title === "string" ? b.title : "My Book",
-      subtitle: typeof b.subtitle === "string" ? b.subtitle : undefined,
-      author: typeof b.author === "string" ? b.author : undefined,
-      puzzleType: typeof b.puzzleType === "string" ? b.puzzleType : "Word Search",
-      puzzleCount: typeof b.puzzleCount === "number" ? b.puzzleCount : 100,
-      difficulty: typeof b.difficulty === "string" ? b.difficulty : "Medium",
+      title: b.title,
+      subtitle: b.subtitle ?? undefined,
+      author: b.author ?? undefined,
+      puzzleType: b.puzzleType ?? "Word Search",
+      puzzleCount: b.puzzleCount ?? 100,
+      difficulty: b.difficulty ?? "Medium",
       largePrint: b.largePrint !== false,
-      paperType: typeof b.paperType === "string" ? b.paperType : "white",
-      theme: typeof b.theme === "string" ? b.theme : "midnight",
-      coverStyle: typeof b.coverStyle === "string" ? b.coverStyle : "classic",
-      backDescription: typeof b.backDescription === "string" ? b.backDescription : undefined,
-      series: typeof b.series === "string" ? b.series : undefined,
-      volumeNumber: typeof b.volumeNumber === "number" ? b.volumeNumber : 0,
+      paperType: b.paperType ?? "white",
+      theme: b.theme ?? "midnight",
+      coverStyle: b.coverStyle ?? "classic",
+      backDescription: b.backDescription ?? undefined,
+      series: b.series ?? undefined,
+      volumeNumber: b.volumeNumber ?? 0,
     };
     const totalPages = computeTotalPages(opts);
     const cover = buildCoverHTML(opts, totalPages);

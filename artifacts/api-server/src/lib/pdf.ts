@@ -41,7 +41,7 @@ export async function htmlToPdf(
   const page = await browser.newPage();
   try {
     if (dpi > 96) {
-      const deviceScaleFactor = dpi / 96;
+      const deviceScaleFactor = Math.ceil(dpi / 96);
       await page.setViewport({
         width: Math.ceil(width * 96),
         height: Math.ceil(height * 96),
