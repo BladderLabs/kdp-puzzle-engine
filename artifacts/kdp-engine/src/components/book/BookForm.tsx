@@ -61,7 +61,7 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
       backDescription: initialValues?.backDescription || "",
       words: initialValues?.words || "",
       niche: initialValues?.niche || "",
-      volumeNumber: initialValues?.volumeNumber || 1,
+      volumeNumber: initialValues?.volumeNumber ?? 0,
     }
   });
 

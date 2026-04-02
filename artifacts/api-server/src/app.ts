@@ -26,9 +26,9 @@ app.use(
   }),
 );
 app.use(cors());
-// Large limit to accommodate full HTML interior (up to ~5MB for 100-puzzle books)
-app.use(express.json({ limit: "20mb" }));
-app.use(express.urlencoded({ extended: true, limit: "20mb" }));
+// 50 MB limit required — interior HTML for 100 puzzles can be 5-10 MB (spec requirement)
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 app.use("/api", router);
 

@@ -62,7 +62,8 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
   const DF = opts.difficulty || "Medium";
   const LP = opts.largePrint !== false;
   const yr = new Date().getFullYear();
-  const vol = opts.series === "3-Volume" ? "Volume 1 of 3" : opts.volumeNumber && opts.volumeNumber > 1 ? `Volume ${opts.volumeNumber}` : "";
+  const vn = opts.volumeNumber ?? 0;
+  const vol = vn === 1 ? "Volume 1 of 3" : vn === 2 ? "Volume 2 of 3" : vn === 3 ? "Volume 3 of 3" : "";
 
   const wpp = LP ? 16 : 20, gsz = LP ? 13 : 15;
   const wC = LP ? 32 : 27, wF = LP ? 16 : 13;
@@ -420,8 +421,10 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const title = escapeHtml(opts.title || "Book Title");
   const sub = escapeHtml(opts.subtitle || "");
   const author = escapeHtml(opts.author || "");
-  const backDesc = escapeHtml(opts.backDescription || `Enjoy ${opts.puzzleCount || 100} carefully crafted puzzles. Large print formatting for comfortable solving. Complete answer key included.`);
-  const meta = `${opts.puzzleCount || 100} ${opts.puzzleType || "Word Search"} Puzzles | ${opts.difficulty || "Medium"} | Large Print`;
+  const lpLabel = opts.largePrint !== false ? " Large print formatting for comfortable solving." : "";
+  const backDesc = escapeHtml(opts.backDescription || `Enjoy ${opts.puzzleCount || 100} carefully crafted ${opts.puzzleType || "Word Search"} puzzles.${lpLabel} Complete answer key included at the back.`);
+  const lpMeta = opts.largePrint !== false ? " | Large Print" : "";
+  const meta = `${opts.puzzleCount || 100} ${opts.puzzleType || "Word Search"} Puzzles | ${opts.difficulty || "Medium"}${lpMeta}`;
 
   const deco = `<div style="position:absolute;top:12%;right:8%;width:120px;height:120px;border:2px solid ${ac}22;border-radius:50%;"></div>` +
     `<div style="position:absolute;bottom:15%;left:6%;width:80px;height:80px;border:2px solid ${ac}18;border-radius:50%;"></div>` +

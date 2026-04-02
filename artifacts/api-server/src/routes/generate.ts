@@ -6,7 +6,6 @@ import { htmlToPdf } from "../lib/pdf";
 
 const router: IRouter = Router();
 
-/** Convert a validated GenerateBookBody into BuildOpts */
 function toOpts(data: ReturnType<typeof GenerateBookBody.parse>): BuildOpts {
   return {
     title: data.title,
@@ -21,10 +20,16 @@ function toOpts(data: ReturnType<typeof GenerateBookBody.parse>): BuildOpts {
     coverStyle: data.coverStyle ?? "classic",
     backDescription: data.backDescription ?? undefined,
     words: Array.isArray(data.words) ? (data.words as string[]) : [],
-    volumeNumber: data.volumeNumber ?? 1,
+    volumeNumber: data.volumeNumber ?? 0,
   };
 }
 
+/**
+ * POST /generate
+ * Step 1 of the spec flow — generates all puzzles, builds HTML for both interior
+ * and cover. Returns the HTML strings and dimensions. No PDF rendering happens here.
+ * The client then calls /pdf/interior and /pdf/cover with the returned HTML.
+ */
 router.post("/generate", async (req, res) => {
   try {
     const opts = toOpts(GenerateBookBody.parse(req.body));
@@ -33,6 +38,7 @@ router.post("/generate", async (req, res) => {
     res.json({
       interiorHtml: interior.html,
       totalPages: interior.totalPages,
+      interiorDims: { trimW: interior.trimW, trimH: interior.trimH },
       coverHtml: cover.html,
       coverDims: {
         fullW: cover.fullW,
@@ -46,12 +52,34 @@ router.post("/generate", async (req, res) => {
   }
 });
 
+/**
+ * POST /pdf/interior
+ * Step 2 of the spec flow — accepts { html, width, height } and renders to PDF.
+ * Also accepts full book opts (legacy / direct-render path) for backwards compat.
+ */
 router.post("/pdf/interior", async (req, res) => {
   try {
-    const opts = toOpts(GenerateBookBody.parse(req.body));
-    const interior = buildInteriorHTML(opts);
-    req.log.info(`Rendering interior PDF: ${interior.totalPages} pages, type=${opts.puzzleType}, size=${interior.trimW}x${interior.trimH}`);
-    const pdf = await htmlToPdf(interior.html, interior.trimW, interior.trimH);
+    let html: string;
+    let w: number;
+    let h: number;
+
+    if (typeof req.body.html === "string") {
+      // Spec flow: client already has the HTML from /generate
+      html = req.body.html;
+      w = typeof req.body.width === "number" ? req.body.width : 8.5;
+      h = typeof req.body.height === "number" ? req.body.height : 11;
+      req.log.info(`Rendering interior PDF from HTML blob: ${w}"x${h}"`);
+    } else {
+      // Legacy / direct path: regenerate from opts
+      const opts = toOpts(GenerateBookBody.parse(req.body));
+      const interior = buildInteriorHTML(opts);
+      html = interior.html;
+      w = interior.trimW;
+      h = interior.trimH;
+      req.log.info(`Rendering interior PDF (direct): ${interior.totalPages} pages, ${w}"x${h}"`);
+    }
+
+    const pdf = await htmlToPdf(html, w, h);
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": 'attachment; filename="interior.pdf"',
@@ -64,13 +92,35 @@ router.post("/pdf/interior", async (req, res) => {
   }
 });
 
+/**
+ * POST /pdf/cover
+ * Step 3 of the spec flow — accepts { html, fullW, fullH } and renders to PDF.
+ * Also accepts full book opts (legacy / direct-render path) for backwards compat.
+ */
 router.post("/pdf/cover", async (req, res) => {
   try {
-    const opts = toOpts(GenerateBookBody.parse(req.body));
-    const totalPages = computeTotalPages(opts);
-    const cover = buildCoverHTML(opts, totalPages);
-    req.log.info(`Rendering cover PDF: ${cover.fullW.toFixed(3)}"x${cover.fullH.toFixed(3)}", type=${opts.puzzleType}`);
-    const pdf = await htmlToPdf(cover.html, cover.fullW, cover.fullH);
+    let html: string;
+    let fullW: number;
+    let fullH: number;
+
+    if (typeof req.body.html === "string") {
+      // Spec flow: client already has the HTML from /generate
+      html = req.body.html;
+      fullW = req.body.fullW;
+      fullH = req.body.fullH;
+      req.log.info(`Rendering cover PDF from HTML blob: ${fullW?.toFixed(3)}"x${fullH?.toFixed(3)}"`);
+    } else {
+      // Legacy / direct path: regenerate from opts
+      const opts = toOpts(GenerateBookBody.parse(req.body));
+      const totalPages = computeTotalPages(opts);
+      const cover = buildCoverHTML(opts, totalPages);
+      html = cover.html;
+      fullW = cover.fullW;
+      fullH = cover.fullH;
+      req.log.info(`Rendering cover PDF (direct): ${fullW.toFixed(3)}"x${fullH.toFixed(3)}"`);
+    }
+
+    const pdf = await htmlToPdf(html, fullW, fullH);
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": 'attachment; filename="cover.pdf"',
