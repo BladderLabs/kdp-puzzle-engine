@@ -129,23 +129,14 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
                   )} />
                 </div>
 
-                {/* Row 2 — Author + Volume */}
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField control={form.control} name="author" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Author</FormLabel>
-                      <FormControl><Input placeholder="Your name or pen name" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="volumeNumber" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Volume #</FormLabel>
-                      <FormControl><Input type="number" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                </div>
+                {/* Row 2 — Author */}
+                <FormField control={form.control} name="author" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Author</FormLabel>
+                    <FormControl><Input placeholder="Your name or pen name" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
 
                 <div className="border-t" />
 
@@ -212,10 +203,48 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
                   )} />
                 </div>
 
-                {/* Row 5 — Page & spine estimate */}
-                <div className="text-xs text-muted-foreground bg-muted/50 rounded px-3 py-2">
-                  Est. {totP} pages · Spine width {spineW.toFixed(3)}"
-                </div>
+                {/* Row 5 — Series */}
+                <FormField control={form.control} name="volumeNumber" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Series / Volume</FormLabel>
+                    <div className="flex gap-2">
+                      {[
+                        { label: "Single Book", val: 0 },
+                        { label: "Vol 1 of 3", val: 1 },
+                        { label: "Vol 2 of 3", val: 2 },
+                        { label: "Vol 3 of 3", val: 3 },
+                      ].map(({ label, val }) => (
+                        <button
+                          type="button"
+                          key={val}
+                          onClick={() => field.onChange(val)}
+                          className={`flex-1 py-1.5 text-xs rounded border transition-colors ${
+                            field.value === val
+                              ? "bg-amber-500 text-black border-amber-500 font-bold"
+                              : "border-border text-muted-foreground hover:border-amber-500/40"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </FormItem>
+                )} />
+
+                {/* Live dimensions display */}
+                {(() => {
+                  const trimW = largePrint ? 8.5 : 6;
+                  const trimH = largePrint ? 11 : 9;
+                  const fullW = 0.125 + trimW + spineW + trimW + 0.125;
+                  const fullH = (trimH + 0.25).toFixed(3);
+                  return (
+                    <div className="font-mono text-xs text-amber-500/70 bg-amber-500/5 border border-amber-500/10 rounded px-3 py-2 leading-relaxed">
+                      Interior: ~{totP} pages &nbsp;·&nbsp;
+                      Cover: {fullW.toFixed(3)} × {fullH} in &nbsp;·&nbsp;
+                      Spine: {spineW.toFixed(3)} in
+                    </div>
+                  );
+                })()}
 
                 {/* Word list (Word Search / Cryptogram only) */}
                 {(puzzleType === "Word Search" || puzzleType === "Cryptogram") && (
