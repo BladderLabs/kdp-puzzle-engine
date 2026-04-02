@@ -55,6 +55,7 @@ export function GenerateBook() {
       coverStyle: (book.coverStyle as BookConfigCoverStyle) ?? "classic",
       backDescription: book.backDescription ?? undefined,
       words: book.words ?? [],
+      wordCategory: book.wordCategory ?? undefined,
       volumeNumber: book.volumeNumber ?? 0,
     };
 

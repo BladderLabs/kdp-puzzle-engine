@@ -68,7 +68,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
 
   const wpp = LP ? 16 : 20, gsz = LP ? 13 : 15;
   const wC = LP ? 34 : 28, wF = LP ? 17 : 14;
-  const sC = LP ? 64 : 54, sF = LP ? 26 : 20;
+  const sC = LP ? 64 : 58, sF = LP ? 26 : 20;
 
   // Word bank: prefer wordCategory, then custom words list, then General bank
   const categoryBank = opts.wordCategory && WORD_BANKS[opts.wordCategory] ? WORD_BANKS[opts.wordCategory] : null;
@@ -132,11 +132,11 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     : DF === "Hard" ? "\u25CF\u25CF\u25CF\u25CF\u25CF"
     : "\u25CF\u25CF\u25CF\u25CB\u25CB";
   const timeMap: Record<string, Record<string, string>> = {
-    "Word Search":   { Easy: "~5 min",  Medium: "~12 min", Hard: "~20 min" },
+    "Word Search":   { Easy: "~5 min",  Medium: "~10 min", Hard: "~20 min" },
     "Sudoku":        { Easy: "~10 min", Medium: "~20 min", Hard: "~40 min" },
     "Maze":          { Easy: "~3 min",  Medium: "~8 min",  Hard: "~15 min" },
-    "Number Search": { Easy: "~5 min",  Medium: "~12 min", Hard: "~20 min" },
-    "Cryptogram":    { Easy: "~5 min",  Medium: "~10 min", Hard: "~18 min" },
+    "Number Search": { Easy: "~5 min",  Medium: "~10 min", Hard: "~20 min" },
+    "Cryptogram":    { Easy: "~3 min",  Medium: "~8 min",  Hard: "~15 min" },
   };
   const timeEst = (timeMap[PT] || timeMap["Word Search"])[DF] || "~10 min";
   const progressBadge = `<span style="display:inline-flex;align-items:center;gap:5px;"><span style="letter-spacing:2px;font-size:9px;">${diffDots}</span><span style="font-size:7.5px;color:#888;">${timeEst}</span><span style="display:inline-block;width:10px;height:10px;border:1px solid #999;margin-left:3px;"></span></span>`;
