@@ -120,7 +120,7 @@ router.post("/pdf/cover", async (req, res) => {
       req.log.info(`Rendering cover PDF (direct): ${fullW.toFixed(3)}"x${fullH.toFixed(3)}"`);
     }
 
-    const pdf = await htmlToPdf(html, fullW, fullH);
+    const pdf = await htmlToPdf(html, fullW, fullH, 300);
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": 'attachment; filename="cover.pdf"',
@@ -130,6 +130,38 @@ router.post("/pdf/cover", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to render cover PDF");
     res.status(500).json({ error: "Failed to render cover PDF" });
+  }
+});
+
+/**
+ * POST /cover-preview
+ * Lightweight cover HTML generation for live browser preview.
+ * No puzzle generation needed — accepts cosmetic fields only.
+ */
+router.post("/cover-preview", (req, res) => {
+  try {
+    const b = req.body as Record<string, unknown>;
+    const opts: BuildOpts = {
+      title: typeof b.title === "string" ? b.title : "My Book",
+      subtitle: typeof b.subtitle === "string" ? b.subtitle : undefined,
+      author: typeof b.author === "string" ? b.author : undefined,
+      puzzleType: typeof b.puzzleType === "string" ? b.puzzleType : "Word Search",
+      puzzleCount: typeof b.puzzleCount === "number" ? b.puzzleCount : 100,
+      difficulty: typeof b.difficulty === "string" ? b.difficulty : "Medium",
+      largePrint: b.largePrint !== false,
+      paperType: typeof b.paperType === "string" ? b.paperType : "white",
+      theme: typeof b.theme === "string" ? b.theme : "midnight",
+      coverStyle: typeof b.coverStyle === "string" ? b.coverStyle : "classic",
+      backDescription: typeof b.backDescription === "string" ? b.backDescription : undefined,
+      series: typeof b.series === "string" ? b.series : undefined,
+      volumeNumber: typeof b.volumeNumber === "number" ? b.volumeNumber : 0,
+    };
+    const totalPages = computeTotalPages(opts);
+    const cover = buildCoverHTML(opts, totalPages);
+    res.json({ html: cover.html, coverDims: { fullW: cover.fullW, fullH: cover.fullH, spineW: cover.spineW } });
+  } catch (err) {
+    req.log.error({ err }, "Failed to generate cover preview");
+    res.status(400).json({ error: "Failed to generate cover preview" });
   }
 });
 

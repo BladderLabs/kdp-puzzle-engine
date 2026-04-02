@@ -34,12 +34,20 @@ async function getBrowser(): Promise<Browser> {
 export async function htmlToPdf(
   html: string,
   width: number,
-  height: number
+  height: number,
+  dpi: number = 96
 ): Promise<Buffer> {
   const browser = await getBrowser();
   const page = await browser.newPage();
   try {
-    // Allow all external requests (needed for Google Fonts to load)
+    if (dpi > 96) {
+      const deviceScaleFactor = dpi / 96;
+      await page.setViewport({
+        width: Math.ceil(width * 96),
+        height: Math.ceil(height * 96),
+        deviceScaleFactor,
+      });
+    }
     await page.setContent(html, { waitUntil: "networkidle0", timeout: 120000 });
     const pdf = await page.pdf({
       width: width.toFixed(4) + "in",

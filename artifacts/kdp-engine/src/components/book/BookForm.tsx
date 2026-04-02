@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { NicheAssistant } from "./NicheAssistant";
 import { PreviewPane } from "./PreviewPane";
+import { CoverPreview } from "./CoverPreview";
 import type { NicheResult } from "@workspace/api-client-react";
 
 const PUZZLE_TYPES = ["Word Search", "Sudoku", "Maze", "Number Search", "Cryptogram"] as const;
@@ -321,6 +322,19 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
 
       {/* ── Right sidebar ── */}
       <div className="xl:col-span-1 space-y-4">
+        <CoverPreview
+          title={form.watch("title")}
+          subtitle={form.watch("subtitle")}
+          author={form.watch("author")}
+          theme={form.watch("theme")}
+          coverStyle={form.watch("coverStyle")}
+          volumeNumber={form.watch("volumeNumber")}
+          puzzleCount={form.watch("puzzleCount")}
+          difficulty={form.watch("difficulty")}
+          largePrint={form.watch("largePrint")}
+          paperType={form.watch("paperType")}
+          backDescription={form.watch("backDescription")}
+        />
         <PreviewPane
           puzzleType={puzzleType}
           difficulty={form.watch("difficulty")}

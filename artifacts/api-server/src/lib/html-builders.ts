@@ -434,14 +434,14 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const sellDiv = `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:${tx}b3;text-transform:uppercase;margin-bottom:12px;">${sellPts}</div>`;
 
   const deco =
-    `<div style="position:absolute;bottom:8%;right:5%;width:140px;height:140px;border:2px solid ${ac};border-radius:50%;opacity:0.12;"></div>` +
-    `<div style="position:absolute;top:8%;left:5%;width:90px;height:90px;border:2px solid ${ac};border-radius:50%;opacity:0.10;"></div>` +
-    `<div style="position:absolute;top:30%;right:10%;width:40px;height:40px;border:1.5px solid ${ac};border-radius:50%;opacity:0.08;"></div>` +
-    `<div style="position:absolute;top:12%;right:8%;width:60px;height:60px;border:1.5px solid ${ac};transform:rotate(45deg);opacity:0.10;"></div>` +
-    `<div style="position:absolute;bottom:12%;left:7%;width:35px;height:35px;border:1px solid ${ac};transform:rotate(30deg);opacity:0.07;"></div>` +
-    `<div style="position:absolute;top:53%;left:50%;transform:translateX(-50%);width:200px;height:1px;background:${ac};opacity:0.15;"></div>` +
-    `<div style="position:absolute;bottom:14%;left:calc(50% - 120px);width:8px;height:8px;background:${ac};border-radius:50%;opacity:0.20;"></div>` +
-    `<div style="position:absolute;bottom:14%;left:calc(50% + 112px);width:8px;height:8px;background:${ac};border-radius:50%;opacity:0.20;"></div>`;
+    `<div style="position:absolute;bottom:8%;right:5%;width:140px;height:140px;border:2px solid ${ac};border-radius:50%;opacity:0.28;"></div>` +
+    `<div style="position:absolute;top:8%;left:5%;width:90px;height:90px;border:2px solid ${ac};border-radius:50%;opacity:0.25;"></div>` +
+    `<div style="position:absolute;top:30%;right:10%;width:40px;height:40px;border:1.5px solid ${ac};border-radius:50%;opacity:0.22;"></div>` +
+    `<div style="position:absolute;top:12%;right:8%;width:60px;height:60px;border:1.5px solid ${ac};transform:rotate(45deg);opacity:0.25;"></div>` +
+    `<div style="position:absolute;bottom:12%;left:7%;width:35px;height:35px;border:1px solid ${ac};transform:rotate(30deg);opacity:0.20;"></div>` +
+    `<div style="position:absolute;top:53%;left:50%;transform:translateX(-50%);width:200px;height:1px;background:${ac};opacity:0.30;"></div>` +
+    `<div style="position:absolute;bottom:14%;left:calc(50% - 120px);width:8px;height:8px;background:${ac};border-radius:50%;opacity:0.35;"></div>` +
+    `<div style="position:absolute;bottom:14%;left:calc(50% + 112px);width:8px;height:8px;background:${ac};border-radius:50%;opacity:0.35;"></div>`;
 
   const back = `<div style="position:absolute;left:${bleed}in;top:${bleed}in;width:${trimW}in;height:${trimH}in;background:${bg};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5in 1in;text-align:center;box-sizing:border-box;">` +
     `<div style="font-family:Lora,serif;font-size:16px;color:${tx}cc;line-height:1.8;margin-bottom:40px;">${backDesc}</div>` +
@@ -473,7 +473,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
     front = `<div style="${fb}text-align:center;padding:1in;">${deco}${seriesBadge}<div style="position:relative;z-index:1;">${opts.puzzleType ? `<div style="font-family:'Source Code Pro',monospace;font-size:11px;letter-spacing:6px;text-transform:uppercase;color:${ac};margin-bottom:24px;">${opts.puzzleType}</div>` : ""}<div style="width:56px;height:2px;background:${ac};margin:0 auto 32px;"></div><div style="font-size:${titleWordCount <= 3 ? "58" : "52"}px;font-weight:700;color:${ac};line-height:1.15;margin-bottom:18px;padding:0 0.3in;">${title}</div><div style="font-size:17px;font-style:italic;color:${tx}e6;letter-spacing:0.5px;margin-bottom:16px;">${sub}</div>${sellDiv}<div style="width:56px;height:2px;background:${ac};margin:0 auto 22px;"></div><div style="font-family:'Source Code Pro',monospace;font-size:13px;letter-spacing:3px;color:${tx}e6;margin-bottom:16px;">${author}</div><div style="font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:3px;color:${tx}b3;">${meta}</div></div></div>`;
   }
 
-  const coverHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet"><style>*{margin:0;padding:0;box-sizing:border-box;}@page{size:${fullW.toFixed(4)}in ${fullH.toFixed(4)}in;margin:0;}body{width:${fullW.toFixed(4)}in;height:${fullH.toFixed(4)}in;overflow:hidden;position:relative;background:${bg};print-color-adjust:exact;-webkit-print-color-adjust:exact;}</style></head><body>${back}${spine}${front}</body></html>`;
+  const coverHtml = `<!DOCTYPE html><html style="background-color:${bg};"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet"><style>*{margin:0;padding:0;box-sizing:border-box;}@page{size:${fullW.toFixed(4)}in ${fullH.toFixed(4)}in;margin:0;}body{width:${fullW.toFixed(4)}in;height:${fullH.toFixed(4)}in;overflow:hidden;position:relative;background:${bg};print-color-adjust:exact;-webkit-print-color-adjust:exact;}</style></head><body>${back}${spine}${front}</body></html>`;
 
   return { html: coverHtml, fullW, fullH, spineW };
 }
