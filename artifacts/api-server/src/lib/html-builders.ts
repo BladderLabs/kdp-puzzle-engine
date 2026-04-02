@@ -435,14 +435,14 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const sellPts = `${opts.puzzleCount || 100} PUZZLES | ${(opts.difficulty || "MEDIUM").toUpperCase()} | SOLUTIONS INCLUDED`;
   const sellDiv = `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:${tx}dd;text-transform:uppercase;margin-bottom:12px;">${sellPts}</div>`;
 
-  // Audience/format callout derived from the book's own fields
-  // Only show "LARGE PRINT" when the field is explicitly true (not the default)
-  const isLP = opts.largePrint === true;
+  // Audience/format callout derived from the book's own fields.
+  // Matches the layout default: largePrint !== false means large-print is on.
+  const isLargePrint = opts.largePrint !== false;
   const ptBadge = (opts.puzzleType || "Puzzle Book").toUpperCase();
   const dfBadge = (opts.difficulty || "MEDIUM").toUpperCase();
-  const audienceParts: string[] = [];
-  if (isLP) audienceParts.push("LARGE PRINT");
-  audienceParts.push(`${dfBadge} LEVEL`);
+  const audienceParts: string[] = ["FOR ALL AGES"];
+  if (isLargePrint) audienceParts.push("LARGE PRINT");
+  audienceParts.push(`${dfBadge}`);
   audienceParts.push(ptBadge);
   const audienceLabel = audienceParts.join(" · ");
   const audienceCallout = `<div style="font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:4px;text-transform:uppercase;color:${ac};opacity:0.95;margin-bottom:16px;">${audienceLabel}</div>`;
