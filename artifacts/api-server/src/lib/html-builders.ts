@@ -283,6 +283,11 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     const pN = pS + i;
     const lb = "#" + String(i + 1).padStart(2, "0");
     const pz = puzzles[i] as Record<string, unknown>;
+    // LP ornamental separator embedded at bottom of every 10th puzzle page
+    // (inside the .pg div — no effect on page count or computeTotalPages)
+    const lpSep = (LP && (i + 1) % 10 === 0 && i < PC - 1)
+      ? `<div style="margin-top:10px;text-align:center;font-family:'Source Code Pro',monospace;font-size:11px;letter-spacing:8px;color:#ccc;border-top:1px solid #eee;padding-top:6px;">— ✦ —</div>`
+      : "";
 
     if (PT === "Word Search") {
       const ws = pz as { grid: string[][]; placed: string[] };
@@ -301,7 +306,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px 8px;">` +
         sortedWS.map(w => `<div style="font-family:'Source Code Pro',monospace;font-size:${LP ? 14 : 12}px;color:#222;padding:1px 0;">${escapeHtml(w)}</div>`).join("") +
         `</div></div>`;
-      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Word Search</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">WORD SEARCH &middot; ${DF.toUpperCase()}</span></div>${ornamentRule}${g}${ch}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Word Search</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">WORD SEARCH &middot; ${DF.toUpperCase()}</span></div>${ornamentRule}${g}${ch}${lpSep}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
 
     } else if (PT === "Sudoku") {
       const sd = pz as { puzzle: number[][] };
@@ -322,7 +327,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         g += "</tr>";
       }
       g += "</table>";
-      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Sudoku</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">SUDOKU &middot; ${DF.toUpperCase()}</span></div>${ornamentRule}${g}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Sudoku</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">SUDOKU &middot; ${DF.toUpperCase()}</span></div>${ornamentRule}${g}${lpSep}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
 
     } else if (PT === "Maze") {
       const mz = pz as { grid: number[][]; rows: number; cols: number };
@@ -345,7 +350,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         g += "</tr>";
       }
       g += "</table>";
-      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Maze</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">MAZE &middot; ${DF.toUpperCase()}</span></div>${ornamentRule}${g}<div style="font-family:'Source Code Pro',monospace;font-size:9px;color:#777;margin-top:6px;text-align:center;">S = Start &nbsp;&nbsp; F = Finish</div></div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Maze</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">MAZE &middot; ${DF.toUpperCase()}</span></div>${ornamentRule}${g}<div style="font-family:'Source Code Pro',monospace;font-size:9px;color:#777;margin-top:6px;text-align:center;">S = Start &nbsp;&nbsp; F = Finish</div>${lpSep}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
 
     } else if (PT === "Number Search") {
       const ns = pz as { grid: string[][]; placed: string[] };
@@ -364,7 +369,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px 8px;">` +
         sortedNS.map(s => `<div style="font-family:'Source Code Pro',monospace;font-size:${LP ? 14 : 12}px;color:#222;padding:1px 0;">${escapeHtml(String(s))}</div>`).join("") +
         `</div></div>`;
-      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Number Search</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">NUMBER SEARCH &middot; ${DF.toUpperCase()}</span></div>${ornamentRule}${g}${ch}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Number Search</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">NUMBER SEARCH &middot; ${DF.toUpperCase()}</span></div>${ornamentRule}${g}${ch}${lpSep}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
 
     } else if (PT === "Cryptogram") {
       const cg = pz as { cipher: string; plain: string };
@@ -381,12 +386,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
           `<td style="${cgCellStyle}"><div style="color:#666;">${l}</div><div style="border-bottom:1px solid #555;width:${LP ? 18 : 14}px;margin:2px auto;height:11px;"></div></td>`
         ).join("") + `</tr>` +
         `</table>`;
-      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>Cryptogram</span></div><div style="padding-top:0.2in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">CRYPTOGRAM</span></div>${ornamentRule}<div style="font-family:'Source Code Pro',monospace;font-size:${LP ? 16 : 13}px;color:#222;line-height:2.8;word-spacing:4px;">${cipherDisplay}</div><div style="margin-top:20px;">${cgKeyTable}</div></div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
-    }
-
-    // Large-print ornamental separator every 10 puzzles (within page flow, no extra page)
-    if (LP && (i + 1) % 10 === 0 && i < PC - 1) {
-      html += `<div style="width:100%;text-align:center;font-family:'Source Code Pro',monospace;font-size:11px;letter-spacing:8px;color:#ccc;padding:6px 0;">— ✦ —</div>`;
+      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>Cryptogram</span></div><div style="padding-top:0.2in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">CRYPTOGRAM</span></div>${ornamentRule}<div style="font-family:'Source Code Pro',monospace;font-size:${LP ? 16 : 13}px;color:#222;line-height:2.8;word-spacing:4px;">${cipherDisplay}</div><div style="margin-top:20px;">${cgKeyTable}</div>${lpSep}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
     }
   }
 
