@@ -17,16 +17,18 @@ import type { NicheResult } from "@workspace/api-client-react";
 const PUZZLE_TYPES = ["Word Search", "Sudoku", "Maze", "Number Search", "Cryptogram"] as const;
 const DIFFICULTIES = ["Easy", "Medium", "Hard"] as const;
 const THEMES = [
-  { value: "midnight", label: "Midnight Gold" },
-  { value: "forest",   label: "Forest Ink" },
-  { value: "crimson",  label: "Crimson Fire" },
-  { value: "ocean",    label: "Ocean Sky" },
-  { value: "violet",   label: "Violet Glow" },
-  { value: "slate",    label: "Slate Orange" },
-  { value: "sunrise",  label: "Sunrise Pink" },
-  { value: "teal",     label: "Teal Wave" },
+  { value: "midnight",  label: "Midnight Gold" },
+  { value: "forest",    label: "Forest Ink" },
+  { value: "crimson",   label: "Crimson Fire" },
+  { value: "ocean",     label: "Ocean Sky" },
+  { value: "violet",    label: "Violet Glow" },
+  { value: "slate",     label: "Slate Orange" },
+  { value: "sunrise",   label: "Sunrise Pink" },
+  { value: "teal",      label: "Teal Wave" },
+  { value: "parchment", label: "Parchment" },
+  { value: "sky",       label: "Sky Blue" },
 ] as const;
-const COVER_STYLES = ["classic", "geometric", "luxury", "bold", "minimal", "retro"] as const;
+const COVER_STYLES = ["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth"] as const;
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),

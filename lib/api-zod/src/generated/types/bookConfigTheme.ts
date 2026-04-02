@@ -16,6 +16,8 @@ export const BookConfigTheme = {
   ocean: "ocean",
   violet: "violet",
   slate: "slate",
-  rose: "rose",
-  ember: "ember",
+  sunrise: "sunrise",
+  teal: "teal",
+  parchment: "parchment",
+  sky: "sky",
 } as const;

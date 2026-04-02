@@ -53,6 +53,8 @@ export const BookConfigTheme = {
   slate: "slate",
   sunrise: "sunrise",
   teal: "teal",
+  parchment: "parchment",
+  sky: "sky",
 } as const;
 
 export type BookConfigCoverStyle =
@@ -65,6 +67,7 @@ export const BookConfigCoverStyle = {
   bold: "bold",
   minimal: "minimal",
   retro: "retro",
+  warmth: "warmth",
 } as const;
 
 export interface BookConfig {

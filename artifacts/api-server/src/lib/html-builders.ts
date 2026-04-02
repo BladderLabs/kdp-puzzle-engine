@@ -375,17 +375,21 @@ interface CoverTheme {
   bg: string;
   ac: string;
   tx: string;
+  isDark: boolean;
+  gradTop: string;
 }
 
 const THEMES: Record<string, CoverTheme> = {
-  midnight: { bg: "#0A0A14", ac: "#F0C040", tx: "#F5F0E0" },
-  forest:   { bg: "#0A1208", ac: "#50C050", tx: "#E8F5E8" },
-  crimson:  { bg: "#1A0505", ac: "#FF6B35", tx: "#FFF0E8" },
-  ocean:    { bg: "#050A18", ac: "#40B0FF", tx: "#E0F0FF" },
-  violet:   { bg: "#120818", ac: "#B06AFF", tx: "#F0E8FF" },
-  slate:    { bg: "#0E0E0E", ac: "#FF9E3D", tx: "#FFF5E8" },
-  sunrise:  { bg: "#1A0A08", ac: "#FF4060", tx: "#FFF0F0" },
-  teal:     { bg: "#081210", ac: "#30D0B0", tx: "#E0FFF8" },
+  midnight:  { bg: "#0A0A14", ac: "#F0C040", tx: "#F5F0E0", isDark: true,  gradTop: "#1E1E3A" },
+  forest:    { bg: "#0A1208", ac: "#50C050", tx: "#E8F5E8", isDark: true,  gradTop: "#182814" },
+  crimson:   { bg: "#1A0505", ac: "#FF6B35", tx: "#FFF0E8", isDark: true,  gradTop: "#381010" },
+  ocean:     { bg: "#050A18", ac: "#40B0FF", tx: "#E0F0FF", isDark: true,  gradTop: "#101830" },
+  violet:    { bg: "#120818", ac: "#B06AFF", tx: "#F0E8FF", isDark: true,  gradTop: "#221428" },
+  slate:     { bg: "#0E0E0E", ac: "#FF9E3D", tx: "#FFF5E8", isDark: true,  gradTop: "#252525" },
+  sunrise:   { bg: "#1A0A08", ac: "#FF4060", tx: "#FFF0F0", isDark: true,  gradTop: "#321412" },
+  teal:      { bg: "#081210", ac: "#30D0B0", tx: "#E0FFF8", isDark: true,  gradTop: "#152822" },
+  parchment: { bg: "#F7EDD8", ac: "#7B3F00", tx: "#1E0F00", isDark: false, gradTop: "#F7EDD8" },
+  sky:       { bg: "#EBF4FF", ac: "#1A3A6B", tx: "#0D1B2A", isDark: false, gradTop: "#EBF4FF" },
 };
 
 export interface CoverBuildOpts extends BuildOpts {
@@ -406,6 +410,15 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const bg = opts.customBg || th.bg;
   const ac = opts.customAccent || th.ac;
   const tx = opts.customText || th.tx;
+  const isDark = th.isDark;
+  const gradTop = th.gradTop;
+
+  // Gradient for dark themes: subtle top-to-bottom lightening; light themes stay flat
+  const bgGrad = isDark ? `linear-gradient(to bottom, ${gradTop}, ${bg})` : bg;
+  // Title on bg panel — white for dark themes, dark tx for light themes
+  const titleOnBg = isDark ? "#ffffff" : tx;
+  // Sidebar meta must contrast with the accent-colored sidebar (bright for dark, dark for light)
+  const sidebarMeta = isDark ? "rgba(0,0,0,0.75)" : "rgba(255,255,255,0.85)";
 
   // Physical trim size matches interior: Large Print = 8.5"x11", Standard = 6"x9"
   const bleed = 0.125;
@@ -447,8 +460,15 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const audienceLabel = audienceParts.join(" · ");
   const audienceCallout = `<div style="font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:4px;text-transform:uppercase;color:${ac};opacity:0.95;margin-bottom:16px;">${audienceLabel}</div>`;
 
-  // Puzzle texture watermark: CSS letter/number grid at 5% opacity — no external assets
-  const txLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ 123456789 PUZZLE FIND BRAIN SOLVE THINK LOGIC GAME ";
+  // Puzzle-type-specific texture watermark at 5% opacity — no external assets
+  const txMap: Record<string, string> = {
+    "Word Search":   "ABCDEFGHIJKLMNOPQRSTUVWXYZ FINDWORDSEARCHPUZZLE ABCDEFGHIJKLMNOPQRSTUVWXYZ BRAINSOLVETHINKGAME ",
+    "Sudoku":        "123456789 147258369 293847165 618374529 456192738 789516234 SUDOKU SOLVE LOGIC ",
+    "Number Search": "1234567890 9876543210 1357924680 2468013579 5647382910 NUMBERSEARCH FIND ",
+    "Maze":          "│─┐┘└┌├┤┬┴┼│─┐┘└┌┤│─┐┘└┌ MAZE PATH SOLVE FIND NAVIGATE ",
+    "Cryptogram":    "A=Z B=Y C=X D=W E=V F=U G=T H=S I=R J=Q K=P L=O M=N N=M CIPHER CODE DECODE ",
+  };
+  const txLetters = txMap[opts.puzzleType || "Word Search"] || txMap["Word Search"];
   const puzzleTexture = `<div style="position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden;z-index:0;pointer-events:none;font-family:'Source Code Pro',monospace;font-size:13px;letter-spacing:5px;line-height:2;padding:0.3in;opacity:0.05;color:${ac};word-break:break-all;">${txLetters.repeat(20)}</div>`;
 
   // 8 decorative shapes — opacities 0.20–0.35
@@ -462,8 +482,8 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
     `<div style="position:absolute;bottom:14%;left:calc(50% - 120px);width:8px;height:8px;background:${ac};border-radius:50%;opacity:0.35;"></div>` +
     `<div style="position:absolute;bottom:14%;left:calc(50% + 112px);width:8px;height:8px;background:${ac};border-radius:50%;opacity:0.35;"></div>`;
 
-  // Back cover: boosted opacities throughout
-  const back = `<div style="position:absolute;left:${bleed}in;top:${bleed}in;width:${trimW}in;height:${trimH}in;background:${bg};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5in 1in;text-align:center;box-sizing:border-box;">` +
+  // Back cover: gradient background, boosted opacities throughout
+  const back = `<div style="position:absolute;left:${bleed}in;top:${bleed}in;width:${trimW}in;height:${trimH}in;background:${bgGrad};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5in 1in;text-align:center;box-sizing:border-box;">` +
     `<div style="font-family:Lora,serif;font-size:16px;color:${tx}dd;line-height:1.8;margin-bottom:40px;">${backDesc}</div>` +
     `<div style="width:50px;height:1px;background:${ac};margin-bottom:30px;"></div>` +
     `<div style="font-family:Lora,serif;font-size:13px;color:${tx};margin-bottom:12px;">${author}</div>` +
@@ -475,7 +495,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
     ? `<div style="position:absolute;left:${spineX}in;top:${bleed}in;width:${spineW}in;height:${trimH}in;background:${bg};display:flex;align-items:center;justify-content:center;"><div style="transform:rotate(-90deg);white-space:nowrap;font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:${tx};text-transform:uppercase;font-weight:600;">${title}${author ? " — " + author : ""}</div></div>`
     : `<div style="position:absolute;left:${spineX}in;top:${bleed}in;width:${spineW}in;height:${trimH}in;background:${bg};"></div>`;
 
-  const fb = `position:absolute;left:${frontX}in;top:${bleed}in;width:${trimW}in;height:${trimH}in;background:${bg};display:flex;flex-direction:column;align-items:center;justify-content:center;color:${tx};font-family:Lora,serif;box-sizing:border-box;overflow:hidden;`;
+  const fb = `position:absolute;left:${frontX}in;top:${bleed}in;width:${trimW}in;height:${trimH}in;background:${bgGrad};display:flex;flex-direction:column;align-items:center;justify-content:center;color:${tx};font-family:Lora,serif;box-sizing:border-box;overflow:hidden;`;
   const cs = opts.coverStyle || "classic";
 
   let front = "";
@@ -488,7 +508,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="text-align:center;z-index:2;position:relative;padding:0 0.8in;">` +
       `<div style="width:40px;height:1px;background:${ac};margin:0 auto 20px;"></div>` +
       `${audienceCallout}` +
-      `<div style="font-size:62px;font-weight:700;text-transform:uppercase;letter-spacing:4px;color:${tx};margin-bottom:18px;line-height:1.2;">${title}</div>` +
+      `<div style="font-family:'Oswald',sans-serif;font-size:62px;font-weight:700;text-transform:uppercase;letter-spacing:4px;color:${tx};margin-bottom:18px;line-height:1.2;">${title}</div>` +
       `<div style="width:40px;height:1px;background:${ac};margin:0 auto 16px;"></div>` +
       `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:14px;">${sub}</div>` +
       `${sellDiv}` +
@@ -497,7 +517,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `</div></div>`;
 
   } else if (cs === "geometric") {
-    // Two angled accent bands with dominant white title
+    // Two angled accent bands — title always on band, white text always works
     front = `<div style="${fb}padding:1in;">${puzzleTexture}${deco}${seriesBadge}` +
       `<div style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;overflow:hidden;">` +
       `<div style="position:absolute;top:18%;left:-10%;width:130%;height:38%;background:${ac};transform:rotate(-30deg);opacity:0.85;"></div>` +
@@ -505,7 +525,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `</div>` +
       `<div style="position:relative;z-index:1;text-align:left;width:100%;">` +
       `${audienceCallout}` +
-      `<div style="font-size:68px;font-weight:700;color:#fff;line-height:1.05;margin-bottom:16px;text-shadow:2px 2px 12px rgba(0,0,0,0.6);">${title}</div>` +
+      `<div style="font-family:'Oswald',sans-serif;font-size:68px;font-weight:700;color:#fff;line-height:1.05;margin-bottom:16px;text-shadow:2px 2px 12px rgba(0,0,0,0.6);">${title}</div>` +
       `<div style="font-size:19px;color:${tx}ee;letter-spacing:0.5px;margin-bottom:14px;">${sub}</div>` +
       `${sellDiv}` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:11px;color:${tx}ee;">${author}</div>` +
@@ -514,16 +534,16 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `</div>`;
 
   } else if (cs === "bold") {
-    // Wider accent sidebar (42%) + puzzle texture in content area
+    // Wider accent sidebar (42%) + puzzle texture in content area; contrast fixes applied
     front = `<div style="${fb}flex-direction:row;padding:0;">${seriesBadge}` +
       `<div style="width:42%;height:100%;background:${ac};display:flex;flex-direction:column;justify-content:flex-end;padding:0.8in 0.4in;box-sizing:border-box;">` +
-      `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:3px;color:${bg}bb;">${meta}</div>` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:3px;color:${sidebarMeta};">${meta}</div>` +
       `</div>` +
       `<div style="width:58%;display:flex;flex-direction:column;justify-content:center;padding:1in 0.7in;position:relative;overflow:hidden;">` +
       `${puzzleTexture}` +
       `<div style="position:relative;z-index:1;">` +
       `${audienceCallout}` +
-      `<div style="font-size:64px;font-weight:700;color:#fff;line-height:1.05;margin-bottom:14px;">${title}</div>` +
+      `<div style="font-family:'Oswald',sans-serif;font-size:64px;font-weight:700;color:${titleOnBg};line-height:1.05;margin-bottom:14px;">${title}</div>` +
       `<div style="font-size:19px;color:${ac};font-style:italic;letter-spacing:0.5px;margin-bottom:12px;">${sub}</div>` +
       `${sellDiv}` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:11px;color:${tx}ee;">${author}</div>` +
@@ -539,7 +559,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="width:24px;height:1px;background:${ac};opacity:0.3;"></div>` +
       `</div>` +
       `${audienceCallout}` +
-      `<div style="font-size:64px;font-weight:700;color:${tx};line-height:1.05;margin-bottom:20px;letter-spacing:1px;">${title}</div>` +
+      `<div style="font-family:'Oswald',sans-serif;font-size:64px;font-weight:700;color:${tx};line-height:1.05;margin-bottom:20px;letter-spacing:1px;">${title}</div>` +
       `${sub ? `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:16px;">${sub}</div>` : ""}` +
       `${sellDiv}` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:10px;color:${tx}ee;margin-bottom:16px;">${author}</div>` +
@@ -552,7 +572,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="width:100%;height:100%;border:8px double ${ac};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0.5in;box-sizing:border-box;position:relative;">` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:6px;color:${ac};text-transform:uppercase;margin-bottom:12px;">★ &nbsp; ${opts.puzzleType || "Puzzles"} &nbsp; ★</div>` +
       `${audienceCallout}` +
-      `<div style="font-size:60px;font-weight:700;color:${tx};line-height:1.05;margin-bottom:12px;text-transform:uppercase;letter-spacing:2px;">${title}</div>` +
+      `<div style="font-family:'Oswald',sans-serif;font-size:60px;font-weight:700;color:${tx};line-height:1.05;margin-bottom:12px;text-transform:uppercase;letter-spacing:2px;">${title}</div>` +
       `${sub ? `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:12px;">${sub}</div>` : ""}` +
       `<div style="width:80px;height:2px;background:${ac};margin:8px auto 14px;"></div>` +
       `${sellDiv}` +
@@ -561,14 +581,35 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="position:absolute;bottom:0.2in;left:0;right:0;text-align:center;font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:4px;color:${ac};opacity:0.7;">★ &nbsp; ★ &nbsp; ★</div>` +
       `</div></div>`;
 
+  } else if (cs === "warmth") {
+    // Warm, welcoming layout for senior/gift market — centered, ornamental, generous whitespace
+    front = `<div style="${fb}text-align:center;padding:1in;">${puzzleTexture}` +
+      `<div style="position:absolute;top:8%;left:8%;width:70px;height:70px;border:1px solid ${ac};border-radius:50%;opacity:0.20;"></div>` +
+      `<div style="position:absolute;bottom:8%;right:8%;width:90px;height:90px;border:1px solid ${ac};border-radius:50%;opacity:0.18;"></div>` +
+      `${seriesBadge}` +
+      `<div style="position:relative;z-index:1;">` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:22px;color:${ac};opacity:0.9;margin-bottom:20px;letter-spacing:4px;">✦</div>` +
+      `${audienceCallout}` +
+      `<div style="font-family:'Oswald',sans-serif;font-size:${titleWordCount <= 3 ? "72" : "62"}px;font-weight:700;color:${isDark ? tx : ac};line-height:1.1;margin-bottom:22px;padding:0 0.2in;">${title}</div>` +
+      `<div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:20px;">` +
+      `<div style="flex:1;max-width:60px;height:1px;background:${ac};opacity:0.6;"></div>` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:14px;color:${ac};">✦</div>` +
+      `<div style="flex:1;max-width:60px;height:1px;background:${ac};opacity:0.6;"></div>` +
+      `</div>` +
+      `<div style="font-size:19px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:20px;">${sub}</div>` +
+      `${sellDiv}` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:12px;color:${tx}ee;margin-bottom:10px;letter-spacing:2px;">${author}</div>` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:${tx}dd;">${meta}</div>` +
+      `</div></div>`;
+
   } else {
-    // classic (default): centered gold title, puzzle texture, audience callout
+    // classic (default): centered accent title, puzzle texture, audience callout
     front = `<div style="${fb}text-align:center;padding:1in;">${puzzleTexture}${deco}${seriesBadge}` +
       `<div style="position:relative;z-index:1;">` +
       `${audienceCallout}` +
       `${opts.puzzleType ? `<div style="font-family:'Source Code Pro',monospace;font-size:11px;letter-spacing:6px;text-transform:uppercase;color:${ac};margin-bottom:20px;">${opts.puzzleType}</div>` : ""}` +
       `<div style="width:56px;height:2px;background:${ac};margin:0 auto 28px;"></div>` +
-      `<div style="font-size:${titleWordCount <= 3 ? "68" : "60"}px;font-weight:700;color:${ac};line-height:1.1;margin-bottom:18px;padding:0 0.3in;">${title}</div>` +
+      `<div style="font-family:'Oswald',sans-serif;font-size:${titleWordCount <= 3 ? "68" : "60"}px;font-weight:700;color:${ac};line-height:1.1;margin-bottom:18px;padding:0 0.3in;">${title}</div>` +
       `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:16px;">${sub}</div>` +
       `${sellDiv}` +
       `<div style="width:56px;height:2px;background:${ac};margin:0 auto 22px;"></div>` +
@@ -577,7 +618,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `</div></div>`;
   }
 
-  const coverHtml = `<!DOCTYPE html><html style="background-color:${bg};"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet"><style>*{margin:0;padding:0;box-sizing:border-box;}@page{size:${fullW.toFixed(4)}in ${fullH.toFixed(4)}in;margin:0;}body{width:${fullW.toFixed(4)}in;height:${fullH.toFixed(4)}in;overflow:hidden;position:relative;background:${bg};print-color-adjust:exact;-webkit-print-color-adjust:exact;}</style></head><body>${back}${spine}${front}</body></html>`;
+  const coverHtml = `<!DOCTYPE html><html style="background-color:${bg};"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Oswald:wght@700&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet"><style>*{margin:0;padding:0;box-sizing:border-box;}@page{size:${fullW.toFixed(4)}in ${fullH.toFixed(4)}in;margin:0;}body{width:${fullW.toFixed(4)}in;height:${fullH.toFixed(4)}in;overflow:hidden;position:relative;background:${bg};print-color-adjust:exact;-webkit-print-color-adjust:exact;}</style></head><body>${back}${spine}${front}</body></html>`;
 
   return { html: coverHtml, fullW, fullH, spineW };
 }
