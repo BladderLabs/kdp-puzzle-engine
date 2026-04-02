@@ -16,6 +16,21 @@ import type { NicheResult } from "@workspace/api-client-react";
 
 const PUZZLE_TYPES = ["Word Search", "Sudoku", "Maze", "Number Search", "Cryptogram"] as const;
 const DIFFICULTIES = ["Easy", "Medium", "Hard"] as const;
+const WORD_CATEGORIES = [
+  { value: "General",   label: "General" },
+  { value: "Animals",   label: "Animals" },
+  { value: "Nature",    label: "Nature" },
+  { value: "Holiday",   label: "Holiday" },
+  { value: "Food",      label: "Food" },
+  { value: "Sports",    label: "Sports" },
+  { value: "Travel",    label: "Travel" },
+  { value: "Science",   label: "Science" },
+  { value: "History",   label: "History" },
+  { value: "Geography", label: "Geography" },
+  { value: "Music",     label: "Music" },
+  { value: "Movies",    label: "Movies" },
+  { value: "Space",     label: "Space" },
+] as const;
 const THEMES = [
   { value: "midnight",  label: "Midnight Gold" },
   { value: "forest",    label: "Forest Ink" },
@@ -43,6 +58,7 @@ const formSchema = z.object({
   coverStyle: z.string().default("classic"),
   backDescription: z.string().optional(),
   words: z.string().optional(),
+  wordCategory: z.string().optional(),
   niche: z.string().optional(),
   volumeNumber: z.coerce.number().optional(),
 });
@@ -72,6 +88,7 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
       coverStyle: initialValues?.coverStyle || "classic",
       backDescription: initialValues?.backDescription || "",
       words: initialValues?.words || "",
+      wordCategory: initialValues?.wordCategory || "General",
       niche: initialValues?.niche || "",
       volumeNumber: initialValues?.volumeNumber ?? 0,
     }
@@ -258,13 +275,29 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
                   );
                 })()}
 
+                {/* Word Category (Word Search / Number Search only) */}
+                {(puzzleType === "Word Search" || puzzleType === "Number Search") && (
+                  <FormField control={form.control} name="wordCategory" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Word Category</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || "General"}>
+                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {WORD_CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                )}
+
                 {/* Word list (Word Search / Cryptogram only) */}
                 {(puzzleType === "Word Search" || puzzleType === "Cryptogram") && (
                   <FormField control={form.control} name="words" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{puzzleType === "Cryptogram" ? "Sentences" : "Word List"} — one per line</FormLabel>
+                      <FormLabel>{puzzleType === "Cryptogram" ? "Sentences" : "Custom Word List"} — one per line (overrides category)</FormLabel>
                       <FormControl>
-                        <Textarea className="h-36 font-mono text-sm" placeholder={"PUZZLE\nBRAIN\nSOLVE\n..."} {...field} />
+                        <Textarea className="h-28 font-mono text-sm" placeholder={"PUZZLE\nBRAIN\nSOLVE\n..."} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

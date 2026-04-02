@@ -16,6 +16,7 @@ export const booksTable = pgTable("books", {
   coverStyle: text("cover_style").notNull().default("classic"),
   backDescription: text("back_description"),
   words: jsonb("words").$type<string[]>().notNull().default([]),
+  wordCategory: text("word_category"),
   niche: text("niche"),
   volumeNumber: integer("volume_number").notNull().default(1),
   createdAt: timestamp("created_at").notNull().defaultNow(),

@@ -54,6 +54,7 @@ export const CreateBookBody = zod.object({
   coverStyle: zod.string().optional(),
   backDescription: zod.string().optional(),
   words: zod.array(zod.string()).optional(),
+  wordCategory: zod.string().optional(),
   niche: zod.string().optional(),
   volumeNumber: zod.number().optional(),
 });
@@ -105,6 +106,7 @@ export const UpdateBookBody = zod.object({
   coverStyle: zod.string().optional(),
   backDescription: zod.string().optional(),
   words: zod.array(zod.string()).optional(),
+  wordCategory: zod.string().optional(),
   niche: zod.string().optional(),
   volumeNumber: zod.number().optional(),
 });
@@ -180,6 +182,7 @@ export const GenerateBookBody = zod.object({
     .optional(),
   backDescription: zod.string().optional(),
   words: zod.array(zod.string()).optional(),
+  wordCategory: zod.string().optional(),
   series: zod.string().optional(),
   volumeNumber: zod.number().optional(),
 });
@@ -232,6 +235,7 @@ export const RenderInteriorPdfBody = zod.object({
     .optional(),
   backDescription: zod.string().optional(),
   words: zod.array(zod.string()).optional(),
+  wordCategory: zod.string().optional(),
   series: zod.string().optional(),
   volumeNumber: zod.number().optional(),
 });
@@ -273,6 +277,7 @@ export const RenderCoverPdfBody = zod.object({
     .optional(),
   backDescription: zod.string().optional(),
   words: zod.array(zod.string()).optional(),
+  wordCategory: zod.string().optional(),
   series: zod.string().optional(),
   volumeNumber: zod.number().optional(),
 });

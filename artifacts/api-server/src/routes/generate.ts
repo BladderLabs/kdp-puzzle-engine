@@ -20,6 +20,7 @@ function toOpts(data: ReturnType<typeof GenerateBookBody.parse>): BuildOpts {
     coverStyle: data.coverStyle ?? "classic",
     backDescription: data.backDescription ?? undefined,
     words: Array.isArray(data.words) ? (data.words as string[]) : [],
+    wordCategory: data.wordCategory ?? undefined,
     volumeNumber: data.volumeNumber ?? 0,
   };
 }

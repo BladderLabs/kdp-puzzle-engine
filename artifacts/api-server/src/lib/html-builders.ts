@@ -1,6 +1,6 @@
 import {
-  shuf, makeWordSearch, makeSudoku, makeMaze, makeNumberSearch, makeCryptogram,
-  DEFWORDS,
+  shuf, makeWordSearch, makeSudoku, makeMaze, makeNumberSearch,
+  makeCryptogram, makeCryptogramFromQuote, WORD_BANKS, QUOTE_BANK, DEFWORDS,
 } from "./puzzles";
 
 /** Compute total page count from config without generating any puzzles. */
@@ -42,6 +42,7 @@ export interface BuildOpts {
   coverStyle?: string;
   backDescription?: string;
   words?: string[];
+  wordCategory?: string;
   series?: string;
   volumeNumber?: number;
 }
@@ -66,10 +67,19 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
   const vol = vn === 1 ? "Volume 1 of 3" : vn === 2 ? "Volume 2 of 3" : vn === 3 ? "Volume 3 of 3" : "";
 
   const wpp = LP ? 16 : 20, gsz = LP ? 13 : 15;
-  const wC = LP ? 32 : 27, wF = LP ? 16 : 13;
-  const sC = LP ? 50 : 44, sF = LP ? 22 : 18;
+  const wC = LP ? 34 : 28, wF = LP ? 17 : 14;
+  const sC = LP ? 64 : 54, sF = LP ? 26 : 20;
 
-  const wordBank = opts.words && opts.words.length >= 10 ? opts.words : DEFWORDS;
+  // Word bank: prefer wordCategory, then custom words list, then General bank
+  const categoryBank = opts.wordCategory && WORD_BANKS[opts.wordCategory] ? WORD_BANKS[opts.wordCategory] : null;
+  const wordBank = categoryBank || (opts.words && opts.words.length >= 10 ? opts.words : WORD_BANKS.General);
+
+  // Cryptogram: build a shuffled pool of quote indices for no-repeat sampling across the book
+  let cryptoQuotePool = PT === "Cryptogram"
+    ? shuf(Array.from({ length: QUOTE_BANK.length }, (_, i) => i))
+    : [];
+  let cryptoQIdx = 0;
+
   const puzzles: unknown[] = [];
 
   for (let i = 0; i < PC; i++) {
@@ -86,9 +96,14 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
       case "Number Search":
         puzzles.push(makeNumberSearch(gsz));
         break;
-      case "Cryptogram":
-        puzzles.push(makeCryptogram());
+      case "Cryptogram": {
+        if (cryptoQIdx >= cryptoQuotePool.length) {
+          cryptoQuotePool = shuf(Array.from({ length: QUOTE_BANK.length }, (_, k) => k));
+          cryptoQIdx = 0;
+        }
+        puzzles.push(makeCryptogramFromQuote(QUOTE_BANK[cryptoQuotePool[cryptoQIdx++]]));
         break;
+      }
       default:
         puzzles.push(makeWordSearch(shuf(wordBank).slice(0, Math.min(wordBank.length, wpp)), gsz));
     }
@@ -111,6 +126,20 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
 
   // Decorative rule between label and grid (shared across all puzzle types)
   const ornamentRule = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;"><div style="flex:1;height:1px;background:#ccc;"></div><div style="font-family:'Source Code Pro',monospace;font-size:10px;color:#aaa;">◆</div><div style="flex:1;height:1px;background:#ccc;"></div></div>`;
+
+  // Per-puzzle progress indicator: difficulty dots + time estimate + checkbox
+  const diffDots = DF === "Easy" ? "\u25CF\u25CF\u25CB\u25CB\u25CB"
+    : DF === "Hard" ? "\u25CF\u25CF\u25CF\u25CF\u25CF"
+    : "\u25CF\u25CF\u25CF\u25CB\u25CB";
+  const timeMap: Record<string, Record<string, string>> = {
+    "Word Search":   { Easy: "~5 min",  Medium: "~12 min", Hard: "~20 min" },
+    "Sudoku":        { Easy: "~10 min", Medium: "~20 min", Hard: "~40 min" },
+    "Maze":          { Easy: "~3 min",  Medium: "~8 min",  Hard: "~15 min" },
+    "Number Search": { Easy: "~5 min",  Medium: "~12 min", Hard: "~20 min" },
+    "Cryptogram":    { Easy: "~5 min",  Medium: "~10 min", Hard: "~18 min" },
+  };
+  const timeEst = (timeMap[PT] || timeMap["Word Search"])[DF] || "~10 min";
+  const progressBadge = `<span style="display:inline-flex;align-items:center;gap:5px;"><span style="letter-spacing:2px;font-size:9px;">${diffDots}</span><span style="font-size:7.5px;color:#888;">${timeEst}</span><span style="display:inline-block;width:10px;height:10px;border:1px solid #999;margin-left:3px;"></span></span>`;
 
   let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${T}</title>` +
     `<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">` +
@@ -308,7 +337,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px 8px;">` +
         sortedWS.map(w => `<div style="font-family:'Source Code Pro',monospace;font-size:${LP ? 14 : 12}px;color:#222;padding:1px 0;">${escapeHtml(w)}</div>`).join("") +
         `</div></div>`;
-      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Word Search</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">WORD SEARCH &middot; ${DF.toUpperCase()}</span></div>${ornamentRule}${g}${ch}${lpSep}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>${T}</span>${progressBadge}</div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">WORD SEARCH</span></div>${ornamentRule}${g}${ch}${lpSep}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
 
     } else if (PT === "Sudoku") {
       const sd = pz as { puzzle: number[][] };
@@ -329,7 +358,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         g += "</tr>";
       }
       g += "</table>";
-      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Sudoku</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">SUDOKU &middot; ${DF.toUpperCase()}</span></div>${ornamentRule}${g}${lpSep}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>${T}</span>${progressBadge}</div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">SUDOKU</span></div>${ornamentRule}${g}${lpSep}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
 
     } else if (PT === "Maze") {
       const mz = pz as { grid: number[][]; rows: number; cols: number };
@@ -352,7 +381,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         g += "</tr>";
       }
       g += "</table>";
-      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Maze</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">MAZE &middot; ${DF.toUpperCase()}</span></div>${ornamentRule}${g}<div style="font-family:'Source Code Pro',monospace;font-size:9px;color:#777;margin-top:6px;text-align:center;">S = Start &nbsp;&nbsp; F = Finish</div>${lpSep}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>${T}</span>${progressBadge}</div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">MAZE</span></div>${ornamentRule}${g}<div style="font-family:'Source Code Pro',monospace;font-size:9px;color:#777;margin-top:6px;text-align:center;">S = Start &nbsp;&nbsp; F = Finish</div>${lpSep}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
 
     } else if (PT === "Number Search") {
       const ns = pz as { grid: string[][]; placed: string[] };
@@ -371,7 +400,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px 8px;">` +
         sortedNS.map(s => `<div style="font-family:'Source Code Pro',monospace;font-size:${LP ? 14 : 12}px;color:#222;padding:1px 0;">${escapeHtml(String(s))}</div>`).join("") +
         `</div></div>`;
-      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Number Search</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">NUMBER SEARCH &middot; ${DF.toUpperCase()}</span></div>${ornamentRule}${g}${ch}${lpSep}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>${T}</span>${progressBadge}</div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">NUMBER SEARCH</span></div>${ornamentRule}${g}${ch}${lpSep}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
 
     } else if (PT === "Cryptogram") {
       const cg = pz as { cipher: string; plain: string };
@@ -388,7 +417,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
           `<td style="${cgCellStyle}"><div style="color:#666;">${l}</div><div style="border-bottom:1px solid #555;width:${LP ? 18 : 14}px;margin:2px auto;height:11px;"></div></td>`
         ).join("") + `</tr>` +
         `</table>`;
-      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>Cryptogram</span></div><div style="padding-top:0.2in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">CRYPTOGRAM</span></div>${ornamentRule}<div style="font-family:'Source Code Pro',monospace;font-size:${LP ? 16 : 13}px;color:#222;line-height:2.8;word-spacing:4px;">${cipherDisplay}</div><div style="margin-top:20px;">${cgKeyTable}</div>${lpSep}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>${T}</span>${progressBadge}</div><div style="padding-top:0.2in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">CRYPTOGRAM</span></div>${ornamentRule}<div style="font-family:'Source Code Pro',monospace;font-size:${LP ? 16 : 13}px;color:#222;line-height:2.8;word-spacing:4px;">${cipherDisplay}</div><div style="margin-top:20px;">${cgKeyTable}</div>${lpSep}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
     }
   }
 
@@ -511,14 +540,18 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
 
   } else if (PT === "Cryptogram") {
     for (let p = 0; p < PC; p += aPer) {
-      const batch = (puzzles.slice(p, p + aPer)) as Array<{ cipher: string; plain: string }>;
+      const batch = (puzzles.slice(p, p + aPer)) as Array<{ cipher: string; plain: string; author: string }>;
       const akBanner = p === 0 ? `<div style="text-align:center;border-bottom:2px solid #555;padding-bottom:8px;margin-bottom:14px;">` +
         `<div style="font-family:Lora,serif;font-size:20px;font-weight:700;color:#222;letter-spacing:2px;text-transform:uppercase;">Answer Key</div>` +
         `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:3px;color:#777;margin-top:4px;">CRYPTOGRAM</div>` +
         `</div>` : "";
       let gs = "";
       batch.forEach((cg, idx) => {
-        gs += `<div style="margin-bottom:20px;padding:10px;border:1px solid #eee;"><div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#555;font-weight:600;margin-bottom:6px;">#${String(p + idx + 1).padStart(2, "0")}</div><div style="font-family:Lora,serif;font-size:11px;color:#333;">${cg.plain}</div></div>`;
+        gs += `<div style="margin-bottom:18px;padding:10px 12px;border:1px solid #eee;border-left:3px solid #bbb;">` +
+          `<div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#555;font-weight:600;margin-bottom:6px;">#${String(p + idx + 1).padStart(2, "0")}</div>` +
+          `<div style="font-family:Lora,serif;font-size:11px;color:#222;line-height:1.6;">${cg.plain}</div>` +
+          `<div style="font-family:'Source Code Pro',monospace;font-size:9px;color:#888;margin-top:5px;font-style:italic;">&mdash; ${cg.author || ""}</div>` +
+          `</div>`;
       });
       html += `<div class="pg in"><div class="hd"><span>Answer Key</span><span>Cryptogram</span></div><div style="padding-top:0.2in;">${akBanner}${gs}</div><div class="ft"><span>${T} — ${AU}</span><span>${akP}</span></div></div>`;
       akP++;
@@ -649,7 +682,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
     `<div style="position:absolute;bottom:0.5in;right:0.4in;width:2in;height:1.2in;border:1px dashed ${ac}44;display:flex;align-items:center;justify-content:center;"><div style="font-family:'Source Code Pro',monospace;font-size:7px;color:${ac}88;">BARCODE AREA</div></div></div>`;
 
   // Spine: larger + bolder text
-  const spine = spineW >= 0.2
+  const spine = totalPages >= 130
     ? `<div style="position:absolute;left:${spineX}in;top:${bleed}in;width:${spineW}in;height:${trimH}in;background:${bg};display:flex;align-items:center;justify-content:center;"><div style="transform:rotate(-90deg);white-space:nowrap;font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:${tx};text-transform:uppercase;font-weight:600;">${title}${author ? " — " + author : ""}</div></div>`
     : `<div style="position:absolute;left:${spineX}in;top:${bleed}in;width:${spineW}in;height:${trimH}in;background:${bg};"></div>`;
 

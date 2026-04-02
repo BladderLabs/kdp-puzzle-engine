@@ -83,6 +83,7 @@ export interface BookConfig {
   coverStyle?: BookConfigCoverStyle;
   backDescription?: string;
   words?: string[];
+  wordCategory?: string;
   series?: string;
   volumeNumber?: number;
 }
@@ -100,6 +101,7 @@ export interface CreateBookBody {
   coverStyle?: string;
   backDescription?: string;
   words?: string[];
+  wordCategory?: string;
   niche?: string;
   volumeNumber?: number;
 }
@@ -118,6 +120,7 @@ export interface Book {
   coverStyle?: string;
   backDescription?: string;
   words?: string[];
+  wordCategory?: string;
   niche?: string;
   volumeNumber?: number;
   createdAt: string;
