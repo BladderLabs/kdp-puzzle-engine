@@ -1,0 +1,65 @@
+The previous colour themes had poor contrast. Based on analysis of the top 10 bestselling puzzle books on Amazon KDP, covers need HIGH CONTRAST bright accent colours against dark backgrounds. The number 1 bestselling word search book uses yellow plus turquoise plus red. Other top sellers use pink plus blue plus yellow, or bold bright colours on dark backgrounds. Low contrast covers get buried in Amazon search results.
+Replace the entire THEMES object with this:
+javascriptconst THEMES = {
+  midnight:  { bg: '#0A0A14', ac: '#F0C040', tx: '#F5F0E0' },   // dark navy + bright gold, contrast 11:1
+  forest:    { bg: '#0A1208', ac: '#50C050', tx: '#E8F5E8' },   // dark green + vivid green, contrast 7:1
+  crimson:   { bg: '#1A0505', ac: '#FF6B35', tx: '#FFF0E8' },   // dark red + bright orange, contrast 8:1
+  ocean:     { bg: '#050A18', ac: '#40B0FF', tx: '#E0F0FF' },   // dark blue + sky blue, contrast 8:1
+  violet:    { bg: '#120818', ac: '#B06AFF', tx: '#F0E8FF' },   // dark purple + bright purple, contrast 6:1
+  slate:     { bg: '#0E0E0E', ac: '#FF9E3D', tx: '#FFF5E8' },   // near black + warm orange, contrast 9:1
+  sunrise:   { bg: '#1A0A08', ac: '#FF4060', tx: '#FFF0F0' },   // dark warm + hot pink, contrast 7:1
+  teal:      { bg: '#081210', ac: '#30D0B0', tx: '#E0FFF8' },   // dark teal + bright turquoise, contrast 8:1
+};
+These are 8 themes instead of 6. All have minimum 6:1 contrast ratio between accent and background. The accent colours are bright and vivid enough to be readable when the cover is shrunk to Amazon thumbnail size which is approximately 150 pixels wide. The text colours are very light, almost white, with a warm or cool tint matching the theme. Update the dropdown in the web form to include all 8 themes: Midnight Gold, Forest Ink, Crimson Fire, Ocean Sky, Violet Glow, Slate Orange, Sunrise Pink, Teal Wave.
+UPDATE 2: DEFAULT AUTHOR NAME — Eleanor Bennett
+If the user leaves the author name field blank, default it to: Eleanor Bennett
+This pen name must appear in these 5 locations:
+
+Front cover — below the subtitle, above the metadata line. Style: font-family Source Code Pro monospace, font-size 13px, letter-spacing 3px, text colour at full opacity (NOT faded, must be clearly readable). This is important for brand recognition across multiple books.
+Spine — after the title, separated by a space, an em dash, and a space. Example: "CAT LOVER WORD SEARCH — Eleanor Bennett". Only if the spine is wide enough for text.
+Back cover — between the description and the metadata line. Style: Lora serif, 13px, text colour at 90% opacity.
+Interior title page — below the copyright line, as its own line. Style: Lora serif, 12px, colour #888.
+Interior page footers — optionally in the left position of the footer alongside the book title. This is optional but adds professionalism.
+
+Set the placeholder text of the Author Name input field to "Eleanor Bennett" so the user sees it as the default suggestion even before they type.
+UPDATE 3: COMPETITIVE COVER DESIGN IMPROVEMENTS
+Based on research of Amazon KDP bestselling puzzle book covers, make these specific changes to the cover HTML generation:
+TITLE SIZE: Increase the title font size on all cover styles. The title should dominate 40 to 60 percent of the front cover visual space. Current sizes are too small. Use these minimum sizes:
+
+Classic style: 52px minimum, go up to 58px if the title is short (3 words or fewer)
+Geometric style: 58px minimum
+Luxury style: 42px minimum with letter-spacing 6px
+Bold style: 50px minimum
+
+SELLING POINTS: Add a selling points section between the subtitle and the metadata on the front cover. This is what top sellers do to convert browsers into buyers. Show 2 to 3 key selling points in a horizontal row, separated by vertical bars or bullet dots. Style: Source Code Pro monospace, 9px, letter-spacing 2px, text colour at 70% opacity, uppercase. Example content: "100+ PUZZLES | LARGE PRINT | ANSWERS INCLUDED" or "[puzzleCount] PUZZLES | [difficulty] | SOLUTIONS INSIDE". Generate this automatically from the book settings.
+DECORATIVE ELEMENTS: Add more visual depth to the covers. Currently there are only 3 to 4 CSS geometric shapes. Increase to 6 to 8 decorative elements, positioned more intentionally:
+
+Large circle (140px) in bottom-right area at 12% opacity
+Medium circle (90px) in top-left area at 10% opacity
+Small circle (40px) near the title at 8% opacity
+Rotated square (60px, 45 degrees) in top-right at 10% opacity
+Rotated square (35px, 30 degrees) in bottom-left at 7% opacity
+Thin horizontal line (200px wide, 1px) between the title and subtitle sections at 15% opacity
+Two small dots (8px circles) flanking the metadata line at 20% opacity
+
+All decorations use the accent colour with low opacity. They must NOT use SVG, emoji, or images. Only CSS border, border-radius, width, height, and transform rotate properties.
+SUBTITLE STYLING: Make the subtitle more prominent than current. Increase to 17 to 18px. Add a slight letter-spacing of 0.5px. Keep it italic. This is the line that communicates the niche value proposition: "Large Print Puzzle Book for Cat Lovers" or "100 Relaxing Themed Puzzles for Adults and Seniors". It should be easy to read, not faded into the background.
+AUTHOR NAME PLACEMENT: On the Classic cover style, the author name goes between the second horizontal rule and the metadata line. On the Geometric style, it goes below the subtitle, left-aligned. On the Luxury style, it goes between the ornamental rules and the metadata, centred. On the Bold style, it goes on the dark side below the subtitle. Make it clearly visible, not hidden or overly transparent. Use 90% opacity minimum.
+SERIES BADGE: If the series option is set to 3-Volume, add a small badge in the top-right corner of the front cover that says "Volume 1" inside a small rounded rectangle. Style: padding 4px 10px, border 1.5px solid accent colour at 40% opacity, border-radius 3px, Source Code Pro 8px, letter-spacing 2px, accent colour text. Position absolute, top 0.6in, right 0.6in. This signals to buyers that more volumes are coming, which increases purchase confidence.
+UPDATE 4: WEB FORM — THEME DROPDOWN UPDATE
+Update the Colour Theme dropdown in the web form to show all 8 themes:
+html<select id="theme">
+  <option value="midnight">Midnight Gold</option>
+  <option value="forest">Forest Ink</option>
+  <option value="crimson">Crimson Fire</option>
+  <option value="ocean">Ocean Sky</option>
+  <option value="violet">Violet Glow</option>
+  <option value="slate">Slate Orange</option>
+  <option value="sunrise">Sunrise Pink</option>
+  <option value="teal">Teal Wave</option>
+</select>
+UPDATE 5: AUTHOR INPUT DEFAULT
+Change the author input field:
+html<input id="author" placeholder="Eleanor Bennett" value="Eleanor Bennett">
+Set the default VALUE to Eleanor Bennett so it is pre-filled. The user can change it if they want a different name, but Eleanor Bennett is the default pen name for all books.
+END OF UPDATES — Apply all 5 updates to the existing build specification.
