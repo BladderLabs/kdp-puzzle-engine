@@ -68,7 +68,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
 
   const wpp = LP ? 16 : 20, gsz = LP ? 13 : 15;
   const wC = LP ? 34 : 28, wF = LP ? 17 : 14;
-  const sC = LP ? 64 : 58, sF = LP ? 26 : 20;
+  const sC = LP ? 64 : 54, sF = LP ? 26 : 20;
 
   // Word bank priority: custom words (≥10) > wordCategory bank > General bank
   const customWords = opts.words && opts.words.length >= 10 ? opts.words : null;
