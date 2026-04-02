@@ -436,7 +436,15 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const sellDiv = `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:${tx}dd;text-transform:uppercase;margin-bottom:12px;">${sellPts}</div>`;
 
   // Audience/format callout derived from the book's own fields
-  const audienceLabel = (opts.largePrint !== false ? "LARGE PRINT · " : "") + `${(opts.difficulty || "MEDIUM").toUpperCase()} LEVEL · FOR ALL AGES`;
+  // Only show "LARGE PRINT" when the field is explicitly true (not the default)
+  const isLP = opts.largePrint === true;
+  const ptBadge = (opts.puzzleType || "Puzzle Book").toUpperCase();
+  const dfBadge = (opts.difficulty || "MEDIUM").toUpperCase();
+  const audienceParts: string[] = [];
+  if (isLP) audienceParts.push("LARGE PRINT");
+  audienceParts.push(`${dfBadge} LEVEL`);
+  audienceParts.push(ptBadge);
+  const audienceLabel = audienceParts.join(" · ");
   const audienceCallout = `<div style="font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:4px;text-transform:uppercase;color:${ac};opacity:0.95;margin-bottom:16px;">${audienceLabel}</div>`;
 
   // Puzzle texture watermark: CSS letter/number grid at 5% opacity — no external assets
@@ -480,7 +488,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="text-align:center;z-index:2;position:relative;padding:0 0.8in;">` +
       `<div style="width:40px;height:1px;background:${ac};margin:0 auto 20px;"></div>` +
       `${audienceCallout}` +
-      `<div style="font-size:54px;font-weight:700;text-transform:uppercase;letter-spacing:4px;color:${tx};margin-bottom:18px;line-height:1.2;">${title}</div>` +
+      `<div style="font-size:62px;font-weight:700;text-transform:uppercase;letter-spacing:4px;color:${tx};margin-bottom:18px;line-height:1.2;">${title}</div>` +
       `<div style="width:40px;height:1px;background:${ac};margin:0 auto 16px;"></div>` +
       `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:14px;">${sub}</div>` +
       `${sellDiv}` +
