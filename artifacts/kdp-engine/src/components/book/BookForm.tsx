@@ -25,7 +25,7 @@ const THEMES = [
   { value: "slate",     label: "Slate Orange" },
   { value: "sunrise",   label: "Sunrise Pink" },
   { value: "teal",      label: "Teal Wave" },
-  { value: "parchment", label: "Parchment" },
+  { value: "parchment", label: "Parchment Warm" },
   { value: "sky",       label: "Sky Blue" },
 ] as const;
 const COVER_STYLES = ["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth"] as const;

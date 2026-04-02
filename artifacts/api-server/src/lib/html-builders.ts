@@ -525,7 +525,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `</div>` +
       `<div style="position:relative;z-index:1;text-align:left;width:100%;">` +
       `${audienceCallout}` +
-      `<div style="font-family:'Oswald',sans-serif;font-size:68px;font-weight:700;color:#fff;line-height:1.05;margin-bottom:16px;text-shadow:2px 2px 12px rgba(0,0,0,0.6);">${title}</div>` +
+      `<div style="font-family:'Oswald',sans-serif;font-size:68px;font-weight:700;color:${titleOnBg};line-height:1.05;margin-bottom:16px;text-shadow:2px 2px 12px rgba(0,0,0,0.4);">${title}</div>` +
       `<div style="font-size:19px;color:${tx}ee;letter-spacing:0.5px;margin-bottom:14px;">${sub}</div>` +
       `${sellDiv}` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:11px;color:${tx}ee;">${author}</div>` +
