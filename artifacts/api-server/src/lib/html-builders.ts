@@ -109,6 +109,9 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
   const gut = Math.max(0.5, gutterIn(totP));
   const pS = 5, aS = pS + PC;
 
+  // Decorative rule between label and grid (shared across all puzzle types)
+  const ornamentRule = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;"><div style="flex:1;height:1px;background:#ccc;"></div><div style="font-family:'Source Code Pro',monospace;font-size:10px;color:#aaa;">◆</div><div style="flex:1;height:1px;background:#ccc;"></div></div>`;
+
   let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${T}</title>` +
     `<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">` +
     `<style>*{margin:0;padding:0;box-sizing:border-box;}@page{size:${trimW}in ${trimH}in;margin:0;}` +
@@ -119,16 +122,25 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     `.ft{position:absolute;bottom:0.25in;left:${gut}in;right:0.4in;display:flex;justify-content:space-between;font-family:'Source Code Pro',monospace;font-size:9px;color:#777;border-top:1px solid #ddd;padding-top:4px;}` +
     `</style></head><body>`;
 
+  // ── Title page (redesigned) ──────────────────────────────────────────────
   html += `<div class="pg in"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:9in;text-align:center;">` +
-    `<div style="font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:4px;color:#666;text-transform:uppercase;margin-bottom:20px;">${PT} Collection</div>` +
+    `<div style="font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:4px;color:#666;text-transform:uppercase;margin-bottom:16px;">${PT} Collection</div>` +
+    `<div style="font-family:'Source Code Pro',monospace;font-size:28px;color:#888;margin-bottom:14px;letter-spacing:6px;">✦</div>` +
     `<div style="font-family:Lora,serif;font-size:34px;font-weight:700;color:#222;margin-bottom:10px;">${T}</div>` +
     `<div style="font-family:Lora,serif;font-size:15px;font-style:italic;color:#555;margin-bottom:24px;">${ST}</div>` +
-    `<div style="width:56px;height:1px;background:#ccc;margin-bottom:20px;"></div>` +
-    `<div style="font-family:'Source Code Pro',monospace;font-size:9px;color:#777;line-height:2;">` +
-    `&copy; ${yr} All Rights Reserved &middot; Published via Amazon KDP<br/>Puzzle content generated with AI assistance${vol ? "<br/>" + vol : ""}</div>` +
-    (AU ? `<div style="font-family:Lora,serif;font-size:12px;color:#666;margin-top:12px;">${AU}</div>` : "") +
+    `<div style="width:56px;height:1px;background:#ccc;margin-bottom:24px;"></div>` +
+    (AU ? `<div style="font-family:Lora,serif;font-size:13px;color:#444;margin-bottom:4px;">${AU}</div>` : "") +
+    `<div style="font-family:'Source Code Pro',monospace;font-size:9px;color:#999;margin-bottom:28px;">${AU ? AU + " Publishing" : "KDP Publishing"}</div>` +
+    `<div style="width:36px;height:1px;background:#ddd;margin-bottom:28px;"></div>` +
+    `<div style="font-family:'Source Code Pro',monospace;font-size:7.5px;color:#999;line-height:2.1;max-width:4.5in;">` +
+    `&copy; ${yr} ${AU}. All rights reserved.${vol ? " " + vol + "." : ""}<br/>` +
+    `No part of this publication may be reproduced, distributed, or transmitted in any form or by any means, including photocopying, recording, or other electronic or mechanical methods, without the prior written permission of the publisher.<br/>` +
+    `ISBN: [Pending]<br/>` +
+    `Published via Amazon KDP` +
+    `</div>` +
     `</div></div>`;
 
+  // ── How-to-Play page ─────────────────────────────────────────────────────
   const htxtMap: Record<string, string> = {
     "Word Search": "Each puzzle contains a grid of letters with hidden words. Words can run horizontally, vertically, or diagonally — both forward and backward. Find every word in the bank below each grid.",
     "Sudoku": "Fill empty cells so every row, column, and 3&times;3 box contains digits 1-9 exactly once.",
@@ -146,16 +158,114 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
   const htxt = htxtMap[PT] || htxtMap["Word Search"];
   const tip = tipMap[PT] || tipMap["Word Search"];
 
+  // Mini inline example per puzzle type (no external assets)
+  let miniEx = "";
+  const miniCellBase = `width:22px;height:22px;text-align:center;font-family:'Source Code Pro',monospace;font-size:10px;border:1px solid #ccc;color:#222;`;
+  if (PT === "Word Search") {
+    const wsRows = [["F","I","N","D","X"],["A","B","C","E","Y"],["Z","T","S","H","I"],["Q","U","V","W","K"],["L","M","O","P","R"]];
+    const wsHi = new Set(["0,0","0,1","0,2","0,3"]);
+    let wsTable = `<table style="border-collapse:collapse;margin:6px auto;">`;
+    for (let r = 0; r < 5; r++) {
+      wsTable += "<tr>";
+      for (let c = 0; c < 5; c++) {
+        const h = wsHi.has(`${r},${c}`);
+        wsTable += `<td style="${miniCellBase}${h ? "background:#e8e8e0;font-weight:700;" : ""}">${wsRows[r][c]}</td>`;
+      }
+      wsTable += "</tr>";
+    }
+    wsTable += "</table>";
+    miniEx = `<div style="margin-bottom:20px;text-align:center;">` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:2px;color:#888;text-transform:uppercase;margin-bottom:6px;">Example — word "FIND" highlighted in row 1:</div>` +
+      wsTable +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#777;margin-top:4px;">Highlighted letters spell F-I-N-D (left to right)</div>` +
+      `</div>`;
+  } else if (PT === "Sudoku") {
+    const sdRows = [[5,0,3],[0,9,0],[2,0,7]];
+    let sdTable = `<table style="border-collapse:collapse;margin:6px auto;">`;
+    for (let r = 0; r < 3; r++) {
+      sdTable += "<tr>";
+      for (let c = 0; c < 3; c++) {
+        const v = sdRows[r][c];
+        sdTable += `<td style="width:28px;height:28px;text-align:center;font-family:'Source Code Pro',monospace;font-size:13px;border:2px solid #555;${v ? "font-weight:700;color:#111;background:#f5f5f0;" : "color:#bbb;"}">${v || "?"}</td>`;
+      }
+      sdTable += "</tr>";
+    }
+    sdTable += "</table>";
+    miniEx = `<div style="margin-bottom:20px;text-align:center;">` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:2px;color:#888;text-transform:uppercase;margin-bottom:6px;">Example — fill "?" so each row &amp; column is unique:</div>` +
+      sdTable +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#777;margin-top:4px;">No repeated digits in any row, column, or 3×3 box</div>` +
+      `</div>`;
+  } else if (PT === "Maze") {
+    // Hardcoded 4×4 mini maze (bit-flags N=1 E=2 S=4 W=8) with shaded solution path
+    const N2 = 1, E2 = 2, S2 = 4, W2 = 8;
+    const mzMini = [[E2|S2,W2|S2,E2,W2|S2],[N2|E2,N2|W2|S2,E2|S2,N2|W2],[E2,W2|N2|E2,W2|N2|S2,S2],[E2,W2|E2,W2|N2|E2,N2|W2]];
+    const mzPath2 = new Set(["0,0","1,0","2,0","2,1","2,2","3,2","3,3"]);
+    let mzTable = `<table style="border-collapse:collapse;margin:6px auto;">`;
+    for (let r = 0; r < 4; r++) {
+      mzTable += "<tr>";
+      for (let c = 0; c < 4; c++) {
+        const cell = mzMini[r][c];
+        const bT = !(cell & N2) ? "2px solid #555" : "1px solid #eee";
+        const bR = !(cell & E2) ? "2px solid #555" : "1px solid #eee";
+        const bB = !(cell & S2) ? "2px solid #555" : "1px solid #eee";
+        const bL = !(cell & W2) ? "2px solid #555" : "1px solid #eee";
+        const onPath = mzPath2.has(`${r},${c}`);
+        let inner = "";
+        if (r === 0 && c === 0) inner = `<span style="font-size:7px;color:#555;font-family:monospace;">S</span>`;
+        if (r === 3 && c === 3) inner = `<span style="font-size:7px;color:#555;font-family:monospace;">F</span>`;
+        mzTable += `<td style="width:22px;height:22px;text-align:center;vertical-align:middle;border-top:${bT};border-right:${bR};border-bottom:${bB};border-left:${bL};${onPath ? "background:#e8e8e0;" : ""}">${inner}</td>`;
+      }
+      mzTable += "</tr>";
+    }
+    mzTable += "</table>";
+    miniEx = `<div style="margin-bottom:20px;text-align:center;">` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:2px;color:#888;text-transform:uppercase;margin-bottom:6px;">Example — shaded path from S to F:</div>` +
+      mzTable +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#777;margin-top:4px;">Follow open passages — no diagonal moves</div>` +
+      `</div>`;
+  } else if (PT === "Number Search") {
+    const nsRows = [["1","2","3","4","7"],["8","5","9","2","3"],["3","7","1","6","8"],["4","2","8","5","9"],["6","1","3","7","2"]];
+    const nsHi = new Set(["0,0","0,1","0,2","0,3"]);
+    let nsTable = `<table style="border-collapse:collapse;margin:6px auto;">`;
+    for (let r = 0; r < 5; r++) {
+      nsTable += "<tr>";
+      for (let c = 0; c < 5; c++) {
+        const h = nsHi.has(`${r},${c}`);
+        nsTable += `<td style="${miniCellBase}${h ? "background:#e8e8e0;font-weight:700;" : ""}">${nsRows[r][c]}</td>`;
+      }
+      nsTable += "</tr>";
+    }
+    nsTable += "</table>";
+    miniEx = `<div style="margin-bottom:20px;text-align:center;">` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:2px;color:#888;text-transform:uppercase;margin-bottom:6px;">Example — sequence "1234" highlighted:</div>` +
+      nsTable +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#777;margin-top:4px;">Highlighted digits spell 1-2-3-4 across row 1</div>` +
+      `</div>`;
+  } else if (PT === "Cryptogram") {
+    miniEx = `<div style="margin-bottom:20px;text-align:center;">` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:2px;color:#888;text-transform:uppercase;margin-bottom:10px;">Example substitution mapping:</div>` +
+      `<div style="display:inline-flex;gap:20px;justify-content:center;margin-bottom:10px;">` +
+      `<div style="text-align:center;font-family:'Source Code Pro',monospace;"><div style="font-size:12px;font-weight:700;color:#222;">T</div><div style="font-size:9px;color:#aaa;">↓</div><div style="font-size:12px;color:#666;">Q</div></div>` +
+      `<div style="text-align:center;font-family:'Source Code Pro',monospace;"><div style="font-size:12px;font-weight:700;color:#222;">H</div><div style="font-size:9px;color:#aaa;">↓</div><div style="font-size:12px;color:#666;">E</div></div>` +
+      `<div style="text-align:center;font-family:'Source Code Pro',monospace;"><div style="font-size:12px;font-weight:700;color:#222;">E</div><div style="font-size:9px;color:#aaa;">↓</div><div style="font-size:12px;color:#666;">V</div></div>` +
+      `</div>` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:9px;color:#555;">"THE" encoded &rarr; <strong>QEV</strong> &nbsp;|&nbsp; decode by reversing the mapping</div>` +
+      `</div>`;
+  }
+
   html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; ${PT}</span></div>` +
     `<div style="padding-top:0.3in;"><div style="font-family:Lora,serif;font-size:26px;font-weight:700;color:#222;margin-bottom:12px;">How to Play</div>` +
     `<div style="width:56px;height:2px;background:#333;margin-bottom:20px;"></div>` +
-    `<div style="font-family:Lora,serif;font-size:13px;line-height:1.8;color:#333;margin-bottom:28px;">${htxt}</div>` +
+    `<div style="font-family:Lora,serif;font-size:13px;line-height:1.8;color:#333;margin-bottom:22px;">${htxt}</div>` +
+    miniEx +
     `<div style="border-left:3px solid #333;background:#f9f9f6;padding:14px 18px;">` +
     `<div style="font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:3px;color:#333;font-weight:600;margin-bottom:6px;">TIP</div>` +
     `<div style="font-family:Lora,serif;font-size:12px;color:#444;">${tip}</div></div>` +
     (LP ? `<div style="margin-top:20px;font-family:Source Code Pro,monospace;font-size:10px;letter-spacing:2px;color:#666;text-align:center;">LARGE PRINT EDITION</div>` : "") +
     `</div><div class="ft"><span>${T} — ${AU}</span><span>3</span></div></div>`;
 
+  // ── Table of Contents ────────────────────────────────────────────────────
   let tocR = "";
   const mx = Math.min(PC, 42);
   for (let i = 0; i < mx; i++)
@@ -168,6 +278,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     `<div style="margin-top:20px;font-family:'Source Code Pro',monospace;font-size:10px;color:#333;letter-spacing:2px;font-weight:600;">ANSWER KEY &mdash; PAGE ${aS}</div></div>` +
     `<div class="ft"><span>${T} — ${AU}</span><span>4</span></div></div>`;
 
+  // ── Puzzle pages ─────────────────────────────────────────────────────────
   for (let i = 0; i < PC; i++) {
     const pN = pS + i;
     const lb = "#" + String(i + 1).padStart(2, "0");
@@ -183,8 +294,14 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         g += "</tr>";
       }
       g += "</table>";
-      const ch = ws.placed.map(w => `<span style="display:inline-block;font-family:'Source Code Pro',monospace;font-size:${LP ? 13 : 12}px;background:#f5f3ee;border:1px solid #ccc;border-radius:3px;padding:3px 8px;margin:2px;">${escapeHtml(w)}</span>`).join("");
-      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Word Search</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">WORD SEARCH &middot; ${DF.toUpperCase()}</span></div>${g}<div style="text-align:center;margin-top:8px;">${ch}</div></div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
+      // Sorted alphabetical word bank in bordered 3-column callout box
+      const sortedWS = [...ws.placed].sort();
+      const ch = `<div style="border:1px solid #ccc;background:#f8f6f0;border-radius:3px;padding:8px 12px;margin-top:8px;">` +
+        `<div style="font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:3px;text-transform:uppercase;color:#666;margin-bottom:6px;text-align:center;border-bottom:1px solid #ddd;padding-bottom:4px;font-variant:small-caps;">Find These Words</div>` +
+        `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px 8px;">` +
+        sortedWS.map(w => `<div style="font-family:'Source Code Pro',monospace;font-size:${LP ? 14 : 12}px;color:#222;padding:1px 0;">${escapeHtml(w)}</div>`).join("") +
+        `</div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Word Search</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">WORD SEARCH &middot; ${DF.toUpperCase()}</span></div>${ornamentRule}${g}${ch}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
 
     } else if (PT === "Sudoku") {
       const sd = pz as { puzzle: number[][] };
@@ -205,7 +322,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         g += "</tr>";
       }
       g += "</table>";
-      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Sudoku</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">SUDOKU &middot; ${DF.toUpperCase()}</span></div>${g}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Sudoku</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">SUDOKU &middot; ${DF.toUpperCase()}</span></div>${ornamentRule}${g}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
 
     } else if (PT === "Maze") {
       const mz = pz as { grid: number[][]; rows: number; cols: number };
@@ -228,7 +345,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         g += "</tr>";
       }
       g += "</table>";
-      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Maze</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">MAZE &middot; ${DF.toUpperCase()}</span></div>${g}<div style="font-family:'Source Code Pro',monospace;font-size:9px;color:#777;margin-top:6px;text-align:center;">S = Start &nbsp;&nbsp; F = Finish</div></div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Maze</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">MAZE &middot; ${DF.toUpperCase()}</span></div>${ornamentRule}${g}<div style="font-family:'Source Code Pro',monospace;font-size:9px;color:#777;margin-top:6px;text-align:center;">S = Start &nbsp;&nbsp; F = Finish</div></div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
 
     } else if (PT === "Number Search") {
       const ns = pz as { grid: string[][]; placed: string[] };
@@ -240,27 +357,54 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         g += "</tr>";
       }
       g += "</table>";
-      const ch = ns.placed.map(s => `<span style="display:inline-block;font-family:'Source Code Pro',monospace;font-size:${LP ? 13 : 12}px;background:#f5f3ee;border:1px solid #ccc;border-radius:3px;padding:3px 8px;margin:2px;">${escapeHtml(String(s))}</span>`).join("");
-      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Number Search</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">NUMBER SEARCH &middot; ${DF.toUpperCase()}</span></div>${g}<div style="text-align:center;margin-top:8px;">${ch}</div></div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
+      // Sorted number bank in bordered 3-column callout box
+      const sortedNS = [...ns.placed].sort();
+      const ch = `<div style="border:1px solid #ccc;background:#f8f6f0;border-radius:3px;padding:8px 12px;margin-top:8px;">` +
+        `<div style="font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:3px;text-transform:uppercase;color:#666;margin-bottom:6px;text-align:center;border-bottom:1px solid #ddd;padding-bottom:4px;font-variant:small-caps;">Find These Numbers</div>` +
+        `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px 8px;">` +
+        sortedNS.map(s => `<div style="font-family:'Source Code Pro',monospace;font-size:${LP ? 14 : 12}px;color:#222;padding:1px 0;">${escapeHtml(String(s))}</div>`).join("") +
+        `</div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Number Search</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">NUMBER SEARCH &middot; ${DF.toUpperCase()}</span></div>${ornamentRule}${g}${ch}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
 
     } else if (PT === "Cryptogram") {
       const cg = pz as { cipher: string; plain: string };
       const cipherDisplay = cg.cipher.split("").map(ch =>
         ch >= "A" && ch <= "Z" ? `<span style="display:inline-block;text-align:center;width:${LP ? 22 : 18}px;">${ch}<br/><span style="display:block;border-bottom:1px solid #333;margin:0 2px;">&nbsp;</span></span>` : (ch === " " ? `<span style="display:inline-block;width:${LP ? 10 : 8}px;">&nbsp;</span>` : ch)
       ).join("");
-      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>Cryptogram</span></div><div style="padding-top:0.2in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">CRYPTOGRAM</span></div><div style="font-family:'Source Code Pro',monospace;font-size:${LP ? 16 : 13}px;color:#222;line-height:2.8;word-spacing:4px;">${cipherDisplay}</div><div style="margin-top:30px;font-family:'Source Code Pro',monospace;font-size:9px;color:#666;">A=__ B=__ C=__ D=__ E=__ F=__ G=__ H=__ I=__ J=__ K=__ L=__ M=__<br/>N=__ O=__ P=__ Q=__ R=__ S=__ T=__ U=__ V=__ W=__ X=__ Y=__ Z=__</div></div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
+      // 2-row × 13-column cipher key table (A–M, N–Z)
+      const cgCellStyle = `text-align:center;padding:3px 0;font-family:'Source Code Pro',monospace;font-size:${LP ? 10 : 8}px;`;
+      const cgKeyTable = `<table style="border-collapse:collapse;margin:0 auto;width:100%;table-layout:fixed;">` +
+        `<tr>` + "ABCDEFGHIJKLM".split("").map(l =>
+          `<td style="${cgCellStyle}"><div style="color:#666;">${l}</div><div style="border-bottom:1px solid #555;width:${LP ? 18 : 14}px;margin:2px auto;height:11px;"></div></td>`
+        ).join("") + `</tr>` +
+        `<tr>` + "NOPQRSTUVWXYZ".split("").map(l =>
+          `<td style="${cgCellStyle}"><div style="color:#666;">${l}</div><div style="border-bottom:1px solid #555;width:${LP ? 18 : 14}px;margin:2px auto;height:11px;"></div></td>`
+        ).join("") + `</tr>` +
+        `</table>`;
+      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>Cryptogram</span></div><div style="padding-top:0.2in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">CRYPTOGRAM</span></div>${ornamentRule}<div style="font-family:'Source Code Pro',monospace;font-size:${LP ? 16 : 13}px;color:#222;line-height:2.8;word-spacing:4px;">${cipherDisplay}</div><div style="margin-top:20px;">${cgKeyTable}</div></div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
+    }
+
+    // Large-print ornamental separator every 10 puzzles (within page flow, no extra page)
+    if (LP && (i + 1) % 10 === 0 && i < PC - 1) {
+      html += `<div style="width:100%;text-align:center;font-family:'Source Code Pro',monospace;font-size:11px;letter-spacing:8px;color:#ccc;padding:6px 0;">— ✦ —</div>`;
     }
   }
 
+  // ── Answer key pages ─────────────────────────────────────────────────────
   let akP = aS;
 
   if (PT === "Word Search" || PT === "Number Search") {
     for (let p = 0; p < PC; p += aPer) {
       const batch = (puzzles.slice(p, p + aPer)) as Array<{ grid: string[][]; placed: string[]; pSet: Record<string, boolean> }>;
+      // Styled banner on the first answer key page only
+      const akBanner = p === 0 ? `<div style="text-align:center;border-bottom:2px solid #555;padding-bottom:8px;margin-bottom:14px;">` +
+        `<div style="font-family:Lora,serif;font-size:20px;font-weight:700;color:#222;letter-spacing:2px;text-transform:uppercase;">Answer Key</div>` +
+        `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:3px;color:#777;margin-top:4px;">${PT.toUpperCase()}</div>` +
+        `</div>` : "";
       let gs = `<div style="display:flex;flex-wrap:wrap;gap:14px;justify-content:center;">`;
       batch.forEach((ws, idx) => {
         const cSz = LP ? 9 : 8, fSz = LP ? 6 : 5;
-        let m = `<div style="text-align:center;"><div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#555;font-weight:600;">#${String(p + idx + 1).padStart(2, "0")}</div><table style="border-collapse:collapse;">`;
+        let m = `<div style="text-align:center;"><div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#555;font-weight:600;">#${String(p + idx + 1).padStart(2, "00")}</div><table style="border-collapse:collapse;">`;
         for (let r = 0; r < ws.grid.length; r++) {
           m += "<tr>";
           for (let c = 0; c < ws.grid[r].length; c++) {
@@ -273,7 +417,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         gs += m;
       });
       gs += "</div>";
-      html += `<div class="pg in"><div class="hd"><span>Answer Key</span><span>${PT}</span></div><div style="padding-top:0.2in;">${gs}</div><div class="ft"><span>${T} — ${AU}</span><span>${akP}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>Answer Key</span><span>${PT}</span></div><div style="padding-top:0.2in;">${akBanner}${gs}</div><div class="ft"><span>${T} — ${AU}</span><span>${akP}</span></div></div>`;
       akP++;
     }
 
@@ -281,6 +425,10 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     for (let p = 0; p < PC; p += aPer) {
       const batch = (puzzles.slice(p, p + aPer)) as Array<{ puzzle: number[][]; solution: number[][] }>;
       const cSz = LP ? 16 : 14;
+      const akBanner = p === 0 ? `<div style="text-align:center;border-bottom:2px solid #555;padding-bottom:8px;margin-bottom:14px;">` +
+        `<div style="font-family:Lora,serif;font-size:20px;font-weight:700;color:#222;letter-spacing:2px;text-transform:uppercase;">Answer Key</div>` +
+        `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:3px;color:#777;margin-top:4px;">SUDOKU</div>` +
+        `</div>` : "";
       let gs = `<div style="display:flex;flex-wrap:wrap;gap:16px;justify-content:center;">`;
       batch.forEach((sd, idx) => {
         let m = `<div style="text-align:center;"><div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#555;font-weight:600;">#${String(p + idx + 1).padStart(2, "0")}</div><table style="border-collapse:collapse;">`;
@@ -301,15 +449,19 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         gs += m;
       });
       gs += "</div>";
-      html += `<div class="pg in"><div class="hd"><span>Answer Key</span><span>Sudoku</span></div><div style="padding-top:0.2in;">${gs}</div><div class="ft"><span>${T} — ${AU}</span><span>${akP}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>Answer Key</span><span>Sudoku</span></div><div style="padding-top:0.2in;">${akBanner}${gs}</div><div class="ft"><span>${T} — ${AU}</span><span>${akP}</span></div></div>`;
       akP++;
     }
 
   } else if (PT === "Maze") {
-    // Maze answers — show solved path
+    // Maze answers — show solved path via BFS
     for (let p = 0; p < PC; p += aPer) {
       const batch = (puzzles.slice(p, p + aPer)) as Array<{ grid: number[][]; rows: number; cols: number }>;
       const N = 1, E = 2, S = 4, W = 8;
+      const akBanner = p === 0 ? `<div style="text-align:center;border-bottom:2px solid #555;padding-bottom:8px;margin-bottom:14px;">` +
+        `<div style="font-family:Lora,serif;font-size:20px;font-weight:700;color:#222;letter-spacing:2px;text-transform:uppercase;">Answer Key</div>` +
+        `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:3px;color:#777;margin-top:4px;">MAZE</div>` +
+        `</div>` : "";
       let gs = `<div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;">`;
       batch.forEach((mz, idx) => {
         // BFS to find solution path
@@ -351,18 +503,22 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         gs += m;
       });
       gs += "</div>";
-      html += `<div class="pg in"><div class="hd"><span>Answer Key</span><span>Maze</span></div><div style="padding-top:0.2in;">${gs}</div><div class="ft"><span>${T} — ${AU}</span><span>${akP}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>Answer Key</span><span>Maze</span></div><div style="padding-top:0.2in;">${akBanner}${gs}</div><div class="ft"><span>${T} — ${AU}</span><span>${akP}</span></div></div>`;
       akP++;
     }
 
   } else if (PT === "Cryptogram") {
     for (let p = 0; p < PC; p += aPer) {
       const batch = (puzzles.slice(p, p + aPer)) as Array<{ cipher: string; plain: string }>;
+      const akBanner = p === 0 ? `<div style="text-align:center;border-bottom:2px solid #555;padding-bottom:8px;margin-bottom:14px;">` +
+        `<div style="font-family:Lora,serif;font-size:20px;font-weight:700;color:#222;letter-spacing:2px;text-transform:uppercase;">Answer Key</div>` +
+        `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:3px;color:#777;margin-top:4px;">CRYPTOGRAM</div>` +
+        `</div>` : "";
       let gs = "";
       batch.forEach((cg, idx) => {
         gs += `<div style="margin-bottom:20px;padding:10px;border:1px solid #eee;"><div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#555;font-weight:600;margin-bottom:6px;">#${String(p + idx + 1).padStart(2, "0")}</div><div style="font-family:Lora,serif;font-size:11px;color:#333;">${cg.plain}</div></div>`;
       });
-      html += `<div class="pg in"><div class="hd"><span>Answer Key</span><span>Cryptogram</span></div><div style="padding-top:0.2in;">${gs}</div><div class="ft"><span>${T} — ${AU}</span><span>${akP}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>Answer Key</span><span>Cryptogram</span></div><div style="padding-top:0.2in;">${akBanner}${gs}</div><div class="ft"><span>${T} — ${AU}</span><span>${akP}</span></div></div>`;
       akP++;
     }
   }
