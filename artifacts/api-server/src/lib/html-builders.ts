@@ -109,7 +109,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
   const pS = 5, aS = pS + PC;
 
   let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${T}</title>` +
-    
+    `<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">` +
     `<style>*{margin:0;padding:0;box-sizing:border-box;}@page{size:${trimW}in ${trimH}in;margin:0;}` +
     `.pg{width:${trimW}in;min-height:${trimH}in;page-break-after:always;position:relative;overflow:hidden;}` +
     `.pg:last-child{page-break-after:auto;}` +
@@ -459,7 +459,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
     front = `<div style="${fb}text-align:center;padding:1in;">${deco}<div style="position:relative;z-index:1;">${opts.puzzleType ? `<div style="font-family:'Source Code Pro',monospace;font-size:11px;letter-spacing:6px;text-transform:uppercase;color:${ac};margin-bottom:24px;">${opts.puzzleType}</div>` : ""}<div style="width:56px;height:2px;background:${ac};margin:0 auto 32px;"></div><div style="font-size:46px;font-weight:700;color:${ac};line-height:1.15;margin-bottom:18px;padding:0 0.3in;">${title}</div><div style="font-size:16px;font-style:italic;color:${tx}aa;margin-bottom:28px;">${sub}</div><div style="width:56px;height:2px;background:${ac};margin:0 auto 22px;"></div>${author ? `<div style="font-family:'Source Code Pro',monospace;font-size:12px;letter-spacing:2px;color:${tx}99;margin-bottom:16px;">${author}</div>` : ""}<div style="font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:3px;color:${tx}77;">${meta}</div></div></div>`;
   }
 
-  const coverHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box;}@page{size:${fullW.toFixed(4)}in ${fullH.toFixed(4)}in;margin:0;}body{width:${fullW.toFixed(4)}in;height:${fullH.toFixed(4)}in;overflow:hidden;position:relative;background:${bg};print-color-adjust:exact;-webkit-print-color-adjust:exact;}</style></head><body>${back}${spine}${front}</body></html>`;
+  const coverHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet"><style>*{margin:0;padding:0;box-sizing:border-box;}@page{size:${fullW.toFixed(4)}in ${fullH.toFixed(4)}in;margin:0;}body{width:${fullW.toFixed(4)}in;height:${fullH.toFixed(4)}in;overflow:hidden;position:relative;background:${bg};print-color-adjust:exact;-webkit-print-color-adjust:exact;}</style></head><body>${back}${spine}${front}</body></html>`;
 
   return { html: coverHtml, fullW, fullH, spineW };
 }

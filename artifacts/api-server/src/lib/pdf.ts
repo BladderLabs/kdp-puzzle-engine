@@ -39,20 +39,11 @@ export async function htmlToPdf(
   const browser = await getBrowser();
   const page = await browser.newPage();
   try {
-    await page.setRequestInterception(true);
-    page.on("request", (req) => {
-      const proto = new URL(req.url()).protocol;
-      if (proto === "data:" || proto === "about:") {
-        req.continue();
-      } else {
-        req.abort("blockedbyclient");
-      }
-    });
-
-    await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 90000 });
+    // Allow all external requests (needed for Google Fonts to load)
+    await page.setContent(html, { waitUntil: "networkidle0", timeout: 120000 });
     const pdf = await page.pdf({
-      width: width + "in",
-      height: height + "in",
+      width: width.toFixed(4) + "in",
+      height: height.toFixed(4) + "in",
       printBackground: true,
       preferCSSPageSize: true,
       margin: { top: 0, right: 0, bottom: 0, left: 0 },
