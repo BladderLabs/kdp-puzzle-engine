@@ -66,8 +66,8 @@ router.post("/pdf/interior", async (req, res) => {
     if (typeof req.body.html === "string") {
       // Spec flow: client already has the HTML from /generate
       html = req.body.html;
-      w = typeof req.body.width === "number" ? req.body.width : 8.5;
-      h = typeof req.body.height === "number" ? req.body.height : 11;
+      w = typeof req.body.width === "number" && req.body.width > 0 ? req.body.width : 8.5;
+      h = typeof req.body.height === "number" && req.body.height > 0 ? req.body.height : 11;
       req.log.info(`Rendering interior PDF from HTML blob: ${w}"x${h}"`);
     } else {
       // Legacy / direct path: regenerate from opts
@@ -106,9 +106,9 @@ router.post("/pdf/cover", async (req, res) => {
     if (typeof req.body.html === "string") {
       // Spec flow: client already has the HTML from /generate
       html = req.body.html;
-      fullW = req.body.fullW;
-      fullH = req.body.fullH;
-      req.log.info(`Rendering cover PDF from HTML blob: ${fullW?.toFixed(3)}"x${fullH?.toFixed(3)}"`);
+      fullW = typeof req.body.fullW === "number" && req.body.fullW > 0 ? req.body.fullW : 17.562;
+      fullH = typeof req.body.fullH === "number" && req.body.fullH > 0 ? req.body.fullH : 11.25;
+      req.log.info(`Rendering cover PDF from HTML blob: ${fullW.toFixed(3)}"x${fullH.toFixed(3)}"`);
     } else {
       // Legacy / direct path: regenerate from opts
       const opts = toOpts(GenerateBookBody.parse(req.body));
