@@ -180,21 +180,22 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
       `<div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#777;margin-top:4px;">Highlighted letters spell F-I-N-D (left to right)</div>` +
       `</div>`;
   } else if (PT === "Sudoku") {
-    const sdRows = [[5,0,3],[0,9,0],[2,0,7]];
+    // 2×2 mini demo (4-cell) showing the uniqueness constraint
+    const sdRows = [[5,0],[0,9]];
     let sdTable = `<table style="border-collapse:collapse;margin:6px auto;">`;
-    for (let r = 0; r < 3; r++) {
+    for (let r = 0; r < 2; r++) {
       sdTable += "<tr>";
-      for (let c = 0; c < 3; c++) {
+      for (let c = 0; c < 2; c++) {
         const v = sdRows[r][c];
-        sdTable += `<td style="width:28px;height:28px;text-align:center;font-family:'Source Code Pro',monospace;font-size:13px;border:2px solid #555;${v ? "font-weight:700;color:#111;background:#f5f5f0;" : "color:#bbb;"}">${v || "?"}</td>`;
+        sdTable += `<td style="width:32px;height:32px;text-align:center;font-family:'Source Code Pro',monospace;font-size:15px;border:2px solid #555;${v ? "font-weight:700;color:#111;background:#f5f5f0;" : "color:#bbb;"}">${v || "?"}</td>`;
       }
       sdTable += "</tr>";
     }
     sdTable += "</table>";
     miniEx = `<div style="margin-bottom:20px;text-align:center;">` +
-      `<div style="font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:2px;color:#888;text-transform:uppercase;margin-bottom:6px;">Example — fill "?" so each row &amp; column is unique:</div>` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:2px;color:#888;text-transform:uppercase;margin-bottom:6px;">Example — fill "?" so no digit repeats:</div>` +
       sdTable +
-      `<div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#777;margin-top:4px;">No repeated digits in any row, column, or 3×3 box</div>` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#777;margin-top:4px;">Each row, column, and 3×3 box must contain 1–9 once</div>` +
       `</div>`;
   } else if (PT === "Maze") {
     // Hardcoded 4×4 mini maze (bit-flags N=1 E=2 S=4 W=8) with shaded solution path
@@ -225,12 +226,13 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
       `<div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#777;margin-top:4px;">Follow open passages — no diagonal moves</div>` +
       `</div>`;
   } else if (PT === "Number Search") {
-    const nsRows = [["1","2","3","4","7"],["8","5","9","2","3"],["3","7","1","6","8"],["4","2","8","5","9"],["6","1","3","7","2"]];
+    // 4×4 grid with sequence 1234 highlighted in row 0
+    const nsRows = [["1","2","3","4"],["8","5","9","2"],["3","7","1","6"],["4","2","8","5"]];
     const nsHi = new Set(["0,0","0,1","0,2","0,3"]);
     let nsTable = `<table style="border-collapse:collapse;margin:6px auto;">`;
-    for (let r = 0; r < 5; r++) {
+    for (let r = 0; r < 4; r++) {
       nsTable += "<tr>";
-      for (let c = 0; c < 5; c++) {
+      for (let c = 0; c < 4; c++) {
         const h = nsHi.has(`${r},${c}`);
         nsTable += `<td style="${miniCellBase}${h ? "background:#e8e8e0;font-weight:700;" : ""}">${nsRows[r][c]}</td>`;
       }
@@ -238,9 +240,9 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     }
     nsTable += "</table>";
     miniEx = `<div style="margin-bottom:20px;text-align:center;">` +
-      `<div style="font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:2px;color:#888;text-transform:uppercase;margin-bottom:6px;">Example — sequence "1234" highlighted:</div>` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:2px;color:#888;text-transform:uppercase;margin-bottom:6px;">Example — sequence "1234" highlighted in row 1:</div>` +
       nsTable +
-      `<div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#777;margin-top:4px;">Highlighted digits spell 1-2-3-4 across row 1</div>` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#777;margin-top:4px;">Highlighted digits spell 1-2-3-4 (left to right)</div>` +
       `</div>`;
   } else if (PT === "Cryptogram") {
     miniEx = `<div style="margin-bottom:20px;text-align:center;">` +
@@ -365,7 +367,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
       // Sorted number bank in bordered 3-column callout box
       const sortedNS = [...ns.placed].sort();
       const ch = `<div style="border:1px solid #ccc;background:#f8f6f0;border-radius:3px;padding:8px 12px;margin-top:8px;">` +
-        `<div style="font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:3px;text-transform:uppercase;color:#666;margin-bottom:6px;text-align:center;border-bottom:1px solid #ddd;padding-bottom:4px;font-variant:small-caps;">Find These Numbers</div>` +
+        `<div style="font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:3px;text-transform:uppercase;color:#666;margin-bottom:6px;text-align:center;border-bottom:1px solid #ddd;padding-bottom:4px;font-variant:small-caps;">Find These Words</div>` +
         `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px 8px;">` +
         sortedNS.map(s => `<div style="font-family:'Source Code Pro',monospace;font-size:${LP ? 14 : 12}px;color:#222;padding:1px 0;">${escapeHtml(String(s))}</div>`).join("") +
         `</div></div>`;
@@ -404,7 +406,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
       let gs = `<div style="display:flex;flex-wrap:wrap;gap:14px;justify-content:center;">`;
       batch.forEach((ws, idx) => {
         const cSz = LP ? 9 : 8, fSz = LP ? 6 : 5;
-        let m = `<div style="text-align:center;"><div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#555;font-weight:600;">#${String(p + idx + 1).padStart(2, "00")}</div><table style="border-collapse:collapse;">`;
+        let m = `<div style="text-align:center;"><div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#555;font-weight:600;">#${String(p + idx + 1).padStart(2, "0")}</div><table style="border-collapse:collapse;">`;
         for (let r = 0; r < ws.grid.length; r++) {
           m += "<tr>";
           for (let c = 0; c < ws.grid[r].length; c++) {
