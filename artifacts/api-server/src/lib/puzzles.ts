@@ -371,7 +371,7 @@ export const QUOTE_BANK: QuoteEntry[] = [
   { text: "NOTHING IS PARTICULARLY HARD IF YOU DIVIDE IT INTO SMALL JOBS", author: "Henry Ford" },
   { text: "HAPPINESS IS NOT BY CHANCE BUT BY CHOICE", author: "Jim Rohn" },
   { text: "THE WISEST MIND HAS SOMETHING YET TO LEARN", author: "George Santayana" },
-  { text: "WE KNOW WHAT WE ARE BUT KNOW NOT WHAT WE MAY BE", author: "William Shakespeare" },
+  { text: "ALL THE WORLD IS A STAGE AND ALL THE MEN AND WOMEN MERELY PLAYERS", author: "William Shakespeare" },
   { text: "A ROOM WITHOUT BOOKS IS LIKE A BODY WITHOUT A SOUL", author: "Marcus Tullius Cicero" },
   { text: "I AM SO CLEVER THAT SOMETIMES I DO NOT UNDERSTAND A SINGLE WORD OF WHAT I AM SAYING", author: "Oscar Wilde" },
   { text: "THE MORE THAT YOU READ THE MORE THINGS YOU WILL KNOW", author: "Dr. Seuss" },

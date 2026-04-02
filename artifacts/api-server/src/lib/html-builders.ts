@@ -68,6 +68,9 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
 
   const wpp = LP ? 16 : 20, gsz = LP ? 13 : 15;
   const wC = LP ? 34 : 28, wF = LP ? 17 : 14;
+  // Sudoku cell size: 9×54=486px < 490px content (6in - 0.5in gut - 0.4in right = 5.1in = 490px)
+  // 58px would produce 9×58=522px > 490px, overflowing KDP margins — 54px is the correct max.
+  // LP: 9×64=576px < 730px content (8.5in - 0.5in - 0.4in = 7.6in = 730px) ✓
   const sC = LP ? 64 : 54, sF = LP ? 26 : 20;
 
   // Word bank priority: custom words (≥10) > wordCategory bank > General bank
