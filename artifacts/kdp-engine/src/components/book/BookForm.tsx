@@ -15,7 +15,16 @@ import type { NicheResult } from "@workspace/api-client-react";
 
 const PUZZLE_TYPES = ["Word Search", "Sudoku", "Maze", "Number Search", "Cryptogram"] as const;
 const DIFFICULTIES = ["Easy", "Medium", "Hard"] as const;
-const THEMES = ["midnight", "forest", "crimson", "ocean", "violet", "slate", "rose", "ember"] as const;
+const THEMES = [
+  { value: "midnight", label: "Midnight Gold" },
+  { value: "forest",   label: "Forest Ink" },
+  { value: "crimson",  label: "Crimson Fire" },
+  { value: "ocean",    label: "Ocean Sky" },
+  { value: "violet",   label: "Violet Glow" },
+  { value: "slate",    label: "Slate Orange" },
+  { value: "sunrise",  label: "Sunrise Pink" },
+  { value: "teal",     label: "Teal Wave" },
+] as const;
 const COVER_STYLES = ["classic", "geometric", "luxury", "bold", "minimal", "retro"] as const;
 
 const formSchema = z.object({
@@ -50,7 +59,7 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
     defaultValues: {
       title: initialValues?.title || "",
       subtitle: initialValues?.subtitle || "",
-      author: initialValues?.author || "",
+      author: initialValues?.author || "Eleanor Bennett",
       puzzleType: initialValues?.puzzleType || "Word Search",
       puzzleCount: initialValues?.puzzleCount || 50,
       difficulty: initialValues?.difficulty || "Medium",
@@ -133,7 +142,7 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
                 <FormField control={form.control} name="author" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Author</FormLabel>
-                    <FormControl><Input placeholder="Your name or pen name" {...field} /></FormControl>
+                    <FormControl><Input placeholder="Eleanor Bennett" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -269,7 +278,7 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                         <SelectContent>
-                          {THEMES.map(t => <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>)}
+                          {THEMES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
                         </SelectContent>
                       </Select>
                       <FormMessage />

@@ -56,7 +56,7 @@ export interface BuildResult {
 export function buildInteriorHTML(opts: BuildOpts): BuildResult {
   const T = escapeHtml(opts.title);
   const ST = escapeHtml(opts.subtitle || "");
-  const AU = escapeHtml(opts.author || "");
+  const AU = escapeHtml(opts.author || "Eleanor Bennett");
   const PT = opts.puzzleType || "Word Search";
   const PC = opts.puzzleCount || 100;
   const DF = opts.difficulty || "Medium";
@@ -154,7 +154,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     `<div style="font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:3px;color:#333;font-weight:600;margin-bottom:6px;">TIP</div>` +
     `<div style="font-family:Lora,serif;font-size:12px;color:#444;">${tip}</div></div>` +
     (LP ? `<div style="margin-top:20px;font-family:Source Code Pro,monospace;font-size:10px;letter-spacing:2px;color:#888;text-align:center;">LARGE PRINT EDITION</div>` : "") +
-    `</div><div class="ft"><span>${T}</span><span>3</span></div></div>`;
+    `</div><div class="ft"><span>${T} — ${AU}</span><span>3</span></div></div>`;
 
   let tocR = "";
   const mx = Math.min(PC, 42);
@@ -166,7 +166,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     `<div style="padding-top:0.3in;"><div style="font-family:Lora,serif;font-size:26px;font-weight:700;color:#222;margin-bottom:16px;">Table of Contents</div>` +
     `<div style="columns:2;column-gap:32px;">${tocR}</div>` +
     `<div style="margin-top:20px;font-family:'Source Code Pro',monospace;font-size:10px;color:#333;letter-spacing:2px;font-weight:600;">ANSWER KEY &mdash; PAGE ${aS}</div></div>` +
-    `<div class="ft"><span>${T}</span><span>4</span></div></div>`;
+    `<div class="ft"><span>${T} — ${AU}</span><span>4</span></div></div>`;
 
   for (let i = 0; i < PC; i++) {
     const pN = pS + i;
@@ -184,7 +184,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
       }
       g += "</table>";
       const ch = ws.placed.map(w => `<span style="display:inline-block;font-family:'Source Code Pro',monospace;font-size:${LP ? 11 : 10}px;background:#f5f3ee;border:1px solid #ddd;border-radius:3px;padding:3px 8px;margin:2px;">${escapeHtml(w)}</span>`).join("");
-      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Word Search</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#333;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#aaa;">WORD SEARCH &middot; ${DF.toUpperCase()}</span></div>${g}<div style="text-align:center;margin-top:8px;">${ch}</div></div><div class="ft"><span>${T}</span><span>${pN}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Word Search</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#333;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#aaa;">WORD SEARCH &middot; ${DF.toUpperCase()}</span></div>${g}<div style="text-align:center;margin-top:8px;">${ch}</div></div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
 
     } else if (PT === "Sudoku") {
       const sd = pz as { puzzle: number[][] };
@@ -205,7 +205,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         g += "</tr>";
       }
       g += "</table>";
-      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Sudoku</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#333;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#aaa;">SUDOKU &middot; ${DF.toUpperCase()}</span></div>${g}</div><div class="ft"><span>${T}</span><span>${pN}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Sudoku</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#333;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#aaa;">SUDOKU &middot; ${DF.toUpperCase()}</span></div>${g}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
 
     } else if (PT === "Maze") {
       const mz = pz as { grid: number[][]; rows: number; cols: number };
@@ -228,7 +228,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         g += "</tr>";
       }
       g += "</table>";
-      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Maze</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#333;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#aaa;">MAZE &middot; ${DF.toUpperCase()}</span></div>${g}<div style="font-family:'Source Code Pro',monospace;font-size:9px;color:#999;margin-top:6px;text-align:center;">S = Start &nbsp;&nbsp; F = Finish</div></div><div class="ft"><span>${T}</span><span>${pN}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Maze</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#333;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#aaa;">MAZE &middot; ${DF.toUpperCase()}</span></div>${g}<div style="font-family:'Source Code Pro',monospace;font-size:9px;color:#999;margin-top:6px;text-align:center;">S = Start &nbsp;&nbsp; F = Finish</div></div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
 
     } else if (PT === "Number Search") {
       const ns = pz as { grid: string[][]; placed: string[] };
@@ -241,14 +241,14 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
       }
       g += "</table>";
       const ch = ns.placed.map(s => `<span style="display:inline-block;font-family:'Source Code Pro',monospace;font-size:${LP ? 11 : 10}px;background:#f5f3ee;border:1px solid #ddd;border-radius:3px;padding:3px 8px;margin:2px;">${escapeHtml(String(s))}</span>`).join("");
-      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Number Search</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#333;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#aaa;">NUMBER SEARCH &middot; ${DF.toUpperCase()}</span></div>${g}<div style="text-align:center;margin-top:8px;">${ch}</div></div><div class="ft"><span>${T}</span><span>${pN}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>${DF} &middot; Number Search</span></div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#333;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#aaa;">NUMBER SEARCH &middot; ${DF.toUpperCase()}</span></div>${g}<div style="text-align:center;margin-top:8px;">${ch}</div></div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
 
     } else if (PT === "Cryptogram") {
       const cg = pz as { cipher: string; plain: string };
       const cipherDisplay = cg.cipher.split("").map(ch =>
         ch >= "A" && ch <= "Z" ? `<span style="display:inline-block;text-align:center;width:${LP ? 22 : 18}px;">${ch}<br/><span style="display:block;border-bottom:1px solid #333;margin:0 2px;">&nbsp;</span></span>` : (ch === " " ? `<span style="display:inline-block;width:${LP ? 10 : 8}px;">&nbsp;</span>` : ch)
       ).join("");
-      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>Cryptogram</span></div><div style="padding-top:0.2in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#333;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#aaa;">CRYPTOGRAM</span></div><div style="font-family:'Source Code Pro',monospace;font-size:${LP ? 16 : 13}px;color:#222;line-height:2.8;word-spacing:4px;">${cipherDisplay}</div><div style="margin-top:30px;font-family:'Source Code Pro',monospace;font-size:9px;color:#aaa;">A=__ B=__ C=__ D=__ E=__ F=__ G=__ H=__ I=__ J=__ K=__ L=__ M=__<br/>N=__ O=__ P=__ Q=__ R=__ S=__ T=__ U=__ V=__ W=__ X=__ Y=__ Z=__</div></div><div class="ft"><span>${T}</span><span>${pN}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>${T}</span><span>Cryptogram</span></div><div style="padding-top:0.2in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#333;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#aaa;">CRYPTOGRAM</span></div><div style="font-family:'Source Code Pro',monospace;font-size:${LP ? 16 : 13}px;color:#222;line-height:2.8;word-spacing:4px;">${cipherDisplay}</div><div style="margin-top:30px;font-family:'Source Code Pro',monospace;font-size:9px;color:#aaa;">A=__ B=__ C=__ D=__ E=__ F=__ G=__ H=__ I=__ J=__ K=__ L=__ M=__<br/>N=__ O=__ P=__ Q=__ R=__ S=__ T=__ U=__ V=__ W=__ X=__ Y=__ Z=__</div></div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
     }
   }
 
@@ -273,7 +273,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         gs += m;
       });
       gs += "</div>";
-      html += `<div class="pg in"><div class="hd"><span>Answer Key</span><span>${PT}</span></div><div style="padding-top:0.2in;">${gs}</div><div class="ft"><span>${T}</span><span>${akP}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>Answer Key</span><span>${PT}</span></div><div style="padding-top:0.2in;">${gs}</div><div class="ft"><span>${T} — ${AU}</span><span>${akP}</span></div></div>`;
       akP++;
     }
 
@@ -301,7 +301,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         gs += m;
       });
       gs += "</div>";
-      html += `<div class="pg in"><div class="hd"><span>Answer Key</span><span>Sudoku</span></div><div style="padding-top:0.2in;">${gs}</div><div class="ft"><span>${T}</span><span>${akP}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>Answer Key</span><span>Sudoku</span></div><div style="padding-top:0.2in;">${gs}</div><div class="ft"><span>${T} — ${AU}</span><span>${akP}</span></div></div>`;
       akP++;
     }
 
@@ -351,7 +351,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         gs += m;
       });
       gs += "</div>";
-      html += `<div class="pg in"><div class="hd"><span>Answer Key</span><span>Maze</span></div><div style="padding-top:0.2in;">${gs}</div><div class="ft"><span>${T}</span><span>${akP}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>Answer Key</span><span>Maze</span></div><div style="padding-top:0.2in;">${gs}</div><div class="ft"><span>${T} — ${AU}</span><span>${akP}</span></div></div>`;
       akP++;
     }
 
@@ -362,7 +362,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
       batch.forEach((cg, idx) => {
         gs += `<div style="margin-bottom:20px;padding:10px;border:1px solid #eee;"><div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#666;font-weight:600;margin-bottom:6px;">#${String(p + idx + 1).padStart(2, "0")}</div><div style="font-family:Lora,serif;font-size:11px;color:#333;">${cg.plain}</div></div>`;
       });
-      html += `<div class="pg in"><div class="hd"><span>Answer Key</span><span>Cryptogram</span></div><div style="padding-top:0.2in;">${gs}</div><div class="ft"><span>${T}</span><span>${akP}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>Answer Key</span><span>Cryptogram</span></div><div style="padding-top:0.2in;">${gs}</div><div class="ft"><span>${T} — ${AU}</span><span>${akP}</span></div></div>`;
       akP++;
     }
   }
@@ -378,15 +378,14 @@ interface CoverTheme {
 }
 
 const THEMES: Record<string, CoverTheme> = {
-  midnight: { bg: "#0A0A14", ac: "#C8951A", tx: "#EDE8DC" },
-  forest:   { bg: "#0A1208", ac: "#4A8A4A", tx: "#E0EDE0" },
-  crimson:  { bg: "#140808", ac: "#C84A1A", tx: "#EDE0DC" },
-  ocean:    { bg: "#080A14", ac: "#1A7AC8", tx: "#DCE4ED" },
-  violet:   { bg: "#100814", ac: "#8A4AC8", tx: "#E4DCED" },
-  slate:    { bg: "#0C0C0C", ac: "#C87A2A", tx: "#EDEBE6" },
-  // NEW themes
-  rose:     { bg: "#14080C", ac: "#C84A7A", tx: "#EDE0E5" },
-  ember:    { bg: "#100A04", ac: "#E8621A", tx: "#EDE6DC" },
+  midnight: { bg: "#0A0A14", ac: "#F0C040", tx: "#F5F0E0" },
+  forest:   { bg: "#0A1208", ac: "#50C050", tx: "#E8F5E8" },
+  crimson:  { bg: "#1A0505", ac: "#FF6B35", tx: "#FFF0E8" },
+  ocean:    { bg: "#050A18", ac: "#40B0FF", tx: "#E0F0FF" },
+  violet:   { bg: "#120818", ac: "#B06AFF", tx: "#F0E8FF" },
+  slate:    { bg: "#0E0E0E", ac: "#FF9E3D", tx: "#FFF5E8" },
+  sunrise:  { bg: "#1A0A08", ac: "#FF4060", tx: "#FFF0F0" },
+  teal:     { bg: "#081210", ac: "#30D0B0", tx: "#E0FFF8" },
 };
 
 export interface CoverBuildOpts extends BuildOpts {
@@ -420,20 +419,34 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
 
   const title = escapeHtml(opts.title || "Book Title");
   const sub = escapeHtml(opts.subtitle || "");
-  const author = escapeHtml(opts.author || "");
+  const author = escapeHtml(opts.author || "Eleanor Bennett");
   const lpLabel = opts.largePrint !== false ? " Large print formatting for comfortable solving." : "";
   const backDesc = escapeHtml(opts.backDescription || `Enjoy ${opts.puzzleCount || 100} carefully crafted ${opts.puzzleType || "Word Search"} puzzles.${lpLabel} Complete answer key included at the back.`);
   const lpMeta = opts.largePrint !== false ? " | Large Print" : "";
   const meta = `${opts.puzzleCount || 100} ${opts.puzzleType || "Word Search"} Puzzles | ${opts.difficulty || "Medium"}${lpMeta}`;
 
-  const deco = `<div style="position:absolute;top:12%;right:8%;width:120px;height:120px;border:2px solid ${ac}22;border-radius:50%;"></div>` +
-    `<div style="position:absolute;bottom:15%;left:6%;width:80px;height:80px;border:2px solid ${ac}18;border-radius:50%;"></div>` +
-    `<div style="position:absolute;top:35%;right:12%;width:50px;height:50px;border:1.5px solid ${ac}15;transform:rotate(45deg);"></div>`;
+  const vn = opts.volumeNumber ?? 0;
+  const titleWordCount = (opts.title || "Book Title").trim().split(/\s+/).length;
+  const seriesBadge = (vn >= 1 && vn <= 3)
+    ? `<div style="position:absolute;top:0.6in;right:0.6in;z-index:10;padding:4px 10px;border:1.5px solid ${ac}66;border-radius:3px;font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:2px;color:${ac};">VOLUME ${vn}</div>`
+    : "";
+  const sellPts = `${opts.puzzleCount || 100} PUZZLES | ${(opts.difficulty || "MEDIUM").toUpperCase()} | SOLUTIONS INSIDE`;
+  const sellDiv = `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:${tx}b3;text-transform:uppercase;margin-bottom:12px;">${sellPts}</div>`;
+
+  const deco =
+    `<div style="position:absolute;bottom:8%;right:5%;width:140px;height:140px;border:2px solid ${ac};border-radius:50%;opacity:0.12;"></div>` +
+    `<div style="position:absolute;top:8%;left:5%;width:90px;height:90px;border:2px solid ${ac};border-radius:50%;opacity:0.10;"></div>` +
+    `<div style="position:absolute;top:30%;right:10%;width:40px;height:40px;border:1.5px solid ${ac};border-radius:50%;opacity:0.08;"></div>` +
+    `<div style="position:absolute;top:12%;right:8%;width:60px;height:60px;border:1.5px solid ${ac};transform:rotate(45deg);opacity:0.10;"></div>` +
+    `<div style="position:absolute;bottom:12%;left:7%;width:35px;height:35px;border:1px solid ${ac};transform:rotate(30deg);opacity:0.07;"></div>` +
+    `<div style="position:absolute;top:53%;left:50%;transform:translateX(-50%);width:200px;height:1px;background:${ac};opacity:0.15;"></div>` +
+    `<div style="position:absolute;bottom:14%;left:calc(50% - 120px);width:8px;height:8px;background:${ac};border-radius:50%;opacity:0.20;"></div>` +
+    `<div style="position:absolute;bottom:14%;left:calc(50% + 112px);width:8px;height:8px;background:${ac};border-radius:50%;opacity:0.20;"></div>`;
 
   const back = `<div style="position:absolute;left:${bleed}in;top:${bleed}in;width:${trimW}in;height:${trimH}in;background:${bg};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5in 1in;text-align:center;box-sizing:border-box;">` +
     `<div style="font-family:Lora,serif;font-size:16px;color:${tx}cc;line-height:1.8;margin-bottom:40px;">${backDesc}</div>` +
     `<div style="width:50px;height:1px;background:${ac};margin-bottom:30px;"></div>` +
-    (author ? `<div style="font-family:Lora,serif;font-size:12px;color:${tx}99;margin-bottom:12px;">${author}</div>` : "") +
+    `<div style="font-family:Lora,serif;font-size:13px;color:${tx}e6;margin-bottom:12px;">${author}</div>` +
     `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:3px;color:${tx}88;">${meta}</div>` +
     `<div style="position:absolute;bottom:0.5in;right:0.4in;width:2in;height:1.2in;border:1px dashed ${ac}33;display:flex;align-items:center;justify-content:center;"><div style="font-family:'Source Code Pro',monospace;font-size:7px;color:${ac}55;">BARCODE AREA</div></div></div>`;
 
@@ -446,20 +459,18 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
 
   let front = "";
   if (cs === "luxury") {
-    front = `<div style="${fb}padding:0;">${deco}<div style="position:absolute;top:0.35in;left:0.35in;right:0.35in;bottom:0.35in;border:3px solid ${ac};z-index:1;"></div><div style="text-align:center;z-index:2;position:relative;"><div style="width:40px;height:1px;background:${ac};margin:0 auto 24px;"></div><div style="font-size:38px;font-weight:700;text-transform:uppercase;letter-spacing:5px;color:${tx};margin-bottom:18px;padding:0 0.8in;line-height:1.2;">${title}</div><div style="width:40px;height:1px;background:${ac};margin:0 auto 16px;"></div><div style="font-size:15px;font-style:italic;color:${tx}bb;margin-bottom:20px;">${sub}</div>${author ? `<div style="font-family:'Source Code Pro',monospace;font-size:11px;color:${tx}99;margin-bottom:16px;">${author}</div>` : ""}<div style="font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:3px;color:${tx}88;">${meta}</div></div></div>`;
+    front = `<div style="${fb}padding:0;">${deco}${seriesBadge}<div style="position:absolute;top:0.35in;left:0.35in;right:0.35in;bottom:0.35in;border:3px solid ${ac};z-index:1;"></div><div style="text-align:center;z-index:2;position:relative;"><div style="width:40px;height:1px;background:${ac};margin:0 auto 24px;"></div><div style="font-size:42px;font-weight:700;text-transform:uppercase;letter-spacing:6px;color:${tx};margin-bottom:18px;padding:0 0.8in;line-height:1.2;">${title}</div><div style="width:40px;height:1px;background:${ac};margin:0 auto 16px;"></div><div style="font-size:17px;font-style:italic;color:${tx}e6;letter-spacing:0.5px;margin-bottom:16px;">${sub}</div>${sellDiv}<div style="font-family:'Source Code Pro',monospace;font-size:11px;color:${tx}e6;margin-bottom:16px;">${author}</div><div style="font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:3px;color:${tx}b3;">${meta}</div></div></div>`;
   } else if (cs === "geometric") {
-    front = `<div style="${fb}padding:1in;">${deco}<div style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;overflow:hidden;"><div style="position:absolute;top:18%;left:-10%;width:130%;height:38%;background:${ac};transform:rotate(-30deg);opacity:0.8;"></div></div><div style="position:relative;z-index:1;text-align:left;width:100%;"><div style="font-size:52px;font-weight:700;color:#fff;line-height:1.1;margin-bottom:14px;text-shadow:2px 2px 10px rgba(0,0,0,0.5);">${title}</div><div style="font-size:15px;color:${tx}bb;margin-bottom:16px;">${sub}</div>${author ? `<div style="font-family:'Source Code Pro',monospace;font-size:11px;color:${tx}99;">${author}</div>` : ""}</div><div style="position:absolute;bottom:1in;left:1in;font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:3px;color:${tx}77;z-index:1;">${meta}</div></div>`;
+    front = `<div style="${fb}padding:1in;">${deco}${seriesBadge}<div style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;overflow:hidden;"><div style="position:absolute;top:18%;left:-10%;width:130%;height:38%;background:${ac};transform:rotate(-30deg);opacity:0.8;"></div></div><div style="position:relative;z-index:1;text-align:left;width:100%;"><div style="font-size:58px;font-weight:700;color:#fff;line-height:1.1;margin-bottom:14px;text-shadow:2px 2px 10px rgba(0,0,0,0.5);">${title}</div><div style="font-size:18px;color:${tx}e6;letter-spacing:0.5px;margin-bottom:12px;">${sub}</div>${sellDiv}<div style="font-family:'Source Code Pro',monospace;font-size:11px;color:${tx}e6;">${author}</div></div><div style="position:absolute;bottom:1in;left:1in;font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:3px;color:${tx}b3;z-index:1;">${meta}</div></div>`;
   } else if (cs === "bold") {
-    front = `<div style="${fb}flex-direction:row;padding:0;"><div style="width:38%;height:100%;background:${ac};display:flex;align-items:flex-end;padding:1in 0.4in;box-sizing:border-box;"><div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:3px;color:${bg};">${meta}</div></div><div style="width:62%;display:flex;flex-direction:column;justify-content:center;padding:1in 0.7in;"><div style="font-size:44px;font-weight:700;color:#fff;line-height:1.1;margin-bottom:16px;">${title}</div><div style="font-size:15px;color:${ac};font-style:italic;margin-bottom:12px;">${sub}</div>${author ? `<div style="font-family:'Source Code Pro',monospace;font-size:11px;color:${tx}99;">${author}</div>` : ""}</div></div>`;
+    front = `<div style="${fb}flex-direction:row;padding:0;">${seriesBadge}<div style="width:38%;height:100%;background:${ac};display:flex;align-items:flex-end;padding:1in 0.4in;box-sizing:border-box;"><div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:3px;color:${bg};">${meta}</div></div><div style="width:62%;display:flex;flex-direction:column;justify-content:center;padding:1in 0.7in;"><div style="font-size:50px;font-weight:700;color:#fff;line-height:1.1;margin-bottom:16px;">${title}</div><div style="font-size:18px;color:${ac};font-style:italic;letter-spacing:0.5px;margin-bottom:12px;">${sub}</div>${sellDiv}<div style="font-family:'Source Code Pro',monospace;font-size:11px;color:${tx}e6;">${author}</div></div></div>`;
   } else if (cs === "minimal") {
-    // NEW: Minimal — clean sans-style with single rule
-    front = `<div style="${fb}padding:1in;text-align:left;"><div style="position:relative;z-index:1;width:100%;"><div style="width:56px;height:3px;background:${ac};margin-bottom:40px;"></div><div style="font-size:42px;font-weight:700;color:${tx};line-height:1.1;margin-bottom:20px;letter-spacing:1px;">${title}</div>${sub ? `<div style="font-size:14px;color:${tx}99;margin-bottom:16px;letter-spacing:2px;text-transform:uppercase;font-family:'Source Code Pro',monospace;">${sub}</div>` : ""}<div style="position:absolute;bottom:-4in;left:0;font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:3px;color:${tx}55;">${meta}</div>${author ? `<div style="position:absolute;bottom:-4.4in;left:0;font-family:'Source Code Pro',monospace;font-size:10px;color:${tx}77;">${author}</div>` : ""}</div></div>`;
+    front = `<div style="${fb}padding:1in;text-align:left;">${seriesBadge}<div style="position:relative;z-index:1;width:100%;"><div style="width:56px;height:3px;background:${ac};margin-bottom:40px;"></div><div style="font-size:48px;font-weight:700;color:${tx};line-height:1.1;margin-bottom:20px;letter-spacing:1px;">${title}</div>${sub ? `<div style="font-size:17px;font-style:italic;color:${tx}e6;letter-spacing:0.5px;margin-bottom:16px;">${sub}</div>` : ""}${sellDiv}<div style="font-family:'Source Code Pro',monospace;font-size:10px;color:${tx}e6;margin-bottom:16px;">${author}</div><div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:3px;color:${tx}b3;">${meta}</div></div></div>`;
   } else if (cs === "retro") {
-    // NEW: Retro — bordered badge style
-    front = `<div style="${fb}padding:0.6in;text-align:center;"><div style="width:100%;height:100%;border:6px double ${ac};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0.5in;box-sizing:border-box;"><div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:6px;color:${ac};text-transform:uppercase;margin-bottom:16px;">★ &nbsp; ${opts.puzzleType || "Puzzles"} &nbsp; ★</div><div style="font-size:40px;font-weight:700;color:${tx};line-height:1.1;margin-bottom:12px;text-transform:uppercase;letter-spacing:3px;">${title}</div>${sub ? `<div style="font-size:13px;font-style:italic;color:${tx}bb;margin-bottom:14px;">${sub}</div>` : ""}<div style="width:80px;height:2px;background:${ac};margin:8px auto 14px;"></div>${author ? `<div style="font-family:'Source Code Pro',monospace;font-size:10px;color:${tx}88;">${author}</div>` : ""}<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:${tx}55;margin-top:12px;">${meta}</div></div></div>`;
+    front = `<div style="${fb}padding:0.6in;text-align:center;">${seriesBadge}<div style="width:100%;height:100%;border:6px double ${ac};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0.5in;box-sizing:border-box;"><div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:6px;color:${ac};text-transform:uppercase;margin-bottom:16px;">★ &nbsp; ${opts.puzzleType || "Puzzles"} &nbsp; ★</div><div style="font-size:44px;font-weight:700;color:${tx};line-height:1.1;margin-bottom:12px;text-transform:uppercase;letter-spacing:3px;">${title}</div>${sub ? `<div style="font-size:17px;font-style:italic;color:${tx}e6;letter-spacing:0.5px;margin-bottom:14px;">${sub}</div>` : ""}<div style="width:80px;height:2px;background:${ac};margin:8px auto 14px;"></div>${sellDiv}<div style="font-family:'Source Code Pro',monospace;font-size:10px;color:${tx}e6;">${author}</div><div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:${tx}b3;margin-top:12px;">${meta}</div></div></div>`;
   } else {
-    // classic (default — original)
-    front = `<div style="${fb}text-align:center;padding:1in;">${deco}<div style="position:relative;z-index:1;">${opts.puzzleType ? `<div style="font-family:'Source Code Pro',monospace;font-size:11px;letter-spacing:6px;text-transform:uppercase;color:${ac};margin-bottom:24px;">${opts.puzzleType}</div>` : ""}<div style="width:56px;height:2px;background:${ac};margin:0 auto 32px;"></div><div style="font-size:46px;font-weight:700;color:${ac};line-height:1.15;margin-bottom:18px;padding:0 0.3in;">${title}</div><div style="font-size:16px;font-style:italic;color:${tx}aa;margin-bottom:28px;">${sub}</div><div style="width:56px;height:2px;background:${ac};margin:0 auto 22px;"></div>${author ? `<div style="font-family:'Source Code Pro',monospace;font-size:12px;letter-spacing:2px;color:${tx}99;margin-bottom:16px;">${author}</div>` : ""}<div style="font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:3px;color:${tx}77;">${meta}</div></div></div>`;
+    // classic (default)
+    front = `<div style="${fb}text-align:center;padding:1in;">${deco}${seriesBadge}<div style="position:relative;z-index:1;">${opts.puzzleType ? `<div style="font-family:'Source Code Pro',monospace;font-size:11px;letter-spacing:6px;text-transform:uppercase;color:${ac};margin-bottom:24px;">${opts.puzzleType}</div>` : ""}<div style="width:56px;height:2px;background:${ac};margin:0 auto 32px;"></div><div style="font-size:${titleWordCount <= 3 ? "58" : "52"}px;font-weight:700;color:${ac};line-height:1.15;margin-bottom:18px;padding:0 0.3in;">${title}</div><div style="font-size:17px;font-style:italic;color:${tx}e6;letter-spacing:0.5px;margin-bottom:16px;">${sub}</div>${sellDiv}<div style="width:56px;height:2px;background:${ac};margin:0 auto 22px;"></div><div style="font-family:'Source Code Pro',monospace;font-size:13px;letter-spacing:3px;color:${tx}e6;margin-bottom:16px;">${author}</div><div style="font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:3px;color:${tx}b3;">${meta}</div></div></div>`;
   }
 
   const coverHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet"><style>*{margin:0;padding:0;box-sizing:border-box;}@page{size:${fullW.toFixed(4)}in ${fullH.toFixed(4)}in;margin:0;}body{width:${fullW.toFixed(4)}in;height:${fullH.toFixed(4)}in;overflow:hidden;position:relative;background:${bg};print-color-adjust:exact;-webkit-print-color-adjust:exact;}</style></head><body>${back}${spine}${front}</body></html>`;
