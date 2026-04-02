@@ -322,6 +322,12 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
 
       {/* ── Right sidebar ── */}
       <div className="xl:col-span-1 space-y-4">
+        <PreviewPane
+          puzzleType={puzzleType}
+          difficulty={form.watch("difficulty")}
+          largePrint={form.watch("largePrint")}
+          words={wordsStr.split("\n").filter(w => w.trim().length > 0)}
+        />
         <CoverPreview
           title={form.watch("title")}
           subtitle={form.watch("subtitle")}
@@ -334,12 +340,6 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
           largePrint={form.watch("largePrint")}
           paperType={form.watch("paperType")}
           backDescription={form.watch("backDescription")}
-        />
-        <PreviewPane
-          puzzleType={puzzleType}
-          difficulty={form.watch("difficulty")}
-          largePrint={form.watch("largePrint")}
-          words={wordsStr.split("\n").filter(w => w.trim().length > 0)}
         />
         <NicheAssistant puzzleType={puzzleType} onApply={applyNicheData} />
       </div>

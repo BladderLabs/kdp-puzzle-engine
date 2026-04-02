@@ -212,6 +212,31 @@ paths:
                 type: string
                 format: binary
 
+  /cover-preview:
+    post:
+      operationId: coverPreview
+      tags: [generate]
+      summary: Generate cover HTML for live browser preview (no puzzle generation)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CoverPreviewRequest"
+      responses:
+        "200":
+          description: Cover HTML and dimensions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoverPreviewResult"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /puzzles/preview:
     post:
       operationId: previewPuzzles
@@ -633,6 +658,63 @@ components:
           type: integer
       required:
         - puzzleType
+
+    CoverPreviewRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        subtitle:
+          type: string
+        author:
+          type: string
+        theme:
+          type: string
+        coverStyle:
+          type: string
+        volumeNumber:
+          type: integer
+        series:
+          type: string
+        backDescription:
+          type: string
+        largePrint:
+          type: boolean
+        puzzleCount:
+          type: integer
+        puzzleType:
+          type: string
+        difficulty:
+          type: string
+        paperType:
+          type: string
+      required:
+        - title
+
+    CoverDims:
+      type: object
+      properties:
+        fullW:
+          type: number
+        fullH:
+          type: number
+        spineW:
+          type: number
+      required:
+        - fullW
+        - fullH
+        - spineW
+
+    CoverPreviewResult:
+      type: object
+      properties:
+        html:
+          type: string
+        coverDims:
+          $ref: "#/components/schemas/CoverDims"
+      required:
+        - html
+        - coverDims
 
     PreviewResult:
       type: object

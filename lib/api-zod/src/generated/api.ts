@@ -488,3 +488,31 @@ export const GetNicheIdeasResponse = zod.object({
     }),
   ),
 });
+
+/**
+ * @summary Generate cover HTML for live browser preview (no puzzle generation)
+ */
+export const CoverPreviewBody = zod.object({
+  title: zod.string(),
+  subtitle: zod.string().optional(),
+  author: zod.string().optional(),
+  theme: zod.string().optional(),
+  coverStyle: zod.string().optional(),
+  volumeNumber: zod.number().optional(),
+  series: zod.string().optional(),
+  backDescription: zod.string().optional(),
+  largePrint: zod.boolean().optional(),
+  puzzleCount: zod.number().optional(),
+  puzzleType: zod.string().optional(),
+  difficulty: zod.string().optional(),
+  paperType: zod.string().optional(),
+});
+
+export const CoverPreviewResponse = zod.object({
+  html: zod.string(),
+  coverDims: zod.object({
+    fullW: zod.number(),
+    fullH: zod.number(),
+    spineW: zod.number(),
+  }),
+});

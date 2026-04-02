@@ -303,3 +303,30 @@ export interface NicheIdea {
 export interface NicheIdeasResult {
   ideas: NicheIdea[];
 }
+
+export interface CoverPreviewRequest {
+  title: string;
+  subtitle?: string;
+  author?: string;
+  theme?: string;
+  coverStyle?: string;
+  volumeNumber?: number;
+  series?: string;
+  backDescription?: string;
+  largePrint?: boolean;
+  puzzleCount?: number;
+  puzzleType?: string;
+  difficulty?: string;
+  paperType?: string;
+}
+
+export interface CoverDims {
+  fullW: number;
+  fullH: number;
+  spineW: number;
+}
+
+export interface CoverPreviewResult {
+  html: string;
+  coverDims: CoverDims;
+}
