@@ -482,7 +482,7 @@ components:
           enum: [white, cream]
         theme:
           type: string
-          enum: [midnight, forest, crimson, ocean, violet, slate, rose, ember]
+          enum: [midnight, forest, crimson, ocean, violet, slate, sunrise, teal]
         coverStyle:
           type: string
           enum: [classic, geometric, luxury, bold, minimal, retro]

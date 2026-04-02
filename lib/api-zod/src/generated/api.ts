@@ -169,8 +169,8 @@ export const GenerateBookBody = zod.object({
       "ocean",
       "violet",
       "slate",
-      "rose",
-      "ember",
+      "sunrise",
+      "teal",
     ])
     .optional(),
   coverStyle: zod
@@ -219,8 +219,8 @@ export const RenderInteriorPdfBody = zod.object({
       "ocean",
       "violet",
       "slate",
-      "rose",
-      "ember",
+      "sunrise",
+      "teal",
     ])
     .optional(),
   coverStyle: zod
@@ -258,8 +258,8 @@ export const RenderCoverPdfBody = zod.object({
       "ocean",
       "violet",
       "slate",
-      "rose",
-      "ember",
+      "sunrise",
+      "teal",
     ])
     .optional(),
   coverStyle: zod
