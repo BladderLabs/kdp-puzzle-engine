@@ -70,9 +70,10 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
   const wC = LP ? 34 : 28, wF = LP ? 17 : 14;
   const sC = LP ? 64 : 58, sF = LP ? 26 : 20;
 
-  // Word bank: prefer wordCategory, then custom words list, then General bank
+  // Word bank priority: custom words (≥10) > wordCategory bank > General bank
+  const customWords = opts.words && opts.words.length >= 10 ? opts.words : null;
   const categoryBank = opts.wordCategory && WORD_BANKS[opts.wordCategory] ? WORD_BANKS[opts.wordCategory] : null;
-  const wordBank = categoryBank || (opts.words && opts.words.length >= 10 ? opts.words : WORD_BANKS.General);
+  const wordBank = customWords || categoryBank || WORD_BANKS.General;
 
   // Cryptogram: build a shuffled pool of quote indices for no-repeat sampling across the book
   let cryptoQuotePool = PT === "Cryptogram"
@@ -94,7 +95,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         puzzles.push(makeMaze(LP ? 12 : 15, LP ? 12 : 15));
         break;
       case "Number Search":
-        puzzles.push(makeNumberSearch(gsz));
+        puzzles.push(makeNumberSearch(gsz, wordBank));
         break;
       case "Cryptogram": {
         if (cryptoQIdx >= cryptoQuotePool.length) {

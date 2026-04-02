@@ -173,7 +173,13 @@ const NUMBER_SEQUENCES = [
   "72634", "49821", "36057", "81234", "56789",
 ];
 
-export function makeNumberSearch(size: number): NumberSearchResult {
+/** Convert a word to a 5-digit sequence via letter-position encoding (A=1,B=2,...,Z=0 mod 10). */
+function wordToSequence(word: string): string {
+  const digits = word.toUpperCase().split("").map(c => ((c.charCodeAt(0) - 64) % 10).toString()).join("");
+  return (digits + digits).slice(0, 5); // repeat to ensure ≥5 chars then trim
+}
+
+export function makeNumberSearch(size: number, wordBank?: string[]): NumberSearchResult {
   const grid: string[][] = Array.from({ length: size }, () => Array(size).fill(""));
   const DIRS: [number, number][] = [
     [0, 1], [0, -1], [1, 0], [-1, 0],
@@ -181,7 +187,11 @@ export function makeNumberSearch(size: number): NumberSearchResult {
   ];
   const placed: string[] = [];
   const pSet: Record<string, boolean> = {};
-  const sequences = shuf([...NUMBER_SEQUENCES]).slice(0, 20);
+  // Use category-derived sequences when a word bank is provided
+  const seqPool = wordBank && wordBank.length >= 5
+    ? shuf([...wordBank]).slice(0, 30).map(wordToSequence)
+    : NUMBER_SEQUENCES;
+  const sequences = shuf([...seqPool]).slice(0, 20);
 
   for (const seq of sequences.sort((a, b) => b.length - a.length)) {
     if (seq.length > size) continue;

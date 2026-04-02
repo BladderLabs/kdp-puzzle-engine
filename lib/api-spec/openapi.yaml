@@ -517,6 +517,8 @@ components:
           type: array
           items:
             type: string
+        wordCategory:
+          type: string
         series:
           type: string
         volumeNumber:
@@ -554,6 +556,8 @@ components:
           type: array
           items:
             type: string
+        wordCategory:
+          type: string
         niche:
           type: string
         volumeNumber:
@@ -593,6 +597,8 @@ components:
           type: array
           items:
             type: string
+        wordCategory:
+          type: string
         niche:
           type: string
         volumeNumber:
