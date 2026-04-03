@@ -12,6 +12,7 @@ interface CoverPreviewProps {
   coverStyle?: string;
   volumeNumber?: number;
   puzzleCount?: number;
+  puzzleType?: string;
   difficulty?: string;
   largePrint?: boolean;
   paperType?: string;
@@ -32,7 +33,7 @@ function computeScale(dims: CoverDims | null) {
 export function CoverPreview(props: CoverPreviewProps) {
   const {
     title, subtitle, author, theme, coverStyle,
-    volumeNumber, puzzleCount, difficulty, largePrint, paperType, backDescription,
+    volumeNumber, puzzleCount, puzzleType, difficulty, largePrint, paperType, backDescription,
   } = props;
 
   const [html, setHtml] = useState<string | null>(null);
@@ -56,6 +57,7 @@ export function CoverPreview(props: CoverPreviewProps) {
           coverStyle: coverStyle || "classic",
           volumeNumber: volumeNumber ?? 0,
           puzzleCount: puzzleCount || 50,
+          puzzleType: puzzleType || "Word Search",
           difficulty: difficulty || "Medium",
           largePrint: largePrint ?? false,
           paperType: paperType || "white",
@@ -75,7 +77,7 @@ export function CoverPreview(props: CoverPreviewProps) {
       clearTimeout(timer);
       if (abortRef.current) abortRef.current.abort();
     };
-  }, [title, subtitle, author, theme, coverStyle, volumeNumber, puzzleCount, difficulty, largePrint, paperType, backDescription]);
+  }, [title, subtitle, author, theme, coverStyle, volumeNumber, puzzleCount, puzzleType, difficulty, largePrint, paperType, backDescription]);
 
   const { scale, iframeW, iframeH, containerH } = computeScale(dims);
 

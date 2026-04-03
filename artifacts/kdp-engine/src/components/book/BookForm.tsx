@@ -371,6 +371,7 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
           coverStyle={form.watch("coverStyle")}
           volumeNumber={form.watch("volumeNumber")}
           puzzleCount={form.watch("puzzleCount")}
+          puzzleType={puzzleType}
           difficulty={form.watch("difficulty")}
           largePrint={form.watch("largePrint")}
           paperType={form.watch("paperType")}
