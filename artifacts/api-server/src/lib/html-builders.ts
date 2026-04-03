@@ -632,7 +632,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const ptLabel = opts.puzzleType || "Word Search";
   const lpLabel2 = opts.largePrint !== false ? ` Large print formatting for comfortable solving.` : "";
   const backDesc = escapeHtml(opts.backDescription ||
-    `${opts.puzzleCount || 100} carefully crafted ${ptLabel} puzzles designed to entertain and challenge.${lpLabel2} Complete answer key included at the back.`);
+    `Enjoy ${opts.puzzleCount || 100} carefully crafted ${ptLabel} puzzles.${lpLabel2} Complete answer key included at the back.`);
   const lpMeta = opts.largePrint !== false ? " | Large Print" : "";
   const meta = `${opts.puzzleCount || 100} ${opts.puzzleType || "Word Search"} Puzzles | ${opts.difficulty || "Medium"}${lpMeta}`;
 
@@ -725,7 +725,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const cleanFeatures = [
     `&#10003; ${opts.puzzleCount || 100} Unique Puzzles`,
     `&#10003; ${opts.difficulty || "Medium"} Difficulty Level`,
-    isLargePrint ? `&#10003; Large Print Format` : `&#10003; Ideal for Gifts &amp; Travel`,
+    `&#10003; Large Print Format`,
     `&#10003; One Puzzle Per Page`,
     `&#10003; Complete Solutions Included`,
   ];
