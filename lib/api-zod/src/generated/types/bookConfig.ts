@@ -24,6 +24,8 @@ export interface BookConfig {
   coverStyle?: BookConfigCoverStyle;
   backDescription?: string;
   words?: string[];
+  wordCategory?: string;
+  coverImageUrl?: string;
   series?: string;
   volumeNumber?: number;
 }

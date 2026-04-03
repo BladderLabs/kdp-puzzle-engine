@@ -20,6 +20,8 @@ export interface Book {
   coverStyle?: string;
   backDescription?: string;
   words?: string[];
+  wordCategory?: string;
+  coverImageUrl?: string;
   niche?: string;
   volumeNumber?: number;
   createdAt: Date;
