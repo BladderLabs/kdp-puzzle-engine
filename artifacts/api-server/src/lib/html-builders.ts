@@ -1,6 +1,6 @@
 import {
   shuf, makeWordSearch, makeSudoku, makeMaze, makeNumberSearch,
-  makeCryptogram, makeCryptogramFromQuote, WORD_BANKS, QUOTE_BANK, DEFWORDS,
+  makeCryptogramFromQuote, WORD_BANKS, QUOTE_BANK,
 } from "./puzzles";
 
 /** Compute total page count from config without generating any puzzles. */
