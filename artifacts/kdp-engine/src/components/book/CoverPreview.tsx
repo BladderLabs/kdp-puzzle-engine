@@ -17,6 +17,7 @@ interface CoverPreviewProps {
   largePrint?: boolean;
   paperType?: string;
   backDescription?: string;
+  coverImageUrl?: string;
 }
 
 const DISPLAY_WIDTH = 240;
@@ -34,6 +35,7 @@ export function CoverPreview(props: CoverPreviewProps) {
   const {
     title, subtitle, author, theme, coverStyle,
     volumeNumber, puzzleCount, puzzleType, difficulty, largePrint, paperType, backDescription,
+    coverImageUrl,
   } = props;
 
   const [html, setHtml] = useState<string | null>(null);
@@ -62,6 +64,7 @@ export function CoverPreview(props: CoverPreviewProps) {
           largePrint: largePrint ?? false,
           paperType: paperType || "white",
           backDescription: backDescription || undefined,
+          coverImageUrl: coverImageUrl || undefined,
         };
         const result = await coverPreview(req, { signal: controller.signal });
         setHtml(result.html);
@@ -77,7 +80,7 @@ export function CoverPreview(props: CoverPreviewProps) {
       clearTimeout(timer);
       if (abortRef.current) abortRef.current.abort();
     };
-  }, [title, subtitle, author, theme, coverStyle, volumeNumber, puzzleCount, puzzleType, difficulty, largePrint, paperType, backDescription]);
+  }, [title, subtitle, author, theme, coverStyle, volumeNumber, puzzleCount, puzzleType, difficulty, largePrint, paperType, backDescription, coverImageUrl]);
 
   const { scale, iframeW, iframeH, containerH } = computeScale(dims);
 

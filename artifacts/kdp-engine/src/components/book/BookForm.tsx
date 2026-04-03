@@ -59,6 +59,7 @@ const formSchema = z.object({
   backDescription: z.string().optional(),
   words: z.string().optional(),
   wordCategory: z.string().optional(),
+  coverImageUrl: z.string().optional(),
   niche: z.string().optional(),
   volumeNumber: z.coerce.number().optional(),
 });
@@ -89,6 +90,7 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
       backDescription: initialValues?.backDescription || "",
       words: initialValues?.words || "",
       wordCategory: initialValues?.wordCategory || "General",
+      coverImageUrl: initialValues?.coverImageUrl || "",
       niche: initialValues?.niche || "",
       volumeNumber: initialValues?.volumeNumber ?? 0,
     }
@@ -334,6 +336,16 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
                   )} />
                 </div>
 
+                {/* Cover Image URL */}
+                <FormField control={form.control} name="coverImageUrl" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cover Image URL <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
+                    <FormControl><Input placeholder="https://i.ibb.co/…/my-cover.jpg" {...field} /></FormControl>
+                    <CardDescription className="text-xs">Upload your image to imgbb.com (free) and paste the direct link here. Appears on the front cover.</CardDescription>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
                 {/* Back description */}
                 <FormField control={form.control} name="backDescription" render={({ field }) => (
                   <FormItem>
@@ -376,6 +388,7 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
           largePrint={form.watch("largePrint")}
           paperType={form.watch("paperType")}
           backDescription={form.watch("backDescription")}
+          coverImageUrl={form.watch("coverImageUrl")}
         />
         <NicheAssistant puzzleType={puzzleType} onApply={applyNicheData} />
       </div>

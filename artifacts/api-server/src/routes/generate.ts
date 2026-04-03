@@ -1,12 +1,12 @@
 import { Router, type IRouter } from "express";
 import { GenerateBookBody, PreviewPuzzlesBody, CoverPreviewBody } from "@workspace/api-zod";
-import { buildInteriorHTML, buildCoverHTML, computeTotalPages, type BuildOpts } from "../lib/html-builders";
+import { buildInteriorHTML, buildCoverHTML, computeTotalPages, type BuildOpts, type CoverBuildOpts } from "../lib/html-builders";
 import { makeWordSearch, makeSudoku, makeMaze, makeNumberSearch, makeCryptogram, shuf, DEFWORDS } from "../lib/puzzles";
 import { htmlToPdf } from "../lib/pdf";
 
 const router: IRouter = Router();
 
-function toOpts(data: ReturnType<typeof GenerateBookBody.parse>): BuildOpts {
+function toOpts(data: ReturnType<typeof GenerateBookBody.parse>): CoverBuildOpts {
   return {
     title: data.title,
     subtitle: data.subtitle ?? undefined,
@@ -22,6 +22,7 @@ function toOpts(data: ReturnType<typeof GenerateBookBody.parse>): BuildOpts {
     words: Array.isArray(data.words) ? (data.words as string[]) : [],
     wordCategory: data.wordCategory ?? undefined,
     volumeNumber: data.volumeNumber ?? 0,
+    coverImageUrl: (data as Record<string, unknown>).coverImageUrl as string | undefined,
   };
 }
 
@@ -142,7 +143,7 @@ router.post("/pdf/cover", async (req, res) => {
 router.post("/cover-preview", (req, res) => {
   try {
     const b = CoverPreviewBody.parse(req.body);
-    const opts: BuildOpts = {
+    const opts: CoverBuildOpts = {
       title: b.title,
       subtitle: b.subtitle ?? undefined,
       author: b.author ?? undefined,
@@ -156,6 +157,7 @@ router.post("/cover-preview", (req, res) => {
       backDescription: b.backDescription ?? undefined,
       series: b.series ?? undefined,
       volumeNumber: b.volumeNumber ?? 0,
+      coverImageUrl: b.coverImageUrl ?? undefined,
     };
     const totalPages = computeTotalPages(opts);
     const cover = buildCoverHTML(opts, totalPages);

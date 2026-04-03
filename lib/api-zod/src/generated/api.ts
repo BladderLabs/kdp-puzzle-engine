@@ -32,6 +32,7 @@ export const ListBooksResponseItem = zod.object({
   backDescription: zod.string().optional(),
   words: zod.array(zod.string()).optional(),
   wordCategory: zod.string().optional(),
+  coverImageUrl: zod.string().optional(),
   niche: zod.string().optional(),
   volumeNumber: zod.number().optional(),
   createdAt: zod.coerce.date(),
@@ -56,6 +57,7 @@ export const CreateBookBody = zod.object({
   backDescription: zod.string().optional(),
   words: zod.array(zod.string()).optional(),
   wordCategory: zod.string().optional(),
+  coverImageUrl: zod.string().optional(),
   niche: zod.string().optional(),
   volumeNumber: zod.number().optional(),
 });
@@ -82,6 +84,7 @@ export const GetBookResponse = zod.object({
   backDescription: zod.string().optional(),
   words: zod.array(zod.string()).optional(),
   wordCategory: zod.string().optional(),
+  coverImageUrl: zod.string().optional(),
   niche: zod.string().optional(),
   volumeNumber: zod.number().optional(),
   createdAt: zod.coerce.date(),
@@ -109,6 +112,7 @@ export const UpdateBookBody = zod.object({
   backDescription: zod.string().optional(),
   words: zod.array(zod.string()).optional(),
   wordCategory: zod.string().optional(),
+  coverImageUrl: zod.string().optional(),
   niche: zod.string().optional(),
   volumeNumber: zod.number().optional(),
 });
@@ -128,6 +132,7 @@ export const UpdateBookResponse = zod.object({
   backDescription: zod.string().optional(),
   words: zod.array(zod.string()).optional(),
   wordCategory: zod.string().optional(),
+  coverImageUrl: zod.string().optional(),
   niche: zod.string().optional(),
   volumeNumber: zod.number().optional(),
   createdAt: zod.coerce.date(),
@@ -186,6 +191,7 @@ export const GenerateBookBody = zod.object({
   backDescription: zod.string().optional(),
   words: zod.array(zod.string()).optional(),
   wordCategory: zod.string().optional(),
+  coverImageUrl: zod.string().optional(),
   series: zod.string().optional(),
   volumeNumber: zod.number().optional(),
 });
@@ -520,6 +526,7 @@ export const CoverPreviewBody = zod.object({
   puzzleType: zod.string().optional(),
   difficulty: zod.string().optional(),
   paperType: zod.string().optional(),
+  coverImageUrl: zod.string().optional(),
 });
 
 export const CoverPreviewResponse = zod.object({

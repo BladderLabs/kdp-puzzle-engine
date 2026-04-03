@@ -56,6 +56,7 @@ export function GenerateBook() {
       backDescription: book.backDescription ?? undefined,
       words: book.words ?? [],
       wordCategory: book.wordCategory ?? undefined,
+      coverImageUrl: book.coverImageUrl ?? undefined,
       volumeNumber: book.volumeNumber ?? 0,
     };
 

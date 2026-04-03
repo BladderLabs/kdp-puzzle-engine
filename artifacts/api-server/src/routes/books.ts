@@ -39,6 +39,7 @@ router.post("/books", async (req, res) => {
       backDescription: data.backDescription ?? null,
       words: (data.words as string[]) ?? [],
       wordCategory: data.wordCategory ?? null,
+      coverImageUrl: data.coverImageUrl ?? null,
       niche: data.niche ?? null,
       volumeNumber: data.volumeNumber ?? 1,
     }).returning();
@@ -79,6 +80,7 @@ router.put("/books/:id", async (req, res) => {
       backDescription: data.backDescription ?? null,
       words: (data.words as string[]) ?? [],
       wordCategory: data.wordCategory ?? null,
+      coverImageUrl: data.coverImageUrl ?? null,
       niche: data.niche ?? null,
       volumeNumber: data.volumeNumber ?? 1,
       updatedAt: new Date(),
@@ -122,6 +124,7 @@ router.post("/books/:id/clone", async (req, res) => {
       backDescription: source.backDescription,
       words: source.words ?? [],
       wordCategory: source.wordCategory,
+      coverImageUrl: source.coverImageUrl,
       niche: source.niche,
       volumeNumber: nextVol,
     }).returning();

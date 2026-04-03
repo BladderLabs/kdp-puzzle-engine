@@ -84,6 +84,7 @@ export interface BookConfig {
   backDescription?: string;
   words?: string[];
   wordCategory?: string;
+  coverImageUrl?: string;
   series?: string;
   volumeNumber?: number;
 }
@@ -102,6 +103,7 @@ export interface CreateBookBody {
   backDescription?: string;
   words?: string[];
   wordCategory?: string;
+  coverImageUrl?: string;
   niche?: string;
   volumeNumber?: number;
 }
@@ -121,6 +123,7 @@ export interface Book {
   backDescription?: string;
   words?: string[];
   wordCategory?: string;
+  coverImageUrl?: string;
   niche?: string;
   volumeNumber?: number;
   createdAt: string;
@@ -324,6 +327,7 @@ export interface CoverPreviewRequest {
   puzzleType?: string;
   difficulty?: string;
   paperType?: string;
+  coverImageUrl?: string;
 }
 
 export interface CoverDims {
