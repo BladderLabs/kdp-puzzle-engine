@@ -630,9 +630,10 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const sub = escapeHtml(opts.subtitle || "");
   const author = escapeHtml(opts.author || "Eleanor Bennett");
   const ptLabel = opts.puzzleType || "Word Search";
+  const diffLabel = opts.difficulty || "Medium";
   const lpLabel2 = opts.largePrint !== false ? ` Large print formatting for comfortable solving.` : "";
   const backDesc = escapeHtml(opts.backDescription ||
-    `Enjoy ${opts.puzzleCount || 100} carefully crafted ${ptLabel} puzzles.${lpLabel2} Complete answer key included at the back.`);
+    `${opts.puzzleCount || 100} carefully crafted ${diffLabel} ${ptLabel} puzzles designed for stress-free brain training. Each puzzle is presented on its own page with generous space for working through solutions.${lpLabel2} A full answer key is included at the back.`);
   const lpMeta = opts.largePrint !== false ? " | Large Print" : "";
   const meta = `${opts.puzzleCount || 100} ${opts.puzzleType || "Word Search"} Puzzles | ${opts.difficulty || "Medium"}${lpMeta}`;
 
@@ -721,7 +722,6 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const decoOrEmpty = (safeImgUrl || isSudokuNoImg) ? "" : deco;
 
   // Back cover: exactly 5-line centered checkmark list (spec-required wording/order, always 5 lines)
-  const ptName = opts.puzzleType || "Word Search";
   const cleanFeatures = [
     `&#10003; ${opts.puzzleCount || 100} Unique Puzzles`,
     `&#10003; ${opts.difficulty || "Medium"} Difficulty Level`,
