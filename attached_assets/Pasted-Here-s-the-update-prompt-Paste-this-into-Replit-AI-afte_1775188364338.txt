@@ -1,0 +1,81 @@
+Here's the update prompt. Paste this into Replit AI after your existing build:
+
+COVER UPGRADE — Apply these changes to the cover generation in server.js:
+UPDATE 1: ADD COVER IMAGE SUPPORT
+Add a new field to the web form called Cover Image URL. It is a text input, optional, with placeholder text "Paste image URL from imgbb.com or postimg.cc". The field ID is coverImageUrl. Place it in the Cover Settings card section after the Cover Style dropdown.
+In the buildCoverHTML function, read opts.coverImageUrl. If this value exists and is not empty, render the image on the front cover. The image replaces the CSS geometric decorations as the main visual element. Position it as follows:
+The image goes in the centre of the front cover, between the title section above and the selling points section below. It should be rendered as an img tag with these exact styles: width 4.5 inches, height 5 inches, object-fit cover, border-radius 6px, border 1.5px solid accent colour at 25 percent opacity, box-shadow 0 8px 32px rgba(0,0,0,0.4). Centre it horizontally using margin 0 auto and display block. Add position relative and z-index 1 so it sits above any remaining background decorations.
+If coverImageUrl is empty or not provided, keep the existing CSS geometric decorations as fallback. Do not show both the image and the decorations together. The image replaces the decorations on the front cover.
+UPDATE 2: NEW FRONT COVER LAYOUT ORDER
+Restructure the front cover content in this exact order from top to bottom for ALL cover styles:
+Section 1 — Volume badge. If series is 3-Volume, show "Volume 1" badge in top-right corner. Position absolute, top 0.5in, right 0.5in. Padding 4px 12px. Border 1.5px solid accent at 40 percent opacity. Border-radius 3px. Source Code Pro 8px. Letter-spacing 2px. Accent colour text.
+Section 2 — Puzzle type label. Source Code Pro monospace, 11px, letter-spacing 6px, uppercase, accent colour. Centred. Example: "S U D O K U". Margin-bottom 12px.
+Section 3 — Thin horizontal rule. Width 56px, height 2px, background accent colour, margin 0 auto 20px.
+Section 4 — Title. Lora serif, bold, accent colour. MINIMUM 52px font size. If the title is 3 words or fewer, use 58px. Line-height 1.1. Text-transform uppercase for the Classic and Luxury styles. Padding 0 0.3in to prevent text touching edges. Margin-bottom 12px.
+Section 5 — Subtitle. Lora serif, 17px, italic, text colour at 85 percent opacity. Not faded into invisibility. Must be clearly readable. Margin-bottom 20px.
+Section 6 — Cover image OR decorative element. If coverImageUrl exists, render the img tag as described in Update 1. If no image URL but puzzle type is Sudoku, render a CSS mini sudoku grid. The mini grid is a 4x4 HTML table with cells 28px by 28px, border 1.5px solid accent at 20 percent opacity, some cells containing numbers (1, 5, 3, 8, 2, 7 placed in random positions) in accent colour at 25 percent opacity, font Source Code Pro 14px. This grid is centred, margin 16px auto, and serves as a visual cue that this is a sudoku book. If no image URL and puzzle type is Word Search, render a small decorative text grid of scattered letters at low opacity instead. If neither condition applies, show the existing CSS geometric decorations. Margin-bottom 20px.
+Section 7 — Selling points bar. This is a new element that does not exist in the current code. Generate it automatically from the book settings. Format the text as: "[puzzleCount] PUZZLES | [difficulty.toUpperCase()] | LARGE PRINT | SOLUTIONS INCLUDED". Style: Source Code Pro monospace, 10px, letter-spacing 2.5px, accent colour at 85 percent opacity, text-align centre, text-transform uppercase. Add a thin horizontal rule (width 40px, accent colour) above this line with margin 0 auto 12px. This selling points bar is critical for converting browsers into buyers. Every bestselling puzzle book on Amazon has this.
+Section 8 — Author name. Source Code Pro monospace, 13px, letter-spacing 3px, text colour at 90 percent opacity. NOT faded. Must be clearly visible for brand building. If author is empty, default to "Eleanor Bennett". Centred. Margin-top 16px.
+Section 9 — Metadata line. Source Code Pro monospace, 9px, letter-spacing 2px, text colour at 55 percent opacity. Shows secondary info like "For All Ages · Large Print · Easy · Sudoku". Margin-top 8px.
+This layout order applies to the Classic style. For Geometric, Luxury, and Bold styles, maintain their unique visual characteristics like the diagonal band, the inset frame, or the split layout but use the same content order and include the image area and selling points bar in each.
+UPDATE 3: HIGH CONTRAST COLOUR THEMES
+Replace the entire THEMES object in the buildCoverHTML function with these 8 themes. These have minimum 6:1 contrast ratio between accent and background, tested for Amazon thumbnail visibility at 150px:
+javascriptconst THEMES = {
+  midnight:  { bg: '#0A0A14', ac: '#F0C040', tx: '#F5F0E0' },
+  forest:    { bg: '#0A1208', ac: '#50C050', tx: '#E8F5E8' },
+  crimson:   { bg: '#1A0505', ac: '#FF6B35', tx: '#FFF0E8' },
+  ocean:     { bg: '#050A18', ac: '#40B0FF', tx: '#E0F0FF' },
+  violet:    { bg: '#120818', ac: '#B06AFF', tx: '#F0E8FF' },
+  slate:     { bg: '#0E0E0E', ac: '#FF9E3D', tx: '#FFF5E8' },
+  sunrise:   { bg: '#1A0A08', ac: '#FF4060', tx: '#FFF0F0' },
+  teal:      { bg: '#081210', ac: '#30D0B0', tx: '#E0FFF8' },
+};
+```
+
+Update the theme dropdown in the web form to show all 8 options: Midnight Gold, Forest Ink, Crimson Fire, Ocean Sky, Violet Glow, Slate Orange, Sunrise Pink, Teal Wave.
+
+UPDATE 4: DEFAULT AUTHOR NAME
+
+Change the author input field default value to Eleanor Bennett. Set both the placeholder and the value attribute to "Eleanor Bennett" so it is pre-filled. The user can change it but Eleanor Bennett is the default for all books.
+
+In the buildCoverHTML function, if opts.author is empty or undefined, set it to "Eleanor Bennett". Show Eleanor Bennett in all 5 locations: front cover below selling points, spine after title separated by em dash, back cover between description and metadata, interior title page, and interior page footers.
+
+UPDATE 5: BACK COVER IMPROVEMENTS
+
+Replace the generic back cover description with benefit-driven copy. If the user provides a custom back description, use it. If the back description field is empty, auto-generate this text using the book settings:
+
+"[puzzleCount] carefully crafted [difficulty.toLowerCase()] [puzzleType.toLowerCase()] puzzles designed for stress-free brain training. Large print format for comfortable solving. One puzzle per page with generous writing space. Complete solutions included at the back. Perfect gift for puzzle lovers, seniors, and anyone seeking a relaxing screen-free activity."
+
+Below the description, add a feature list rendered as a centred column of short lines:
+```
+✓ [puzzleCount] Unique Puzzles
+✓ [difficulty] Difficulty Level
+✓ Large Print Format
+✓ One Puzzle Per Page
+✓ Complete Solutions Included
+Style each line as: Source Code Pro monospace, 10px, text colour at 70 percent opacity, line-height 2.2, text-align centre. The check mark character is ✓ (Unicode 2713) not an emoji. This feature list is between the description paragraph and the author name.
+UPDATE 6: WEB FORM CHANGES
+Add the Cover Image URL input field to the Cover Settings card:
+html<label>Cover Image URL (optional — generate in Grok, upload to imgbb.com)</label>
+<input id="coverImageUrl" placeholder="https://i.ibb.co/your-image.jpg">
+Add a help text below this field:
+html<div style="font-family:'Courier New',monospace;font-size:9px;color:#9A9080;margin-top:4px;line-height:1.5;">
+  TIP: Open grok.com, ask it to generate a photorealistic image of someone solving a sudoku puzzle on a wooden desk with warm lighting. Download the image, upload to imgbb.com, paste the direct link here.
+</div>
+Update the theme dropdown to include all 8 themes.
+Set the author input default value to Eleanor Bennett.
+In the client-side JavaScript generate function, add coverImageUrl to the data object being sent to the server:
+javascriptdata.coverImageUrl = document.getElementById('coverImageUrl').value;
+UPDATE 7: INTERIOR IMPROVEMENTS
+Add a selling points line to the title page after the copyright text and before the author name. Same format as the cover: "[puzzleCount] [puzzleType] Puzzles | [difficulty] | Large Print | Solutions Included". Source Code Pro 10px, letter-spacing 2px, colour #888, margin-top 16px.
+On each puzzle page, below the puzzle number label, add a difficulty indicator. For Easy show "DIFFICULTY: ● ○ ○ ○ ○", for Medium show "DIFFICULTY: ● ● ● ○ ○", for Hard show "DIFFICULTY: ● ● ● ● ○". Use Unicode circles: ● is filled (U+25CF), ○ is empty (U+25CB). Source Code Pro 8px, colour #bbb. This is a small touch but it makes the interior feel polished and professional.
+Add a progress line at the bottom of each puzzle page footer. Instead of just the page number, show: "Puzzle [current] of [total] | Page [pageNumber]". This gives solvers a sense of progression and makes the book feel comprehensive.
+UPDATE 8: CRITICAL — DO NOT BREAK THESE
+All interior content must remain pure B&W greyscale. No accent colours in the interior.
+The cover full-wrap dimensions must still be calculated dynamically from page count.
+The barcode area on the back cover must remain clear.
+The AI disclosure line on the title page must remain.
+Print-color-adjust exact must remain on the cover body.
+Page-break-after always must remain on every page div.
+Google Fonts must still load via link tag with networkidle0 wait.
+END OF UPDATES. Apply all 8 updates to the existing server.js code. Do not remove or break any existing functionality. These are additions and modifications to the cover generation, the web form, and the interior formatting.
