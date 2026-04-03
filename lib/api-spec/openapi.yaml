@@ -519,6 +519,8 @@ components:
             type: string
         wordCategory:
           type: string
+        coverImageUrl:
+          type: string
         series:
           type: string
         volumeNumber:
@@ -557,6 +559,8 @@ components:
           items:
             type: string
         wordCategory:
+          type: string
+        coverImageUrl:
           type: string
         niche:
           type: string
@@ -598,6 +602,8 @@ components:
           items:
             type: string
         wordCategory:
+          type: string
+        coverImageUrl:
           type: string
         niche:
           type: string
@@ -693,6 +699,8 @@ components:
         difficulty:
           type: string
         paperType:
+          type: string
+        coverImageUrl:
           type: string
       required:
         - title

@@ -679,42 +679,46 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
     `<div style="position:absolute;bottom:14%;left:calc(50% - 120px);width:8px;height:8px;background:${ac};border-radius:50%;opacity:0.35;"></div>` +
     `<div style="position:absolute;bottom:14%;left:calc(50% + 112px);width:8px;height:8px;background:${ac};border-radius:50%;opacity:0.35;"></div>`;
 
-  // Image block: cover image URL → <img>, Sudoku + no URL → mini 4×4 grid, else deco shapes
+  // Sanitize coverImageUrl: only allow http(s) URLs to prevent attribute injection / SSRF
+  const rawUrl = opts.coverImageUrl || "";
+  const safeImgUrl = /^https?:\/\//i.test(rawUrl)
+    ? rawUrl.replace(/"/g, "%22").replace(/'/g, "%27").replace(/</g, "%3C").replace(/>/g, "%3E")
+    : "";
+
+  // Image block: safe URL → <img>; Sudoku + no URL → mini 4×4 CSS grid; else empty
   let imageBlock = "";
-  if (opts.coverImageUrl) {
-    imageBlock = `<div style="width:100%;max-height:2.2in;overflow:hidden;margin-bottom:18px;border-radius:4px;"><img src="${opts.coverImageUrl}" alt="Cover Image" style="width:100%;height:auto;object-fit:cover;display:block;" /></div>`;
+  if (safeImgUrl) {
+    imageBlock = `<div style="width:100%;max-height:2in;overflow:hidden;margin-bottom:16px;border-radius:4px;"><img src="${safeImgUrl}" alt="Cover Image" style="width:100%;height:auto;object-fit:cover;display:block;" /></div>`;
   } else if ((opts.puzzleType || "Word Search") === "Sudoku") {
-    const miniGrid = [
-      [5,3,0,0],[7,0,0,0],[0,9,8,0],[0,0,0,6]
-    ];
+    const miniGrid = [[5,3,0,0],[7,0,0,0],[0,9,8,0],[0,0,0,6]];
     let sdRows = "";
     for (const row of miniGrid) {
-      sdRows += "<tr>" + row.map(v => `<td style="width:18px;height:18px;text-align:center;font-family:'Source Code Pro',monospace;font-size:9px;border:1px solid ${ac}66;${v ? `color:${tx};font-weight:700;` : `color:transparent;`}">${v || "."}</td>`).join("") + "</tr>";
+      sdRows += "<tr>" + row.map(v => `<td style="width:18px;height:18px;text-align:center;font-family:'Source Code Pro',monospace;font-size:9px;border:1px solid ${ac}66;${v ? `color:${tx};font-weight:700;` : "color:transparent;"}">${v || "."}</td>`).join("") + "</tr>";
     }
-    imageBlock = `<div style="margin-bottom:18px;display:flex;justify-content:center;"><table style="border-collapse:collapse;border:2px solid ${ac};">${sdRows}</table></div>`;
+    imageBlock = `<div style="margin-bottom:16px;display:flex;justify-content:center;"><table style="border-collapse:collapse;border:2px solid ${ac};">${sdRows}</table></div>`;
   }
 
-  // Back cover: benefit-driven description + checkmark feature list
-  const ptName = opts.puzzleType || "Word Search";
-  const lpFeature = isLargePrint ? `✓ Large print — easy on the eyes` : "";
-  const features = [
-    `✓ ${opts.puzzleCount || 100} hand-crafted ${ptName} puzzles`,
-    `✓ ${opts.difficulty || "Medium"} difficulty — suitable for all skill levels`,
-    lpFeature,
-    `✓ Complete answer key included`,
-    `✓ Premium ${opts.paperType === "cream" ? "cream" : "white"} paper interior`,
-    `✓ Perfect for gifts, travel &amp; daily brain training`,
-  ].filter(Boolean);
-  const featureList = features.map(f => `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:0.5px;color:${tx}cc;padding:3px 0;border-bottom:1px solid ${ac}22;">${f}</div>`).join("");
+  // When a cover image is present, suppress geometric deco shapes (image is the visual focal point)
+  const decoOrEmpty = safeImgUrl ? "" : deco;
 
-  const back = `<div style="position:absolute;left:${bleed}in;top:${bleed}in;width:${trimW}in;height:${trimH}in;background:${bgGrad};display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:1in 0.9in;text-align:left;box-sizing:border-box;">` +
-    `<div style="font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:4px;text-transform:uppercase;color:${ac};margin-bottom:14px;opacity:0.9;">${ptName} Collection</div>` +
-    `<div style="font-family:Lora,serif;font-size:14px;color:${tx}ee;line-height:1.75;margin-bottom:20px;">${backDesc}</div>` +
-    `<div style="width:36px;height:2px;background:${ac};margin-bottom:16px;opacity:0.8;"></div>` +
-    `<div style="margin-bottom:20px;width:100%;">${featureList}</div>` +
-    `<div style="width:36px;height:1px;background:${ac};margin-bottom:16px;opacity:0.5;"></div>` +
-    `<div style="font-family:Lora,serif;font-size:12px;color:${tx};margin-bottom:6px;">${author}</div>` +
-    `<div style="font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:2px;color:${tx}99;">${meta}</div>` +
+  // Back cover: fixed 5-line benefit checkmark list + preserved separator/author/meta/barcode structure
+  const ptName = opts.puzzleType || "Word Search";
+  const lpLine = isLargePrint ? `&#10003; Large print — easy on the eyes` : `&#10003; Clear, legible formatting for comfortable solving`;
+  const fixedFeatures = [
+    `&#10003; ${opts.puzzleCount || 100} hand-crafted ${ptName} puzzles`,
+    lpLine,
+    `&#10003; ${opts.difficulty || "Medium"} difficulty — suitable for all skill levels`,
+    `&#10003; Complete answer key included at the back`,
+    `&#10003; Great for gifts, travel &amp; daily brain training`,
+  ];
+  const featureList = fixedFeatures.map(f => `<div style="font-family:'Source Code Pro',monospace;font-size:10px;color:${tx};line-height:2.2;opacity:0.70;">${f}</div>`).join("");
+
+  const back = `<div style="position:absolute;left:${bleed}in;top:${bleed}in;width:${trimW}in;height:${trimH}in;background:${bgGrad};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5in 1in;text-align:center;box-sizing:border-box;">` +
+    `<div style="font-family:Lora,serif;font-size:16px;color:${tx}dd;line-height:1.8;margin-bottom:28px;">${backDesc}</div>` +
+    `<div style="width:100%;text-align:left;margin-bottom:28px;">${featureList}</div>` +
+    `<div style="width:50px;height:1px;background:${ac};margin-bottom:30px;"></div>` +
+    `<div style="font-family:Lora,serif;font-size:13px;color:${tx};margin-bottom:12px;">${author}</div>` +
+    `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:3px;color:${tx}cc;">${meta}</div>` +
     `<div style="position:absolute;bottom:0.5in;right:0.4in;width:2in;height:1.2in;border:1px dashed ${ac}44;display:flex;align-items:center;justify-content:center;"><div style="font-family:'Source Code Pro',monospace;font-size:7px;color:${ac}88;">BARCODE AREA</div></div></div>`;
 
   // Spine: larger + bolder text
@@ -728,25 +732,27 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   let front = "";
 
   if (cs === "luxury") {
-    // Double-frame centered layout with elevated typography + imageBlock
-    front = `<div style="${fb}padding:0;">${puzzleTexture}${deco}${seriesBadge}` +
+    // Double-frame centered layout. Section order: audienceCallout → puzzleType label → rule → title → rule → subtitle → imageBlock → sellDiv → rule → author → meta
+    front = `<div style="${fb}padding:0;">${puzzleTexture}${decoOrEmpty}${seriesBadge}` +
       `<div style="position:absolute;top:0.22in;left:0.22in;right:0.22in;bottom:0.22in;border:1px solid ${ac}55;z-index:1;"></div>` +
       `<div style="position:absolute;top:0.4in;left:0.4in;right:0.4in;bottom:0.4in;border:3px solid ${ac};z-index:1;"></div>` +
       `<div style="text-align:center;z-index:2;position:relative;padding:0 0.8in;">` +
-      `<div style="width:40px;height:1px;background:${ac};margin:0 auto 20px;"></div>` +
       `${audienceCallout}` +
-      `${imageBlock}` +
-      `<div style="font-family:'Oswald',sans-serif;font-size:62px;font-weight:700;text-transform:uppercase;letter-spacing:4px;color:${tx};margin-bottom:18px;line-height:1.2;">${title}</div>` +
+      `${opts.puzzleType ? `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:6px;text-transform:uppercase;color:${ac};margin-bottom:14px;opacity:0.85;">${opts.puzzleType}</div>` : ""}` +
       `<div style="width:40px;height:1px;background:${ac};margin:0 auto 16px;"></div>` +
-      `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:14px;">${sub}</div>` +
+      `<div style="font-family:'Oswald',sans-serif;font-size:62px;font-weight:700;text-transform:uppercase;letter-spacing:4px;color:${tx};margin-bottom:14px;line-height:1.2;">${title}</div>` +
+      `<div style="width:40px;height:1px;background:${ac};margin:0 auto 14px;"></div>` +
+      `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:16px;">${sub}</div>` +
+      `${imageBlock}` +
       `${sellDiv}` +
-      `<div style="font-family:'Source Code Pro',monospace;font-size:11px;color:${tx}ee;margin-bottom:12px;">${author}</div>` +
+      `<div style="width:40px;height:1px;background:${ac};margin:0 auto 14px;"></div>` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:11px;color:${tx}ee;margin-bottom:10px;">${author}</div>` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:3px;color:${tx}dd;">${meta}</div>` +
       `</div></div>`;
 
   } else if (cs === "geometric") {
-    // Two angled accent bands — title always on band, white text always works
-    front = `<div style="${fb}padding:1in;">${puzzleTexture}${deco}${seriesBadge}` +
+    // Two angled accent bands — title always on band. Section order: audienceCallout → title → subtitle → imageBlock → sellDiv → author
+    front = `<div style="${fb}padding:1in;">${puzzleTexture}${decoOrEmpty}${seriesBadge}` +
       `<div style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;overflow:hidden;">` +
       `<div style="position:absolute;top:18%;left:-10%;width:130%;height:38%;background:${ac};transform:rotate(-30deg);opacity:0.85;"></div>` +
       `<div style="position:absolute;top:52%;left:-10%;width:130%;height:7%;background:${ac};transform:rotate(-30deg);opacity:0.4;"></div>` +
@@ -755,6 +761,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `${audienceCallout}` +
       `<div style="font-family:'Oswald',sans-serif;font-size:68px;font-weight:700;color:${titleOnBg};line-height:1.05;margin-bottom:16px;text-shadow:2px 2px 12px rgba(0,0,0,0.4);">${title}</div>` +
       `<div style="font-size:19px;color:${tx}ee;letter-spacing:0.5px;margin-bottom:14px;">${sub}</div>` +
+      `${imageBlock}` +
       `${sellDiv}` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:11px;color:${tx}ee;">${author}</div>` +
       `</div>` +
@@ -762,7 +769,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `</div>`;
 
   } else if (cs === "bold") {
-    // Wider accent sidebar (42%) + puzzle texture in content area; contrast fixes applied
+    // Wider accent sidebar (42%). Section order in content area: audienceCallout → title → subtitle → imageBlock → sellDiv → author
     front = `<div style="${fb}flex-direction:row;padding:0;">${seriesBadge}` +
       `<div style="width:42%;height:100%;background:${ac};display:flex;flex-direction:column;justify-content:flex-end;padding:0.8in 0.4in;box-sizing:border-box;">` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:3px;color:${sidebarMeta};">${meta}</div>` +
@@ -773,13 +780,14 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `${audienceCallout}` +
       `<div style="font-family:'Oswald',sans-serif;font-size:64px;font-weight:700;color:${titleOnBg};line-height:1.05;margin-bottom:14px;">${title}</div>` +
       `<div style="font-size:19px;color:${ac};font-style:italic;letter-spacing:0.5px;margin-bottom:12px;">${sub}</div>` +
+      `${imageBlock}` +
       `${sellDiv}` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:11px;color:${tx}ee;">${author}</div>` +
       `</div></div></div>`;
 
   } else if (cs === "minimal") {
-    // Triple-stripe accent mark + larger dominant title
-    front = `<div style="${fb}padding:1in;text-align:left;">${puzzleTexture}${deco}${seriesBadge}` +
+    // Triple-stripe accent mark. Section order: stripes → audienceCallout → title → subtitle → imageBlock → sellDiv → author → meta
+    front = `<div style="${fb}padding:1in;text-align:left;">${puzzleTexture}${decoOrEmpty}${seriesBadge}` +
       `<div style="position:relative;z-index:1;width:100%;">` +
       `<div style="margin-bottom:32px;">` +
       `<div style="width:56px;height:3px;background:${ac};margin-bottom:6px;"></div>` +
@@ -789,20 +797,22 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `${audienceCallout}` +
       `<div style="font-family:'Oswald',sans-serif;font-size:64px;font-weight:700;color:${tx};line-height:1.05;margin-bottom:20px;letter-spacing:1px;">${title}</div>` +
       `${sub ? `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:16px;">${sub}</div>` : ""}` +
+      `${imageBlock}` +
       `${sellDiv}` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:10px;color:${tx}ee;margin-bottom:16px;">${author}</div>` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:3px;color:${tx}dd;">${meta}</div>` +
       `</div></div>`;
 
   } else if (cs === "retro") {
-    // Concentric double-border with star decorators and larger title
-    front = `<div style="${fb}padding:0.6in;text-align:center;">${puzzleTexture}${deco}${seriesBadge}` +
+    // Concentric double-border. Section order: star label → audienceCallout → title → subtitle → rule → imageBlock → sellDiv → author → meta → star footer
+    front = `<div style="${fb}padding:0.6in;text-align:center;">${puzzleTexture}${decoOrEmpty}${seriesBadge}` +
       `<div style="width:100%;height:100%;border:8px double ${ac};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0.5in;box-sizing:border-box;position:relative;">` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:6px;color:${ac};text-transform:uppercase;margin-bottom:12px;">★ &nbsp; ${opts.puzzleType || "Puzzles"} &nbsp; ★</div>` +
       `${audienceCallout}` +
       `<div style="font-family:'Oswald',sans-serif;font-size:60px;font-weight:700;color:${tx};line-height:1.05;margin-bottom:12px;text-transform:uppercase;letter-spacing:2px;">${title}</div>` +
       `${sub ? `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:12px;">${sub}</div>` : ""}` +
       `<div style="width:80px;height:2px;background:${ac};margin:8px auto 14px;"></div>` +
+      `${imageBlock}` +
       `${sellDiv}` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:10px;color:${tx}ee;">${author}</div>` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:${tx}dd;margin-top:12px;">${meta}</div>` +
@@ -810,7 +820,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `</div></div>`;
 
   } else if (cs === "warmth") {
-    // Warm, welcoming layout for senior/gift market — centered, ornamental, generous whitespace
+    // Warm, welcoming layout. Section order: ornament → audienceCallout → title → ornament divider → subtitle → imageBlock → sellDiv → author → meta
     front = `<div style="${fb}text-align:center;padding:1in;">${puzzleTexture}` +
       `<div style="position:absolute;top:8%;left:8%;width:70px;height:70px;border:1px solid ${ac};border-radius:50%;opacity:0.20;"></div>` +
       `<div style="position:absolute;bottom:8%;right:8%;width:90px;height:90px;border:1px solid ${ac};border-radius:50%;opacity:0.18;"></div>` +
@@ -825,21 +835,22 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="flex:1;max-width:60px;height:1px;background:${ac};opacity:0.6;"></div>` +
       `</div>` +
       `<div style="font-size:19px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:20px;">${sub}</div>` +
+      `${imageBlock}` +
       `${sellDiv}` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:12px;color:${tx}ee;margin-bottom:10px;letter-spacing:2px;">${author}</div>` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:${tx}dd;">${meta}</div>` +
       `</div></div>`;
 
   } else {
-    // classic (default): centered accent title UPPERCASE, puzzle texture, audience callout, imageBlock
-    front = `<div style="${fb}text-align:center;padding:1in;">${puzzleTexture}${deco}${seriesBadge}` +
+    // classic (default). Section order: audienceCallout → puzzleType label → rule → title → subtitle → imageBlock → sellDiv → rule → author → meta
+    front = `<div style="${fb}text-align:center;padding:1in;">${puzzleTexture}${decoOrEmpty}${seriesBadge}` +
       `<div style="position:relative;z-index:1;">` +
       `${audienceCallout}` +
       `${opts.puzzleType ? `<div style="font-family:'Source Code Pro',monospace;font-size:11px;letter-spacing:6px;text-transform:uppercase;color:${ac};margin-bottom:20px;">${opts.puzzleType}</div>` : ""}` +
       `<div style="width:56px;height:2px;background:${ac};margin:0 auto 28px;"></div>` +
-      `${imageBlock}` +
       `<div style="font-family:'Oswald',sans-serif;font-size:${titleWordCount <= 3 ? "68" : "60"}px;font-weight:700;text-transform:uppercase;color:${ac};line-height:1.1;margin-bottom:18px;padding:0 0.3in;">${title}</div>` +
       `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:16px;">${sub}</div>` +
+      `${imageBlock}` +
       `${sellDiv}` +
       `<div style="width:56px;height:2px;background:${ac};margin:0 auto 22px;"></div>` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:13px;letter-spacing:3px;color:${tx}ee;margin-bottom:16px;">${author}</div>` +
