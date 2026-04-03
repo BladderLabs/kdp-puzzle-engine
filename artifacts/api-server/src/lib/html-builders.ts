@@ -630,9 +630,9 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const sub = escapeHtml(opts.subtitle || "");
   const author = escapeHtml(opts.author || "Eleanor Bennett");
   const ptLabel = opts.puzzleType || "Word Search";
-  const lpLabel2 = opts.largePrint !== false ? " Large-print format makes it easy on your eyes." : "";
+  const lpLabel2 = opts.largePrint !== false ? ` Formatted in large print for comfortable solving.` : "";
   const backDesc = escapeHtml(opts.backDescription ||
-    `Challenge your mind and sharpen your focus with this carefully curated collection of ${opts.puzzleCount || 100} ${ptLabel} puzzles. Whether you're looking for a relaxing daily brain workout, a thoughtful gift, or a fun activity for travel, this book delivers hours of satisfying entertainment.${lpLabel2} Every puzzle comes with a complete answer key so you can check your progress at any time.`);
+    `Keep your mind sharp with this collection of ${opts.puzzleCount || 100} unique ${ptLabel} puzzles — crafted for fun, focus, and relaxation.${lpLabel2} A complete solutions section is included at the back so you can verify your answers any time.`);
   const lpMeta = opts.largePrint !== false ? " | Large Print" : "";
   const meta = `${opts.puzzleCount || 100} ${opts.puzzleType || "Word Search"} Puzzles | ${opts.difficulty || "Medium"}${lpMeta}`;
 
@@ -701,20 +701,20 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
     imageBlock = `<div style="margin-bottom:16px;display:flex;justify-content:center;"><table style="border-collapse:collapse;border:2px solid ${ac};">${sdRows}</table></div>`;
   }
 
-  // When a cover image is present, suppress geometric deco shapes (image is the visual focal point)
-  const decoOrEmpty = safeImgUrl ? "" : deco;
+  // Suppress geometric deco when cover image is present, or when Sudoku mini-grid is shown (it IS the decorative block)
+  const isSudokuNoImg = !safeImgUrl && (opts.puzzleType || "Word Search") === "Sudoku";
+  const decoOrEmpty = (safeImgUrl || isSudokuNoImg) ? "" : deco;
 
-  // Back cover: benefit-driven fallback paragraph + fixed 5-line centered checkmark list
+  // Back cover: fixed exact 5-line centered checkmark list (spec-required wording/order)
   const ptName = opts.puzzleType || "Word Search";
-  const lpLine = isLargePrint ? `&#10003; Large print — easy on the eyes` : `&#10003; Clear, legible formatting for comfortable solving`;
-  const fixedFeatures = [
-    `&#10003; ${opts.puzzleCount || 100} hand-crafted ${ptName} puzzles`,
-    lpLine,
-    `&#10003; ${opts.difficulty || "Medium"} difficulty — suitable for all skill levels`,
-    `&#10003; Complete answer key included at the back`,
-    `&#10003; Great for gifts, travel &amp; daily brain training`,
-  ];
-  const featureList = fixedFeatures.map(f => `<div style="font-family:'Source Code Pro',monospace;font-size:10px;color:${tx};line-height:2.2;opacity:0.70;text-align:center;">${f}</div>`).join("");
+  const cleanFeatures = [
+    `&#10003; ${opts.puzzleCount || 100} Unique Puzzles`,
+    `&#10003; ${opts.difficulty || "Medium"} Difficulty Level`,
+    `&#10003; Large Print Format`,
+    `&#10003; One Puzzle Per Page`,
+    `&#10003; Complete Solutions Included`,
+  ].filter((line, i) => i !== 2 || isLargePrint);
+  const featureList = cleanFeatures.map(f => `<div style="font-family:'Source Code Pro',monospace;font-size:10px;color:${tx};line-height:2.2;opacity:0.70;text-align:center;">${f}</div>`).join("");
 
   const back = `<div style="position:absolute;left:${bleed}in;top:${bleed}in;width:${trimW}in;height:${trimH}in;background:${bgGrad};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5in 1in;text-align:center;box-sizing:border-box;">` +
     `<div style="font-family:Lora,serif;font-size:16px;color:${tx}dd;line-height:1.8;margin-bottom:28px;">${backDesc}</div>` +
@@ -735,16 +735,14 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   let front = "";
 
   if (cs === "luxury") {
-    // Double-frame centered layout. Section order: puzzleType label → audienceCallout → rule → title → rule → subtitle → imageBlock → sellDiv → rule → author → meta
+    // Double-frame centered layout. Exact 9-section order: (volume badge abs) → puzzleType label → thin rule → title UPPERCASE → subtitle → imageBlock → selling points → author → metadata
     front = `<div style="${fb}padding:0;">${puzzleTexture}${decoOrEmpty}${seriesBadge}` +
       `<div style="position:absolute;top:0.22in;left:0.22in;right:0.22in;bottom:0.22in;border:1px solid ${ac}55;z-index:1;"></div>` +
       `<div style="position:absolute;top:0.4in;left:0.4in;right:0.4in;bottom:0.4in;border:3px solid ${ac};z-index:1;"></div>` +
       `<div style="text-align:center;z-index:2;position:relative;padding:0 0.8in;">` +
       `${opts.puzzleType ? `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:6px;text-transform:uppercase;color:${ac};margin-bottom:14px;opacity:0.85;">${opts.puzzleType}</div>` : ""}` +
-      `${audienceCallout}` +
       `<div style="width:40px;height:1px;background:${ac};margin:0 auto 16px;"></div>` +
       `<div style="font-family:'Oswald',sans-serif;font-size:62px;font-weight:700;text-transform:uppercase;letter-spacing:4px;color:${tx};margin-bottom:14px;line-height:1.2;">${title}</div>` +
-      `<div style="width:40px;height:1px;background:${ac};margin:0 auto 14px;"></div>` +
       `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:16px;">${sub}</div>` +
       `${imageBlock}` +
       `${sellDiv}` +
@@ -845,11 +843,10 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `</div></div>`;
 
   } else {
-    // classic (default). Section order: puzzleType label → audienceCallout → rule → title → subtitle → imageBlock → sellDiv → rule → author → meta
+    // classic (default). Exact 9-section order: (volume badge abs) → puzzleType label → thin rule → title UPPERCASE → subtitle → imageBlock → selling points → author → metadata
     front = `<div style="${fb}text-align:center;padding:1in;">${puzzleTexture}${decoOrEmpty}${seriesBadge}` +
       `<div style="position:relative;z-index:1;">` +
       `${opts.puzzleType ? `<div style="font-family:'Source Code Pro',monospace;font-size:11px;letter-spacing:6px;text-transform:uppercase;color:${ac};margin-bottom:12px;">${opts.puzzleType}</div>` : ""}` +
-      `${audienceCallout}` +
       `<div style="width:56px;height:2px;background:${ac};margin:0 auto 28px;"></div>` +
       `<div style="font-family:'Oswald',sans-serif;font-size:${titleWordCount <= 3 ? "68" : "60"}px;font-weight:700;text-transform:uppercase;color:${ac};line-height:1.1;margin-bottom:18px;padding:0 0.3in;">${title}</div>` +
       `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:16px;">${sub}</div>` +

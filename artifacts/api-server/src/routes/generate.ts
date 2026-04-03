@@ -22,7 +22,7 @@ function toOpts(data: ReturnType<typeof GenerateBookBody.parse>): CoverBuildOpts
     words: Array.isArray(data.words) ? (data.words as string[]) : [],
     wordCategory: data.wordCategory ?? undefined,
     volumeNumber: data.volumeNumber ?? 0,
-    coverImageUrl: (data as Record<string, unknown>).coverImageUrl as string | undefined,
+    coverImageUrl: data.coverImageUrl,
   };
 }
 
