@@ -630,9 +630,9 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const sub = escapeHtml(opts.subtitle || "");
   const author = escapeHtml(opts.author || "Eleanor Bennett");
   const ptLabel = opts.puzzleType || "Word Search";
-  const lpLabel2 = opts.largePrint !== false ? ` Formatted in large print for comfortable solving.` : "";
+  const lpLabel2 = opts.largePrint !== false ? ` Large print formatting for comfortable solving.` : "";
   const backDesc = escapeHtml(opts.backDescription ||
-    `Keep your mind sharp with this collection of ${opts.puzzleCount || 100} unique ${ptLabel} puzzles — crafted for fun, focus, and relaxation.${lpLabel2} A complete solutions section is included at the back so you can verify your answers any time.`);
+    `${opts.puzzleCount || 100} carefully crafted ${ptLabel} puzzles designed to entertain and challenge.${lpLabel2} Complete answer key included at the back.`);
   const lpMeta = opts.largePrint !== false ? " | Large Print" : "";
   const meta = `${opts.puzzleCount || 100} ${opts.puzzleType || "Word Search"} Puzzles | ${opts.difficulty || "Medium"}${lpMeta}`;
 
@@ -681,9 +681,24 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
     `<div style="position:absolute;bottom:14%;left:calc(50% - 120px);width:8px;height:8px;background:${ac};border-radius:50%;opacity:0.35;"></div>` +
     `<div style="position:absolute;bottom:14%;left:calc(50% + 112px);width:8px;height:8px;background:${ac};border-radius:50%;opacity:0.35;"></div>`;
 
-  // Sanitize coverImageUrl: only allow http(s) URLs to prevent attribute injection / SSRF
+  // Sanitize coverImageUrl: only allow http(s) URLs with non-private hostnames (SSRF mitigation)
   const rawUrl = opts.coverImageUrl || "";
-  const safeImgUrl = /^https?:\/\//i.test(rawUrl)
+  function isSafeImageUrl(url: string): boolean {
+    if (!/^https?:\/\//i.test(url)) return false;
+    try {
+      const parsed = new URL(url);
+      const host = parsed.hostname.toLowerCase();
+      // Block loopback, link-local, private ranges, and metadata endpoints
+      if (host === "localhost" || host === "127.0.0.1" || host === "::1") return false;
+      if (/^10\.\d+\.\d+\.\d+$/.test(host)) return false;
+      if (/^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/.test(host)) return false;
+      if (/^192\.168\.\d+\.\d+$/.test(host)) return false;
+      if (/^169\.254\.\d+\.\d+$/.test(host)) return false;
+      if (host === "0.0.0.0" || host === "metadata.google.internal") return false;
+      return true;
+    } catch { return false; }
+  }
+  const safeImgUrl = isSafeImageUrl(rawUrl)
     ? rawUrl.replace(/"/g, "%22").replace(/'/g, "%27").replace(/</g, "%3C").replace(/>/g, "%3E")
     : "";
 
@@ -705,15 +720,15 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const isSudokuNoImg = !safeImgUrl && (opts.puzzleType || "Word Search") === "Sudoku";
   const decoOrEmpty = (safeImgUrl || isSudokuNoImg) ? "" : deco;
 
-  // Back cover: fixed exact 5-line centered checkmark list (spec-required wording/order)
+  // Back cover: exactly 5-line centered checkmark list (spec-required wording/order, always 5 lines)
   const ptName = opts.puzzleType || "Word Search";
   const cleanFeatures = [
     `&#10003; ${opts.puzzleCount || 100} Unique Puzzles`,
     `&#10003; ${opts.difficulty || "Medium"} Difficulty Level`,
-    `&#10003; Large Print Format`,
+    isLargePrint ? `&#10003; Large Print Format` : `&#10003; Ideal for Gifts &amp; Travel`,
     `&#10003; One Puzzle Per Page`,
     `&#10003; Complete Solutions Included`,
-  ].filter((line, i) => i !== 2 || isLargePrint);
+  ];
   const featureList = cleanFeatures.map(f => `<div style="font-family:'Source Code Pro',monospace;font-size:10px;color:${tx};line-height:2.2;opacity:0.70;text-align:center;">${f}</div>`).join("");
 
   const back = `<div style="position:absolute;left:${bleed}in;top:${bleed}in;width:${trimW}in;height:${trimH}in;background:${bgGrad};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5in 1in;text-align:center;box-sizing:border-box;">` +
