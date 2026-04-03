@@ -143,7 +143,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     "Cryptogram":    { Easy: "~3 min",  Medium: "~8 min",  Hard: "~15 min" },
   };
   const timeEst = (timeMap[PT] || timeMap["Word Search"])[DF] || "~10 min";
-  const progressBadge = `<span style="display:inline-flex;align-items:center;gap:5px;"><span style="letter-spacing:2px;font-size:9px;">${diffDots}</span><span style="font-size:7.5px;color:#888;">${timeEst}</span><span style="display:inline-block;width:10px;height:10px;border:1px solid #999;margin-left:3px;"></span></span>`;
+  const progressBadge = `<span style="display:inline-flex;align-items:center;gap:6px;padding:2px 6px;border:1px solid #ddd;border-radius:4px;background:#fafafa;"><span style="letter-spacing:3px;font-size:11px;color:#555;">${diffDots}</span><span style="font-size:9px;color:#777;font-family:'Source Code Pro',monospace;">${timeEst}</span><span style="display:inline-block;width:12px;height:12px;border:1.5px solid #aaa;border-radius:2px;margin-left:2px;"></span></span>`;
 
   let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${T}</title>` +
     `<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">` +

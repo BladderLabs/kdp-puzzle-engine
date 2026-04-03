@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams } from "wouter";
 import { useGetBook, getGetBookQueryKey } from "@workspace/api-client-react";
 import type { BookConfigPuzzleType, BookConfigDifficulty, BookConfigPaperType, BookConfigTheme, BookConfigCoverStyle } from "@workspace/api-client-react";
@@ -9,6 +9,61 @@ import { useToast } from "@/hooks/use-toast";
 type Status = "idle" | "generating" | "pdf_interior" | "pdf_cover" | "done" | "error";
 
 const GOLD = "#C8951A";
+
+function HtmlPreviewIframe({ html, scaleW, naturalW, naturalH, label }: {
+  html: string;
+  scaleW: number;
+  naturalW: number;
+  naturalH: number;
+  label: string;
+}) {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    setBlobUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [html]);
+
+  const scale = scaleW / naturalW;
+  const containerH = Math.round(naturalH * scale);
+
+  return (
+    <div>
+      <p className="text-xs font-mono mb-2" style={{ color: GOLD + "aa", letterSpacing: "0.08em" }}>{label}</p>
+      <div
+        style={{
+          width: scaleW,
+          height: containerH,
+          overflow: "hidden",
+          borderRadius: 6,
+          border: `1px solid ${GOLD}33`,
+          position: "relative",
+          background: "#111",
+        }}
+      >
+        {blobUrl && (
+          <iframe
+            ref={iframeRef}
+            src={blobUrl}
+            style={{
+              width: naturalW,
+              height: naturalH,
+              border: "none",
+              transform: `scale(${scale})`,
+              transformOrigin: "top left",
+              pointerEvents: "none",
+            }}
+            title={label}
+            sandbox="allow-same-origin"
+          />
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function GenerateBook() {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +77,9 @@ export function GenerateBook() {
   const [errorMsg, setErrorMsg] = useState("");
   const interiorBlobRef = useRef<Blob | null>(null);
   const coverBlobRef = useRef<Blob | null>(null);
+  const [coverHtml, setCoverHtml] = useState<string | null>(null);
+  const [samplePageHtml, setSamplePageHtml] = useState<string | null>(null);
+  const [coverDimsState, setCoverDimsState] = useState<{ fullW: number; fullH: number } | null>(null);
 
   const downloadBlob = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
@@ -36,11 +94,21 @@ export function GenerateBook() {
 
   const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
+  const extractFirstPuzzlePage = (interiorHtml: string): string => {
+    const pages = interiorHtml.match(/<div class="pg in">[\s\S]*?(?=<div class="pg in">|<\/body>)/g);
+    if (!pages || pages.length < 3) return interiorHtml;
+    const puzzlePage = pages.find((p, i) => i >= 2 && p.includes("inline-flex")) || pages[2] || pages[0];
+    const head = interiorHtml.match(/^[\s\S]*?<\/head>/)?.[0] || "";
+    return `<!DOCTYPE html><html>${head}<body style="margin:0;padding:0;background:#fff;">${puzzlePage}</div></body></html>`;
+  };
+
   const handleGenerate = async () => {
     if (!book) return;
     setErrorMsg("");
     interiorBlobRef.current = null;
     coverBlobRef.current = null;
+    setCoverHtml(null);
+    setSamplePageHtml(null);
 
     const bookConfig = {
       title: book.title,
@@ -61,7 +129,6 @@ export function GenerateBook() {
     };
 
     try {
-      // ── Step 1: Generate HTML (puzzle generation happens here) ──
       setStatus("generating");
       const genRes = await fetch("/api/generate", {
         method: "POST",
@@ -69,9 +136,12 @@ export function GenerateBook() {
         body: JSON.stringify(bookConfig),
       });
       if (!genRes.ok) throw new Error(`Generate failed: ${await genRes.text()}`);
-      const { interiorHtml, interiorDims, coverHtml, coverDims } = await genRes.json();
+      const { interiorHtml, interiorDims, coverHtml: cHtml, coverDims } = await genRes.json();
 
-      // ── Step 2: Render interior PDF ──
+      setCoverHtml(cHtml);
+      setCoverDimsState(coverDims);
+      setSamplePageHtml(extractFirstPuzzlePage(interiorHtml));
+
       setStatus("pdf_interior");
       const interiorRes = await fetch("/api/pdf/interior", {
         method: "POST",
@@ -85,13 +155,12 @@ export function GenerateBook() {
       if (!interiorRes.ok) throw new Error(`Interior PDF failed: ${await interiorRes.text()}`);
       interiorBlobRef.current = await interiorRes.blob();
 
-      // ── Step 3: Render cover PDF ──
       setStatus("pdf_cover");
       const coverRes = await fetch("/api/pdf/cover", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          html: coverHtml,
+          html: cHtml,
           fullW: coverDims.fullW,
           fullH: coverDims.fullH,
         }),
@@ -112,6 +181,9 @@ export function GenerateBook() {
   const handleReset = () => {
     interiorBlobRef.current = null;
     coverBlobRef.current = null;
+    setCoverHtml(null);
+    setSamplePageHtml(null);
+    setCoverDimsState(null);
     setStatus("idle");
     setErrorMsg("");
   };
@@ -151,11 +223,15 @@ export function GenerateBook() {
 
   const bookSlug = slug(book.title);
 
+  const coverNaturalW = coverDimsState ? Math.round(coverDimsState.fullW * 96) : 1666;
+  const coverNaturalH = coverDimsState ? Math.round(coverDimsState.fullH * 96) : 1080;
+  const interiorNaturalW = book.largePrint ? 816 : 576;
+  const interiorNaturalH = book.largePrint ? 1056 : 864;
+
   return (
-    <div className="max-w-3xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-8">
       <h1 className="text-3xl font-bold">Generate: {book.title}</h1>
 
-      {/* Book spec summary */}
       <Card>
         <CardHeader>
           <CardTitle>Book Specifications</CardTitle>
@@ -172,11 +248,9 @@ export function GenerateBook() {
         </CardContent>
       </Card>
 
-      {/* Generate card */}
       <Card>
         <CardContent className="p-8 space-y-6">
 
-          {/* Shimmer loading bar — visible during generation */}
           {isGenerating && (
             <div className="space-y-3">
               <div
@@ -209,12 +283,10 @@ export function GenerateBook() {
             </div>
           )}
 
-          {/* Error message */}
           {status === "error" && (
             <p className="text-sm text-destructive text-center">{errorMsg}</p>
           )}
 
-          {/* Generate button — hidden when done */}
           {status !== "done" && (
             <Button
               size="lg"
@@ -226,52 +298,88 @@ export function GenerateBook() {
             </Button>
           )}
 
-          {/* ── Result section — appears after generation ── */}
           {status === "done" && (
-            <div className="space-y-6 text-center">
-              {/* Diamond decoration */}
-              <div style={{ fontSize: "28px", color: GOLD }}>◆</div>
-
-              {/* Gold heading */}
-              <div>
-                <h2 style={{ fontSize: "24px", fontWeight: 700, color: GOLD, marginBottom: "8px" }}>
+            <div className="space-y-8">
+              <div className="text-center space-y-3">
+                <div style={{ fontSize: "28px", color: GOLD }}>◆</div>
+                <h2 style={{ fontSize: "24px", fontWeight: 700, color: GOLD }}>
                   Book Generated!
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Both PDFs are ready. Download them and upload to KDP.
+                  Preview below — download the PDFs and upload to KDP.
                 </p>
               </div>
 
-              {/* Download Interior PDF — gold, full width */}
-              <Button
-                size="lg"
-                className="w-full text-base"
-                style={{ background: GOLD, color: "#000", fontWeight: 700 }}
-                onClick={() => interiorBlobRef.current && downloadBlob(interiorBlobRef.current, `${bookSlug}-interior.pdf`)}
-              >
-                Download Interior PDF
-              </Button>
+              {/* ── Live Cover Preview ── */}
+              {coverHtml && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold" style={{ color: GOLD }}>
+                    Cover Preview (front + spine + back)
+                  </h3>
+                  <div className="overflow-x-auto">
+                    <HtmlPreviewIframe
+                      html={coverHtml}
+                      scaleW={740}
+                      naturalW={coverNaturalW}
+                      naturalH={coverNaturalH}
+                      label="FULL COVER WRAP — PRINT READY"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Left panel = back cover · Center = spine · Right panel = front cover
+                  </p>
+                </div>
+              )}
 
-              {/* Download Cover PDF — ghost style */}
-              <Button
-                size="lg"
-                variant="outline"
-                className="w-full text-base"
-                style={{ borderColor: GOLD, color: GOLD }}
-                onClick={() => coverBlobRef.current && downloadBlob(coverBlobRef.current, `${bookSlug}-cover.pdf`)}
-              >
-                Download Cover PDF
-              </Button>
+              {/* ── Interior Sample Page ── */}
+              {samplePageHtml && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold" style={{ color: GOLD }}>
+                    Interior Sample — First Puzzle Page
+                  </h3>
+                  <div className="flex justify-center">
+                    <HtmlPreviewIframe
+                      html={samplePageHtml}
+                      scaleW={380}
+                      naturalW={interiorNaturalW}
+                      naturalH={interiorNaturalH}
+                      label="INTERIOR PAGE — B&W"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Top-right: difficulty dots + estimated time + completion checkbox
+                  </p>
+                </div>
+              )}
 
-              {/* KDP Upload Instructions — all 9 steps */}
+              {/* ── Download buttons ── */}
+              <div className="space-y-3 pt-2">
+                <Button
+                  size="lg"
+                  className="w-full text-base"
+                  style={{ background: GOLD, color: "#000", fontWeight: 700 }}
+                  onClick={() => interiorBlobRef.current && downloadBlob(interiorBlobRef.current, `${bookSlug}-interior.pdf`)}
+                >
+                  Download Interior PDF
+                </Button>
+
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-full text-base"
+                  style={{ borderColor: GOLD, color: GOLD }}
+                  onClick={() => coverBlobRef.current && downloadBlob(coverBlobRef.current, `${bookSlug}-cover.pdf`)}
+                >
+                  Download Cover PDF (Full Wrap)
+                </Button>
+              </div>
+
+              {/* ── KDP Instructions ── */}
               <div
                 className="text-left rounded-lg p-5 space-y-3"
                 style={{ border: `1px solid ${GOLD}44`, background: GOLD + "08" }}
               >
-                <h3
-                  className="font-bold text-base mb-3"
-                  style={{ color: GOLD }}
-                >
+                <h3 className="font-bold text-base mb-3" style={{ color: GOLD }}>
                   KDP Upload Instructions
                 </h3>
                 <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
@@ -287,7 +395,6 @@ export function GenerateBook() {
                 </ol>
               </div>
 
-              {/* Generate Another Book — ghost reset button */}
               <Button
                 variant="outline"
                 className="w-full"
