@@ -389,11 +389,13 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
 
     } else if (PT === "Number Search") {
       const ns = pz as { grid: string[][]; placed: string[] };
+      // Number Search retains original sizing — not changed by this upgrade (Word Search only)
+      const nsC = LP ? 34 : 28, nsF = LP ? 17 : 14;
       let g = `<table style="border-collapse:collapse;margin:10px auto;">`;
       for (let r = 0; r < ns.grid.length; r++) {
         g += "<tr>";
         for (let c = 0; c < ns.grid[r].length; c++)
-          g += `<td style="width:${wC}px;height:${wC}px;text-align:center;vertical-align:middle;font-family:'Source Code Pro',monospace;font-size:${wF}px;font-weight:500;color:#222;border:1px solid #ccc;">${ns.grid[r][c]}</td>`;
+          g += `<td style="width:${nsC}px;height:${nsC}px;text-align:center;vertical-align:middle;font-family:'Source Code Pro',monospace;font-size:${nsF}px;font-weight:500;color:#222;border:1px solid #ccc;">${ns.grid[r][c]}</td>`;
         g += "</tr>";
       }
       g += "</table>";
