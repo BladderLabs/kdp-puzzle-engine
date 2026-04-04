@@ -428,16 +428,16 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
   // ── Answer key pages ─────────────────────────────────────────────────────
   let akP = aS;
 
-  if (PT === "Word Search" || PT === "Number Search") {
-    // LP: 2×2 grid (4-up), cSz=26px — each mini-grid fits in 365px half-width slot comfortably
-    // Std: 2×3 grid (6-up), cSz=16px — each mini-grid fits in 258px half-width slot comfortably
+  if (PT === "Word Search") {
+    // LP: 2×2 grid (4-up, aPer=4), cSz=26px — each mini-grid fits in 365px half-width slot
+    // Std: 2×3 grid (6-up, aPer=6), cSz=16px — each mini-grid fits in 258px half-width slot
     const akCols = 2;
     const cSz = LP ? 26 : 16, fSz = LP ? 14 : 9;
     for (let p = 0; p < PC; p += aPer) {
       const batch = (puzzles.slice(p, p + aPer)) as Array<{ grid: string[][]; placed: string[]; pSet: Record<string, boolean> }>;
       const akBanner = p === 0 ? `<div style="text-align:center;border-bottom:2px solid #555;padding-bottom:8px;margin-bottom:14px;">` +
         `<div style="font-family:Lora,serif;font-size:20px;font-weight:700;color:#222;letter-spacing:2px;text-transform:uppercase;">Answer Key</div>` +
-        `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:3px;color:#777;margin-top:4px;">${PT.toUpperCase()}</div>` +
+        `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:3px;color:#777;margin-top:4px;">WORD SEARCH</div>` +
         `</div>` : "";
       let gs = `<div style="display:grid;grid-template-columns:repeat(${akCols},1fr);gap:${LP ? 24 : 14}px;">`;
       batch.forEach((ws, idx) => {
@@ -454,7 +454,35 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         gs += m;
       });
       gs += "</div>";
-      html += `<div class="pg in"><div class="hd"><span>Answer Key</span><span>${PT}</span></div><div style="padding-top:0.2in;">${akBanner}${gs}</div><div class="ft"><span>${T} — ${AU}</span><span>${akP}</span></div></div>`;
+      html += `<div class="pg in"><div class="hd"><span>Answer Key</span><span>Word Search</span></div><div style="padding-top:0.2in;">${akBanner}${gs}</div><div class="ft"><span>${T} — ${AU}</span><span>${akP}</span></div></div>`;
+      akP++;
+    }
+
+  } else if (PT === "Number Search") {
+    // Number Search: preserve original compact flex-wrap layout (aPer=9/12, cSz=9/8) — unchanged per spec
+    for (let p = 0; p < PC; p += aPer) {
+      const batch = (puzzles.slice(p, p + aPer)) as Array<{ grid: string[][]; placed: string[]; pSet: Record<string, boolean> }>;
+      const akBanner = p === 0 ? `<div style="text-align:center;border-bottom:2px solid #555;padding-bottom:8px;margin-bottom:14px;">` +
+        `<div style="font-family:Lora,serif;font-size:20px;font-weight:700;color:#222;letter-spacing:2px;text-transform:uppercase;">Answer Key</div>` +
+        `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:3px;color:#777;margin-top:4px;">NUMBER SEARCH</div>` +
+        `</div>` : "";
+      let gs = `<div style="display:flex;flex-wrap:wrap;gap:14px;justify-content:center;">`;
+      batch.forEach((ws, idx) => {
+        const cSz = LP ? 9 : 8, fSz = LP ? 6 : 5;
+        let m = `<div style="text-align:center;"><div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#555;font-weight:600;">#${String(p + idx + 1).padStart(2, "0")}</div><table style="border-collapse:collapse;">`;
+        for (let r = 0; r < ws.grid.length; r++) {
+          m += "<tr>";
+          for (let c = 0; c < ws.grid[r].length; c++) {
+            const ia = ws.pSet[`${r},${c}`];
+            m += `<td style="width:${cSz}px;height:${cSz}px;font-size:${fSz}px;text-align:center;font-family:monospace;color:${ia ? "#000" : "#999"};font-weight:${ia ? "700" : "400"};${ia ? "background:#e0e0d8;" : ""}border:1px solid #eee;">${ws.grid[r][c]}</td>`;
+          }
+          m += "</tr>";
+        }
+        m += "</table></div>";
+        gs += m;
+      });
+      gs += "</div>";
+      html += `<div class="pg in"><div class="hd"><span>Answer Key</span><span>Number Search</span></div><div style="padding-top:0.2in;">${akBanner}${gs}</div><div class="ft"><span>${T} — ${AU}</span><span>${akP}</span></div></div>`;
       akP++;
     }
 
