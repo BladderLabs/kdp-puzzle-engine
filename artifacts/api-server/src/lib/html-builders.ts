@@ -733,16 +733,6 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const txLetters = txMap[opts.puzzleType || "Word Search"] || txMap["Word Search"];
   const puzzleTexture = `<div style="position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden;z-index:0;pointer-events:none;font-family:'Source Code Pro',monospace;font-size:13px;letter-spacing:5px;line-height:2;padding:0.3in;opacity:0.05;color:${ac};word-break:break-all;">${txLetters.repeat(20)}</div>`;
 
-  // 8 decorative shapes — opacities 0.20–0.35
-  const deco =
-    `<div style="position:absolute;bottom:8%;right:5%;width:140px;height:140px;border:2px solid ${ac};border-radius:50%;opacity:0.28;"></div>` +
-    `<div style="position:absolute;top:8%;left:5%;width:90px;height:90px;border:2px solid ${ac};border-radius:50%;opacity:0.25;"></div>` +
-    `<div style="position:absolute;top:30%;right:10%;width:40px;height:40px;border:1.5px solid ${ac};border-radius:50%;opacity:0.22;"></div>` +
-    `<div style="position:absolute;top:12%;right:8%;width:60px;height:60px;border:1.5px solid ${ac};transform:rotate(45deg);opacity:0.25;"></div>` +
-    `<div style="position:absolute;bottom:12%;left:7%;width:35px;height:35px;border:1px solid ${ac};transform:rotate(30deg);opacity:0.20;"></div>` +
-    `<div style="position:absolute;top:53%;left:50%;transform:translateX(-50%);width:200px;height:1px;background:${ac};opacity:0.30;"></div>` +
-    `<div style="position:absolute;bottom:14%;left:calc(50% - 120px);width:8px;height:8px;background:${ac};border-radius:50%;opacity:0.35;"></div>` +
-    `<div style="position:absolute;bottom:14%;left:calc(50% + 112px);width:8px;height:8px;background:${ac};border-radius:50%;opacity:0.35;"></div>`;
 
   // Sanitize coverImageUrl: only allow http(s) URLs with non-private hostnames (SSRF mitigation)
   const rawUrl = opts.coverImageUrl || "";
@@ -773,9 +763,6 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   } else {
     imageBlock = buildThemeCoverArt(opts.theme || "midnight", ac, bg);
   }
-
-  // Suppress geometric deco when any image block is shown (imageBlock always filled now)
-  const decoOrEmpty = "";
 
   // Back cover: exactly 5-line centered checkmark list (spec-required wording/order, always 5 lines)
   const cleanFeatures = [
@@ -813,7 +800,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
 
   if (cs === "luxury") {
     // Double-frame centered layout. Exact 9-section order: (volume badge abs) → puzzleType label → thin rule → title UPPERCASE → subtitle → imageBlock → selling points → author → metadata
-    front = `<div style="${fb}padding:0;">${puzzleTexture}${decoOrEmpty}${seriesBadge}` +
+    front = `<div style="${fb}padding:0;">${puzzleTexture}${seriesBadge}` +
       `<div style="position:absolute;top:0.22in;left:0.22in;right:0.22in;bottom:0.22in;border:1px solid ${ac}55;z-index:1;"></div>` +
       `<div style="position:absolute;top:0.4in;left:0.4in;right:0.4in;bottom:0.4in;border:3px solid ${ac};z-index:1;"></div>` +
       `<div style="text-align:center;z-index:2;position:relative;padding:0 0.8in;">` +
@@ -831,7 +818,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
 
   } else if (cs === "geometric") {
     // Two angled accent bands — title always on band. Section order: audienceCallout → title → subtitle → imageBlock → sellDiv → author
-    front = `<div style="${fb}padding:1in;">${puzzleTexture}${decoOrEmpty}${seriesBadge}` +
+    front = `<div style="${fb}padding:1in;">${puzzleTexture}${seriesBadge}` +
       `<div style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:0;overflow:hidden;">` +
       `<div style="position:absolute;top:18%;left:-10%;width:130%;height:38%;background:${ac};transform:rotate(-30deg);opacity:0.85;"></div>` +
       `<div style="position:absolute;top:52%;left:-10%;width:130%;height:7%;background:${ac};transform:rotate(-30deg);opacity:0.4;"></div>` +
@@ -868,7 +855,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
 
   } else if (cs === "minimal") {
     // Triple-stripe accent mark. Section order: stripes → audienceCallout → title → subtitle → imageBlock → sellDiv → author → meta
-    front = `<div style="${fb}padding:1in;text-align:left;">${puzzleTexture}${decoOrEmpty}${seriesBadge}` +
+    front = `<div style="${fb}padding:1in;text-align:left;">${puzzleTexture}${seriesBadge}` +
       `<div style="position:relative;z-index:1;width:100%;">` +
       `<div style="margin-bottom:32px;">` +
       `<div style="width:56px;height:3px;background:${ac};margin-bottom:6px;"></div>` +
@@ -887,7 +874,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
 
   } else if (cs === "retro") {
     // Concentric double-border. Section order: star label → audienceCallout → title → subtitle → rule → imageBlock → sellDiv → author → meta → star footer
-    front = `<div style="${fb}padding:0.6in;text-align:center;">${puzzleTexture}${decoOrEmpty}${seriesBadge}` +
+    front = `<div style="${fb}padding:0.6in;text-align:center;">${puzzleTexture}${seriesBadge}` +
       `<div style="width:100%;height:100%;border:8px double ${ac};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0.5in;box-sizing:border-box;position:relative;">` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:6px;color:${ac};text-transform:uppercase;margin-bottom:12px;">★ &nbsp; ${opts.puzzleType || "Puzzles"} &nbsp; ★</div>` +
       `${audienceCallout}` +
@@ -927,7 +914,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
 
   } else {
     // classic (default). Exact 9-section order: (volume badge abs) → puzzleType label → thin rule → title UPPERCASE → subtitle → imageBlock → selling points → author → metadata
-    front = `<div style="${fb}text-align:center;padding:1in;">${puzzleTexture}${decoOrEmpty}${seriesBadge}` +
+    front = `<div style="${fb}text-align:center;padding:1in;">${puzzleTexture}${seriesBadge}` +
       `<div style="position:relative;z-index:1;">` +
       `${opts.puzzleType ? `<div style="font-family:'Source Code Pro',monospace;font-size:11px;letter-spacing:6px;text-transform:uppercase;color:${ac};margin-bottom:12px;">${opts.puzzleType}</div>` : ""}` +
       `<div style="width:56px;height:2px;background:${ac};margin:0 auto 28px;"></div>` +
