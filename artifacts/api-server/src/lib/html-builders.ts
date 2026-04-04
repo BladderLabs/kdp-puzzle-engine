@@ -8,7 +8,7 @@ export function computeTotalPages(opts: BuildOpts): number {
   const PT = opts.puzzleType || "Word Search";
   const PC = opts.puzzleCount || 100;
   const LP = opts.largePrint !== false;
-  const aPer = PT === "Word Search" ? (LP ? 9 : 12)
+  const aPer = PT === "Word Search" ? (LP ? 4 : 6)
     : PT === "Sudoku" ? (LP ? 6 : 8)
     : PT === "Maze" ? (LP ? 4 : 6)
     : PT === "Number Search" ? (LP ? 9 : 12)
@@ -66,8 +66,8 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
   const vn = opts.volumeNumber ?? 0;
   const vol = vn === 1 ? "Volume 1 of 3" : vn === 2 ? "Volume 2 of 3" : vn === 3 ? "Volume 3 of 3" : "";
 
-  const wpp = LP ? 16 : 20, gsz = LP ? 13 : 15;
-  const wC = LP ? 34 : 28, wF = LP ? 17 : 14;
+  const wpp = LP ? 20 : 25, gsz = LP ? 13 : 15;
+  const wC = LP ? 52 : 33, wF = LP ? 22 : 17;
   // Sudoku cell size: 9×54=486px < 490px content (6in - 0.5in gut - 0.4in right = 5.1in = 490px)
   // 58px would produce 9×58=522px > 490px, overflowing KDP margins — 54px is the correct max.
   // LP: 9×64=576px < 730px content (8.5in - 0.5in - 0.4in = 7.6in = 730px) ✓
@@ -113,7 +113,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     }
   }
 
-  const aPer = PT === "Word Search" ? (LP ? 9 : 12)
+  const aPer = PT === "Word Search" ? (LP ? 4 : 6)
     : PT === "Sudoku" ? (LP ? 6 : 8)
     : PT === "Maze" ? (LP ? 4 : 6)
     : PT === "Number Search" ? (LP ? 9 : 12)
@@ -330,7 +330,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
       for (let r = 0; r < ws.grid.length; r++) {
         g += "<tr>";
         for (let c = 0; c < ws.grid[r].length; c++)
-          g += `<td style="width:${wC}px;height:${wC}px;text-align:center;vertical-align:middle;font-family:'Source Code Pro',monospace;font-size:${wF}px;font-weight:500;color:#222;border:1px solid #ccc;">${ws.grid[r][c]}</td>`;
+          g += `<td style="width:${wC}px;height:${wC}px;text-align:center;vertical-align:middle;font-family:'Source Code Pro',monospace;font-size:${wF}px;font-weight:700;color:#222;border:1px solid #aaa;">${ws.grid[r][c]}</td>`;
         g += "</tr>";
       }
       g += "</table>";
@@ -339,7 +339,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
       const ch = `<div style="border:1px solid #ccc;background:#f8f6f0;border-radius:3px;padding:8px 12px;margin-top:8px;">` +
         `<div style="font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:3px;text-transform:uppercase;color:#666;margin-bottom:6px;text-align:center;border-bottom:1px solid #ddd;padding-bottom:4px;font-variant:small-caps;">Find These Words</div>` +
         `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px 8px;">` +
-        sortedWS.map(w => `<div style="font-family:'Source Code Pro',monospace;font-size:${LP ? 14 : 12}px;color:#222;padding:1px 0;">${escapeHtml(w)}</div>`).join("") +
+        sortedWS.map(w => `<div style="font-family:'Source Code Pro',monospace;font-size:${LP ? 15 : 13}px;font-weight:600;color:#222;padding:1px 0;">${escapeHtml(w)}</div>`).join("") +
         `</div></div>`;
       html += `<div class="pg in"><div class="hd"><span>${T}</span>${progressBadge}</div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">WORD SEARCH</span></div>${ornamentRule}${g}${ch}${lpSep}</div><div class="ft"><span>${T} — ${AU}</span><span>${pN}</span></div></div>`;
 
@@ -429,22 +429,24 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
   let akP = aS;
 
   if (PT === "Word Search" || PT === "Number Search") {
+    // LP: 2×2 grid (4-up), cSz=26px — each mini-grid fits in 365px half-width slot comfortably
+    // Std: 2×3 grid (6-up), cSz=16px — each mini-grid fits in 258px half-width slot comfortably
+    const akCols = 2;
+    const cSz = LP ? 26 : 16, fSz = LP ? 14 : 9;
     for (let p = 0; p < PC; p += aPer) {
       const batch = (puzzles.slice(p, p + aPer)) as Array<{ grid: string[][]; placed: string[]; pSet: Record<string, boolean> }>;
-      // Styled banner on the first answer key page only
       const akBanner = p === 0 ? `<div style="text-align:center;border-bottom:2px solid #555;padding-bottom:8px;margin-bottom:14px;">` +
         `<div style="font-family:Lora,serif;font-size:20px;font-weight:700;color:#222;letter-spacing:2px;text-transform:uppercase;">Answer Key</div>` +
         `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:3px;color:#777;margin-top:4px;">${PT.toUpperCase()}</div>` +
         `</div>` : "";
-      let gs = `<div style="display:flex;flex-wrap:wrap;gap:14px;justify-content:center;">`;
+      let gs = `<div style="display:grid;grid-template-columns:repeat(${akCols},1fr);gap:${LP ? 24 : 14}px;">`;
       batch.forEach((ws, idx) => {
-        const cSz = LP ? 9 : 8, fSz = LP ? 6 : 5;
-        let m = `<div style="text-align:center;"><div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#555;font-weight:600;">#${String(p + idx + 1).padStart(2, "0")}</div><table style="border-collapse:collapse;">`;
+        let m = `<div style="text-align:center;"><div style="font-family:'Source Code Pro',monospace;font-size:${LP ? 10 : 8}px;color:#555;font-weight:700;margin-bottom:4px;">PUZZLE #${String(p + idx + 1).padStart(2, "0")}</div><table style="border-collapse:collapse;margin:0 auto;">`;
         for (let r = 0; r < ws.grid.length; r++) {
           m += "<tr>";
           for (let c = 0; c < ws.grid[r].length; c++) {
             const ia = ws.pSet[`${r},${c}`];
-            m += `<td style="width:${cSz}px;height:${cSz}px;font-size:${fSz}px;text-align:center;font-family:monospace;color:${ia ? "#000" : "#999"};font-weight:${ia ? "700" : "400"};${ia ? "background:#e0e0d8;" : ""}border:1px solid #eee;">${ws.grid[r][c]}</td>`;
+            m += `<td style="width:${cSz}px;height:${cSz}px;font-size:${fSz}px;text-align:center;font-family:'Source Code Pro',monospace;color:${ia ? "#000" : "#ccc"};font-weight:${ia ? "700" : "400"};${ia ? "background:#e8e6de;" : ""}border:1px solid #ddd;">${ws.grid[r][c]}</td>`;
           }
           m += "</tr>";
         }
@@ -601,6 +603,34 @@ export interface CoverResult {
   spineW: number;
 }
 
+function buildThemeCoverArt(theme: string, ac: string, bg: string): string {
+  const cs = `width:4.5in;height:4in;margin:0 auto 16px;border-radius:8px;overflow:hidden;border:2px solid ${ac};position:relative;background:${bg};`;
+  switch (theme) {
+    case "ocean":
+      return `<div style="${cs}"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><defs><linearGradient id="og1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${bg}"/><stop offset="100%" stop-color="${ac}" stop-opacity="0.3"/></linearGradient></defs><rect width="432" height="384" fill="url(#og1)"/><path d="M0 200 Q54 160 108 200 Q162 240 216 200 Q270 160 324 200 Q378 240 432 200 L432 384 L0 384 Z" fill="${ac}" fill-opacity="0.2"/><path d="M0 235 Q54 195 108 235 Q162 275 216 235 Q270 195 324 235 Q378 275 432 235 L432 384 L0 384 Z" fill="${ac}" fill-opacity="0.28"/><path d="M0 268 Q54 228 108 268 Q162 308 216 268 Q270 228 324 268 Q378 308 432 268 L432 384 L0 384 Z" fill="${ac}" fill-opacity="0.38"/><circle cx="216" cy="96" r="44" fill="${ac}" fill-opacity="0.15"/><circle cx="216" cy="96" r="32" fill="${ac}" fill-opacity="0.12"/><circle cx="80" cy="55" r="2" fill="${ac}" fill-opacity="0.5"/><circle cx="155" cy="32" r="1.5" fill="${ac}" fill-opacity="0.4"/><circle cx="348" cy="44" r="2" fill="${ac}" fill-opacity="0.5"/><circle cx="395" cy="75" r="1.5" fill="${ac}" fill-opacity="0.35"/><circle cx="290" cy="28" r="1.5" fill="${ac}" fill-opacity="0.3"/><line x1="180" y1="140" x2="252" y2="140" stroke="${ac}" stroke-width="1" stroke-opacity="0.25"/></svg></div>`;
+    case "midnight":
+      return `<div style="${cs}"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><rect width="432" height="384" fill="${bg}"/><circle cx="43" cy="52" r="2" fill="${ac}" fill-opacity="0.5"/><circle cx="97" cy="31" r="1.5" fill="${ac}" fill-opacity="0.4"/><circle cx="152" cy="67" r="2.5" fill="${ac}" fill-opacity="0.55"/><circle cx="210" cy="22" r="1.5" fill="${ac}" fill-opacity="0.35"/><circle cx="271" cy="58" r="2" fill="${ac}" fill-opacity="0.45"/><circle cx="318" cy="38" r="1.5" fill="${ac}" fill-opacity="0.4"/><circle cx="376" cy="72" r="2" fill="${ac}" fill-opacity="0.5"/><circle cx="62" cy="115" r="1.5" fill="${ac}" fill-opacity="0.3"/><circle cx="132" cy="98" r="1" fill="${ac}" fill-opacity="0.35"/><circle cx="248" cy="88" r="1.5" fill="${ac}" fill-opacity="0.4"/><circle cx="390" cy="110" r="1" fill="${ac}" fill-opacity="0.3"/><circle cx="44" cy="175" r="1" fill="${ac}" fill-opacity="0.25"/><circle cx="188" cy="145" r="1.5" fill="${ac}" fill-opacity="0.3"/><circle cx="342" cy="158" r="1" fill="${ac}" fill-opacity="0.25"/><circle cx="416" cy="135" r="1.5" fill="${ac}" fill-opacity="0.3"/><circle cx="216" cy="155" r="52" fill="${ac}" fill-opacity="0.18"/><circle cx="232" cy="140" r="44" fill="${bg}"/><circle cx="216" cy="155" r="68" fill="none" stroke="${ac}" stroke-width="1" stroke-opacity="0.18"/><circle cx="216" cy="155" r="90" fill="none" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.1"/><ellipse cx="216" cy="340" rx="180" ry="28" fill="${ac}" fill-opacity="0.05"/></svg></div>`;
+    case "forest":
+      return `<div style="${cs}"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><rect width="432" height="384" fill="${bg}"/><rect width="432" height="210" fill="${ac}" fill-opacity="0.06"/><polygon points="109,145 50,280 168,280" fill="${ac}" fill-opacity="0.28"/><polygon points="109,88 28,210 190,210" fill="${ac}" fill-opacity="0.20"/><polygon points="207,112 142,265 272,265" fill="${ac}" fill-opacity="0.32"/><polygon points="207,52 122,195 292,195" fill="${ac}" fill-opacity="0.22"/><polygon points="308,148 258,285 358,285" fill="${ac}" fill-opacity="0.25"/><polygon points="308,90 245,205 371,205" fill="${ac}" fill-opacity="0.18"/><rect x="101" y="280" width="16" height="104" fill="${ac}" fill-opacity="0.5"/><rect x="199" y="265" width="16" height="119" fill="${ac}" fill-opacity="0.55"/><rect x="300" y="285" width="16" height="99" fill="${ac}" fill-opacity="0.45"/><line x1="216" y1="0" x2="146" y2="195" stroke="${ac}" stroke-width="1" stroke-opacity="0.1"/><line x1="216" y1="0" x2="216" y2="210" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.12"/><line x1="216" y1="0" x2="286" y2="195" stroke="${ac}" stroke-width="1" stroke-opacity="0.1"/></svg></div>`;
+    case "crimson":
+      return `<div style="${cs}"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><rect width="432" height="384" fill="${bg}"/><ellipse cx="216" cy="192" rx="55" ry="30" fill="${ac}" fill-opacity="0.18" transform="rotate(0 216 192)"/><ellipse cx="216" cy="192" rx="55" ry="30" fill="${ac}" fill-opacity="0.16" transform="rotate(60 216 192)"/><ellipse cx="216" cy="192" rx="55" ry="30" fill="${ac}" fill-opacity="0.18" transform="rotate(120 216 192)"/><ellipse cx="216" cy="192" rx="55" ry="30" fill="${ac}" fill-opacity="0.16" transform="rotate(180 216 192)"/><ellipse cx="216" cy="192" rx="55" ry="30" fill="${ac}" fill-opacity="0.18" transform="rotate(240 216 192)"/><ellipse cx="216" cy="192" rx="55" ry="30" fill="${ac}" fill-opacity="0.16" transform="rotate(300 216 192)"/><circle cx="216" cy="192" r="28" fill="${ac}" fill-opacity="0.3"/><circle cx="216" cy="192" r="16" fill="${ac}" fill-opacity="0.4"/><circle cx="216" cy="192" r="120" fill="none" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.15"/><circle cx="216" cy="192" r="155" fill="none" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.1"/></svg></div>`;
+    case "violet":
+      return `<div style="${cs}"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><rect width="432" height="384" fill="${bg}"/><polygon points="0,0 72,0 36,62" fill="none" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.18"/><polygon points="72,0 144,0 108,62" fill="none" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.18"/><polygon points="144,0 216,0 180,62" fill="none" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.18"/><polygon points="216,0 288,0 252,62" fill="none" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.18"/><polygon points="288,0 360,0 324,62" fill="none" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.18"/><polygon points="360,0 432,0 396,62" fill="none" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.18"/><polygon points="36,62 108,62 72,124" fill="none" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.15"/><polygon points="108,62 180,62 144,124" fill="none" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.15"/><polygon points="180,62 252,62 216,124" fill="none" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.15"/><polygon points="252,62 324,62 288,124" fill="none" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.15"/><polygon points="324,62 396,62 360,124" fill="none" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.15"/><polygon points="72,124 144,124 108,186" fill="none" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.13"/><polygon points="144,124 216,124 180,186" fill="none" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.13"/><polygon points="216,124 288,124 252,186" fill="none" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.13"/><polygon points="288,124 360,124 324,186" fill="none" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.13"/><polygon points="216,138 264,192 216,246 168,192" fill="${ac}" fill-opacity="0.22"/><polygon points="216,158 248,192 216,226 184,192" fill="${ac}" fill-opacity="0.2"/><line x1="216" y1="192" x2="216" y2="60" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.15"/><line x1="216" y1="192" x2="326" y2="256" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.15"/><line x1="216" y1="192" x2="106" y2="256" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.15"/></svg></div>`;
+    case "slate":
+      return `<div style="${cs}"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><rect width="432" height="384" fill="${bg}"/><line x1="0" y1="42" x2="432" y2="42" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.12"/><line x1="0" y1="84" x2="432" y2="84" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.12"/><line x1="0" y1="126" x2="432" y2="126" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.12"/><line x1="0" y1="168" x2="432" y2="168" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.12"/><line x1="0" y1="210" x2="432" y2="210" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.12"/><line x1="0" y1="252" x2="432" y2="252" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.12"/><line x1="0" y1="294" x2="432" y2="294" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.12"/><line x1="0" y1="336" x2="432" y2="336" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.12"/><line x1="48" y1="0" x2="48" y2="384" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.12"/><line x1="96" y1="0" x2="96" y2="384" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.12"/><line x1="144" y1="0" x2="144" y2="384" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.12"/><line x1="192" y1="0" x2="192" y2="384" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.12"/><line x1="240" y1="0" x2="240" y2="384" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.12"/><line x1="288" y1="0" x2="288" y2="384" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.12"/><line x1="336" y1="0" x2="336" y2="384" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.12"/><line x1="384" y1="0" x2="384" y2="384" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.12"/><circle cx="216" cy="192" r="82" fill="none" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.28"/><circle cx="216" cy="192" r="56" fill="none" stroke="${ac}" stroke-width="1" stroke-opacity="0.2"/><line x1="134" y1="192" x2="298" y2="192" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.22"/><line x1="216" y1="110" x2="216" y2="274" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.22"/><polygon points="55,55 200,82 178,205 33,178" fill="none" stroke="${ac}" stroke-width="1" stroke-opacity="0.22"/><polygon points="258,102 404,52 422,202 276,232" fill="none" stroke="${ac}" stroke-width="1" stroke-opacity="0.18"/><path d="M0,0 L58,0 L58,10 L10,10 L10,58 L0,58 Z" fill="${ac}" fill-opacity="0.18"/><path d="M432,384 L374,384 L374,374 L422,374 L422,326 L432,326 Z" fill="${ac}" fill-opacity="0.18"/></svg></div>`;
+    case "sunrise":
+      return `<div style="${cs}"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><defs><radialGradient id="sg1" cx="50%" cy="110%" r="90%"><stop offset="0%" stop-color="${ac}" stop-opacity="0.45"/><stop offset="100%" stop-color="${bg}" stop-opacity="0"/></radialGradient></defs><rect width="432" height="384" fill="${bg}"/><rect width="432" height="384" fill="url(#sg1)"/><line x1="216" y1="384" x2="56" y2="184" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.22"/><line x1="216" y1="384" x2="96" y2="174" stroke="${ac}" stroke-width="1" stroke-opacity="0.15"/><line x1="216" y1="384" x2="136" y2="168" stroke="${ac}" stroke-width="1" stroke-opacity="0.15"/><line x1="216" y1="384" x2="176" y2="166" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.22"/><line x1="216" y1="384" x2="216" y2="164" stroke="${ac}" stroke-width="2" stroke-opacity="0.28"/><line x1="216" y1="384" x2="256" y2="166" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.22"/><line x1="216" y1="384" x2="296" y2="168" stroke="${ac}" stroke-width="1" stroke-opacity="0.15"/><line x1="216" y1="384" x2="336" y2="174" stroke="${ac}" stroke-width="1" stroke-opacity="0.15"/><line x1="216" y1="384" x2="376" y2="184" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.22"/><path d="M116,384 A100,100 0 0,1 316,384" fill="${ac}" fill-opacity="0.28"/><path d="M138,384 A78,78 0 0,1 294,384" fill="${ac}" fill-opacity="0.22"/><line x1="0" y1="344" x2="432" y2="344" stroke="${ac}" stroke-width="1" stroke-opacity="0.28"/><ellipse cx="100" cy="100" rx="58" ry="24" fill="${ac}" fill-opacity="0.08"/><ellipse cx="340" cy="140" rx="50" ry="20" fill="${ac}" fill-opacity="0.07"/></svg></div>`;
+    case "teal":
+      return `<div style="${cs}"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><rect width="432" height="384" fill="${bg}"/><polyline points="0,65 23,50 46,65 69,50 92,65 115,50 138,65 161,50 184,65 207,50 230,65 253,50 276,65 299,50 322,65 345,50 368,65 391,50 414,65 432,55" fill="none" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.18"/><polyline points="0,115 23,100 46,115 69,100 92,115 115,100 138,115 161,100 184,115 207,100 230,115 253,100 276,115 299,100 322,115 345,100 368,115 391,100 414,115 432,105" fill="none" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.20"/><polyline points="0,165 23,150 46,165 69,150 92,165 115,150 138,165 161,150 184,165 207,150 230,165 253,150 276,165 299,150 322,165 345,150 368,165 391,150 414,165 432,155" fill="none" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.22"/><polyline points="0,215 23,200 46,215 69,200 92,215 115,200 138,215 161,200 184,215 207,200 230,215 253,200 276,215 299,200 322,215 345,200 368,215 391,200 414,215 432,205" fill="none" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.24"/><polyline points="0,265 23,250 46,265 69,250 92,265 115,250 138,265 161,250 184,265 207,250 230,265 253,250 276,265 299,250 322,265 345,250 368,265 391,250 414,265 432,255" fill="none" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.26"/><polyline points="0,315 23,300 46,315 69,300 92,315 115,300 138,315 161,300 184,315 207,300 230,315 253,300 276,315 299,300 322,315 345,300 368,315 391,300 414,315 432,305" fill="none" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.28"/><polygon points="216,122 278,192 216,262 154,192" fill="none" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.3"/><polygon points="216,148 254,192 216,236 178,192" fill="${ac}" fill-opacity="0.14"/><polygon points="0,0 78,0 0,78" fill="${ac}" fill-opacity="0.1"/><polygon points="432,384 354,384 432,306" fill="${ac}" fill-opacity="0.1"/></svg></div>`;
+    case "parchment":
+      return `<div style="${cs};background:#F5EBCF;"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><rect width="432" height="384" fill="#F5EBCF"/><line x1="40" y1="22" x2="392" y2="22" stroke="${ac}" stroke-width="0.6" stroke-opacity="0.22"/><line x1="40" y1="43" x2="392" y2="43" stroke="${ac}" stroke-width="0.6" stroke-opacity="0.22"/><line x1="40" y1="64" x2="392" y2="64" stroke="${ac}" stroke-width="0.6" stroke-opacity="0.22"/><line x1="40" y1="85" x2="392" y2="85" stroke="${ac}" stroke-width="0.6" stroke-opacity="0.22"/><line x1="40" y1="106" x2="392" y2="106" stroke="${ac}" stroke-width="0.6" stroke-opacity="0.22"/><line x1="40" y1="127" x2="392" y2="127" stroke="${ac}" stroke-width="0.6" stroke-opacity="0.22"/><line x1="40" y1="148" x2="392" y2="148" stroke="${ac}" stroke-width="0.6" stroke-opacity="0.22"/><line x1="40" y1="169" x2="392" y2="169" stroke="${ac}" stroke-width="0.6" stroke-opacity="0.22"/><line x1="40" y1="190" x2="392" y2="190" stroke="${ac}" stroke-width="0.6" stroke-opacity="0.22"/><line x1="40" y1="211" x2="392" y2="211" stroke="${ac}" stroke-width="0.6" stroke-opacity="0.22"/><line x1="40" y1="232" x2="392" y2="232" stroke="${ac}" stroke-width="0.6" stroke-opacity="0.22"/><line x1="40" y1="253" x2="392" y2="253" stroke="${ac}" stroke-width="0.6" stroke-opacity="0.22"/><line x1="40" y1="274" x2="392" y2="274" stroke="${ac}" stroke-width="0.6" stroke-opacity="0.22"/><line x1="40" y1="295" x2="392" y2="295" stroke="${ac}" stroke-width="0.6" stroke-opacity="0.22"/><line x1="40" y1="316" x2="392" y2="316" stroke="${ac}" stroke-width="0.6" stroke-opacity="0.22"/><line x1="40" y1="337" x2="392" y2="337" stroke="${ac}" stroke-width="0.6" stroke-opacity="0.22"/><line x1="40" y1="358" x2="392" y2="358" stroke="${ac}" stroke-width="0.6" stroke-opacity="0.22"/><line x1="78" y1="0" x2="78" y2="384" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.25"/><rect x="18" y="18" width="396" height="348" fill="none" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.28"/><rect x="26" y="26" width="380" height="332" fill="none" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.18"/><path d="M156,192 Q216,152 276,192 Q216,232 156,192" fill="none" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.32"/><path d="M186,192 Q216,172 246,192 Q216,212 186,192" fill="${ac}" fill-opacity="0.1"/><circle cx="38" cy="38" r="8" fill="none" stroke="${ac}" stroke-width="1" stroke-opacity="0.28"/><circle cx="394" cy="38" r="8" fill="none" stroke="${ac}" stroke-width="1" stroke-opacity="0.28"/><circle cx="38" cy="346" r="8" fill="none" stroke="${ac}" stroke-width="1" stroke-opacity="0.28"/><circle cx="394" cy="346" r="8" fill="none" stroke="${ac}" stroke-width="1" stroke-opacity="0.28"/></svg></div>`;
+    case "sky":
+      return `<div style="${cs};background:#DFF0FF;"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><defs><radialGradient id="skyg" cx="75%" cy="20%" r="50%"><stop offset="0%" stop-color="${ac}" stop-opacity="0.2"/><stop offset="100%" stop-color="${ac}" stop-opacity="0.02"/></radialGradient></defs><rect width="432" height="384" fill="#DFF0FF"/><rect width="432" height="384" fill="url(#skyg)"/><ellipse cx="120" cy="100" rx="68" ry="33" fill="white" fill-opacity="0.82"/><ellipse cx="88" cy="106" rx="44" ry="28" fill="white" fill-opacity="0.82"/><ellipse cx="157" cy="108" rx="40" ry="25" fill="white" fill-opacity="0.82"/><ellipse cx="324" cy="158" rx="72" ry="36" fill="white" fill-opacity="0.74"/><ellipse cx="292" cy="165" rx="46" ry="29" fill="white" fill-opacity="0.74"/><ellipse cx="360" cy="167" rx="42" ry="26" fill="white" fill-opacity="0.74"/><ellipse cx="178" cy="238" rx="62" ry="30" fill="white" fill-opacity="0.65"/><ellipse cx="150" cy="245" rx="40" ry="24" fill="white" fill-opacity="0.65"/><ellipse cx="212" cy="246" rx="36" ry="22" fill="white" fill-opacity="0.65"/><circle cx="362" cy="58" r="34" fill="${ac}" fill-opacity="0.22"/><circle cx="362" cy="58" r="24" fill="${ac}" fill-opacity="0.3"/><path d="M200,302 L212,295 L224,302" fill="none" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.5"/><path d="M244,278 L258,270 L272,278" fill="none" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.42"/><path d="M158,322 L169,316 L180,322" fill="none" stroke="${ac}" stroke-width="1.2" stroke-opacity="0.35"/><path d="M280,318 L289,313 L298,318" fill="none" stroke="${ac}" stroke-width="1.2" stroke-opacity="0.35"/></svg></div>`;
+    default:
+      return `<div style="${cs}"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><rect width="432" height="384" fill="${bg}"/><circle cx="216" cy="192" r="30" fill="${ac}" fill-opacity="0.22"/><circle cx="216" cy="192" r="52" fill="none" stroke="${ac}" stroke-width="1" stroke-opacity="0.2"/><circle cx="216" cy="192" r="74" fill="none" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.16"/><circle cx="216" cy="192" r="96" fill="none" stroke="${ac}" stroke-width="0.6" stroke-opacity="0.13"/><circle cx="216" cy="192" r="120" fill="none" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.10"/></svg></div>`;
+  }
+}
+
 export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverResult {
   const th = THEMES[opts.theme || "midnight"] || THEMES.midnight;
   const bg = opts.customBg || th.bg;
@@ -647,9 +677,11 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   // Matches the layout default: largePrint !== false means large-print is on.
   const isLargePrint = opts.largePrint !== false;
 
-  // Sell points — always include LARGE PRINT tag when applicable
+  // Sell points — include word count (wpp: LP=20, std=25) and LARGE PRINT tag when applicable
+  const wppu = isLargePrint ? 20 : 25;
+  const totalWords = (opts.puzzleCount || 100) * wppu;
   const lpSellTag = isLargePrint ? " | LARGE PRINT" : "";
-  const sellPts = `${opts.puzzleCount || 100} PUZZLES | ${(opts.difficulty || "MEDIUM").toUpperCase()}${lpSellTag} | SOLUTIONS INCLUDED`;
+  const sellPts = `${opts.puzzleCount || 100} PUZZLES | ${totalWords.toLocaleString()} WORDS | ${(opts.difficulty || "MEDIUM").toUpperCase()}${lpSellTag} | SOLUTIONS INCLUDED`;
   const sellDiv = `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:${tx}dd;text-transform:uppercase;margin-bottom:12px;">${sellPts}</div>`;
   const ptBadge = (opts.puzzleType || "Puzzle Book").toUpperCase();
   const dfBadge = (opts.difficulty || "MEDIUM").toUpperCase();
@@ -703,23 +735,17 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
     ? rawUrl.replace(/"/g, "%22").replace(/'/g, "%27").replace(/</g, "%3C").replace(/>/g, "%3E")
     : "";
 
-  // Image block: safe URL → fixed 4.5in × 5in centered img with accent border & shadow;
-  // Sudoku + no URL → mini 4×4 CSS grid; else empty
+  // Image block: safe URL → fixed 4.5in × 4in centered img with accent border & shadow;
+  // no URL → themed CSS/SVG art for all 10 themes (buildThemeCoverArt)
   let imageBlock = "";
   if (safeImgUrl) {
-    imageBlock = `<div style="width:4.5in;height:5in;margin:0 auto 16px;border-radius:8px;overflow:hidden;border:2px solid ${ac};box-shadow:0 4px 24px rgba(0,0,0,0.35);flex-shrink:0;"><img src="${safeImgUrl}" alt="Cover Image" style="width:100%;height:100%;object-fit:cover;display:block;" /></div>`;
-  } else if ((opts.puzzleType || "Word Search") === "Sudoku") {
-    const miniGrid = [[5,3,0,0],[7,0,0,0],[0,9,8,0],[0,0,0,6]];
-    let sdRows = "";
-    for (const row of miniGrid) {
-      sdRows += "<tr>" + row.map(v => `<td style="width:18px;height:18px;text-align:center;font-family:'Source Code Pro',monospace;font-size:9px;border:1px solid ${ac}66;${v ? `color:${tx};font-weight:700;` : "color:transparent;"}">${v || "."}</td>`).join("") + "</tr>";
-    }
-    imageBlock = `<div style="margin-bottom:16px;display:flex;justify-content:center;"><table style="border-collapse:collapse;border:2px solid ${ac};">${sdRows}</table></div>`;
+    imageBlock = `<div style="width:4.5in;height:4in;margin:0 auto 16px;border-radius:8px;overflow:hidden;border:2px solid ${ac};box-shadow:0 4px 24px rgba(0,0,0,0.35);flex-shrink:0;"><img src="${safeImgUrl}" alt="Cover Image" style="width:100%;height:100%;object-fit:cover;display:block;" /></div>`;
+  } else {
+    imageBlock = buildThemeCoverArt(opts.theme || "midnight", ac, bg);
   }
 
-  // Suppress geometric deco when cover image is present, or when Sudoku mini-grid is shown (it IS the decorative block)
-  const isSudokuNoImg = !safeImgUrl && (opts.puzzleType || "Word Search") === "Sudoku";
-  const decoOrEmpty = (safeImgUrl || isSudokuNoImg) ? "" : deco;
+  // Suppress geometric deco when any image block is shown (imageBlock always filled now)
+  const decoOrEmpty = "";
 
   // Back cover: exactly 5-line centered checkmark list (spec-required wording/order, always 5 lines)
   const cleanFeatures = [
@@ -747,6 +773,12 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const fb = `position:absolute;left:${frontX}in;top:${bleed}in;width:${trimW}in;height:${trimH}in;background:${bgGrad};display:flex;flex-direction:column;align-items:center;justify-content:center;color:${tx};font-family:Lora,serif;box-sizing:border-box;overflow:hidden;`;
   const cs = opts.coverStyle || "classic";
 
+  // Prominent LARGE PRINT banner — full-width accent-colored strip, clearly visible in thumbnail
+  const bannerTx = isDark ? "#111" : "#fff";
+  const lpBanner = isLargePrint
+    ? `<div style="background:${ac};padding:7px 16px;margin-bottom:16px;text-align:center;letter-spacing:6px;font-family:'Source Code Pro',monospace;font-size:13px;font-weight:700;color:${bannerTx};text-transform:uppercase;width:100%;box-sizing:border-box;">✦ LARGE PRINT EDITION ✦</div>`
+    : "";
+
   let front = "";
 
   if (cs === "luxury") {
@@ -757,6 +789,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="text-align:center;z-index:2;position:relative;padding:0 0.8in;">` +
       `${opts.puzzleType ? `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:6px;text-transform:uppercase;color:${ac};margin-bottom:14px;opacity:0.85;">${opts.puzzleType}</div>` : ""}` +
       `<div style="width:40px;height:1px;background:${ac};margin:0 auto 16px;"></div>` +
+      `${lpBanner}` +
       `<div style="font-family:'Oswald',sans-serif;font-size:62px;font-weight:700;text-transform:uppercase;letter-spacing:4px;color:${tx};margin-bottom:14px;line-height:1.2;">${title}</div>` +
       `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:16px;">${sub}</div>` +
       `${imageBlock}` +
@@ -775,6 +808,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `</div>` +
       `<div style="position:relative;z-index:1;text-align:left;width:100%;">` +
       `${audienceCallout}` +
+      `${lpBanner}` +
       `<div style="font-family:'Oswald',sans-serif;font-size:68px;font-weight:700;color:${titleOnBg};line-height:1.05;margin-bottom:16px;text-shadow:2px 2px 12px rgba(0,0,0,0.4);">${title}</div>` +
       `<div style="font-size:19px;color:${tx}ee;letter-spacing:0.5px;margin-bottom:14px;">${sub}</div>` +
       `${imageBlock}` +
@@ -794,6 +828,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `${puzzleTexture}` +
       `<div style="position:relative;z-index:1;">` +
       `${audienceCallout}` +
+      `${lpBanner}` +
       `<div style="font-family:'Oswald',sans-serif;font-size:64px;font-weight:700;color:${titleOnBg};line-height:1.05;margin-bottom:14px;">${title}</div>` +
       `<div style="font-size:19px;color:${ac};font-style:italic;letter-spacing:0.5px;margin-bottom:12px;">${sub}</div>` +
       `${imageBlock}` +
@@ -811,6 +846,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="width:24px;height:1px;background:${ac};opacity:0.3;"></div>` +
       `</div>` +
       `${audienceCallout}` +
+      `${lpBanner}` +
       `<div style="font-family:'Oswald',sans-serif;font-size:64px;font-weight:700;color:${tx};line-height:1.05;margin-bottom:20px;letter-spacing:1px;">${title}</div>` +
       `${sub ? `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:16px;">${sub}</div>` : ""}` +
       `${imageBlock}` +
@@ -825,6 +861,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="width:100%;height:100%;border:8px double ${ac};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0.5in;box-sizing:border-box;position:relative;">` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:6px;color:${ac};text-transform:uppercase;margin-bottom:12px;">★ &nbsp; ${opts.puzzleType || "Puzzles"} &nbsp; ★</div>` +
       `${audienceCallout}` +
+      `${lpBanner}` +
       `<div style="font-family:'Oswald',sans-serif;font-size:60px;font-weight:700;color:${tx};line-height:1.05;margin-bottom:12px;text-transform:uppercase;letter-spacing:2px;">${title}</div>` +
       `${sub ? `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:12px;">${sub}</div>` : ""}` +
       `<div style="width:80px;height:2px;background:${ac};margin:8px auto 14px;"></div>` +
@@ -844,6 +881,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="position:relative;z-index:1;">` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:22px;color:${ac};opacity:0.9;margin-bottom:20px;letter-spacing:4px;">✦</div>` +
       `${audienceCallout}` +
+      `${lpBanner}` +
       `<div style="font-family:'Oswald',sans-serif;font-size:${titleWordCount <= 3 ? "72" : "62"}px;font-weight:700;color:${isDark ? tx : ac};line-height:1.1;margin-bottom:22px;padding:0 0.2in;">${title}</div>` +
       `<div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:20px;">` +
       `<div style="flex:1;max-width:60px;height:1px;background:${ac};opacity:0.6;"></div>` +
@@ -863,6 +901,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="position:relative;z-index:1;">` +
       `${opts.puzzleType ? `<div style="font-family:'Source Code Pro',monospace;font-size:11px;letter-spacing:6px;text-transform:uppercase;color:${ac};margin-bottom:12px;">${opts.puzzleType}</div>` : ""}` +
       `<div style="width:56px;height:2px;background:${ac};margin:0 auto 28px;"></div>` +
+      `${lpBanner}` +
       `<div style="font-family:'Oswald',sans-serif;font-size:${titleWordCount <= 3 ? "68" : "60"}px;font-weight:700;text-transform:uppercase;color:${ac};line-height:1.1;margin-bottom:18px;padding:0 0.3in;">${title}</div>` +
       `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:16px;">${sub}</div>` +
       `${imageBlock}` +
