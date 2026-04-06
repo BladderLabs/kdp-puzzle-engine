@@ -73,7 +73,7 @@ const formSchema = z.object({
   volumeNumber: z.coerce.number().optional(),
   dedication: z.string().optional(),
   difficultyMode: z.string().default("uniform"),
-  challengeDays: z.coerce.number().optional(),
+  challengeDays: z.union([z.literal(30), z.literal(60), z.literal(90)]).optional(),
 });
 
 export type BookFormValues = z.infer<typeof formSchema>;

@@ -18,10 +18,10 @@ export function computeTotalPages(opts: BuildOpts): number {
     : (LP ? 6 : 8);
   // Front matter: title(1) + htp(2) + toc(3)
   // Optional: dedication (+1), tracker (+1)
-  // Section dividers: 3 pages in progressive mode when PC >= 30
+  // Section dividers: 3 pages in progressive mode (always, for any puzzle count)
   // Back matter: 4 notes pages (always) + answer key pages
   const frontMatter = 3 + (opts.dedication ? 1 : 0) + (opts.challengeDays ? 1 : 0);
-  const dividers = progressive && PC >= 30 ? 3 : 0;
+  const dividers = progressive ? 3 : 0;
   return frontMatter + 4 + PC + Math.ceil(PC / aPer) + dividers;
 }
 
@@ -154,8 +154,8 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
   const trimH = LP ? 11 : 9;
 
   const progressive = opts.difficultyMode === "progressive";
-  // Enrichment pack: section dividers appear in progressive mode for 30+ puzzle books
-  const hasSections = progressive && PC >= 30;
+  // Enrichment pack: section dividers appear in progressive mode for any puzzle count
+  const hasSections = progressive;
   const sec1 = Math.round(PC / 3);
   const sec2 = Math.round(2 * PC / 3);
 

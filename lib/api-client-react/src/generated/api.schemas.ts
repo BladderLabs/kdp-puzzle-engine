@@ -108,7 +108,7 @@ export interface CreateBookBody {
   volumeNumber?: number;
   dedication?: string;
   difficultyMode?: string;
-  challengeDays?: number;
+  challengeDays?: 30 | 60 | 90;
 }
 
 export interface Book {
@@ -131,7 +131,7 @@ export interface Book {
   volumeNumber?: number;
   dedication?: string;
   difficultyMode?: string;
-  challengeDays?: number;
+  challengeDays?: 30 | 60 | 90;
   createdAt: string;
   updatedAt: string;
 }
