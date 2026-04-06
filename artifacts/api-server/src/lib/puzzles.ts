@@ -604,34 +604,11 @@ function makeCrosswordClue(word: string): string {
 }
 
 export function makeCrossword(words: string[], size: number): CrosswordResult {
-  // ── White-cell template crossword with guaranteed 180° rotational symmetry ──
-  //
-  // Core insight: define SLOTS (word positions) as symmetric pairs.
-  // A slot pair = slot A + its 180°-mirror slot B (same length, same direction).
-  // Backtracking fills PAIRS: if slot A gets word W, slot B must get word X
-  // (same length, consistent crossing letters). If no X is found, neither A
-  // nor B gets a word — both remain '#'. This is the ONLY way to guarantee
-  // strict rotational symmetry without any post-pass correction.
-  //
-  // Self-symmetric slots (whose 180° mirror is themselves, e.g. center H/V
-  // on an odd-sized grid) are filled once.
-  //
-  // No post-pass symmetry correction. No "accept asymmetry" fallback.
-  // ──────────────────────────────────────────────────────────────────────────
-
   interface Slot { row: number; col: number; len: number; dir: "H" | "V" }
-  // A SlotGroup is either [A] (self-symmetric) or [A, B] (symmetric pair)
   type SlotGroup = [Slot] | [Slot, Slot];
   interface Intersection { a: number; posA: number; b: number; posB: number }
 
   const m = Math.floor(size / 2);
-
-  // ── Step 1: Define symmetric slot groups ──────────────────────────────────
-  // addH(r, cStart, len): adds H slot at (r, cStart) + its 180°-mirror.
-  // addV(c, rStart, len): adds V slot at (rStart, c) + its 180°-mirror.
-  // Mirror of H(r, cStart, len): H(size-1-r, size-1-(cStart+len-1), len)
-  // Mirror of V(c, rStart, len): V(size-1-c, size-1-(rStart+len-1), len)
-
   const groups: SlotGroup[] = [];
 
   function addH(r: number, cStart: number, len: number) {
@@ -660,45 +637,18 @@ export function makeCrossword(words: string[], size: number): CrosswordResult {
     }
   }
 
-  // ── Hard-coded symmetric slot layouts ─────────────────────────────────────
-  //
-  // "Plus/cross" topology: center-H and center-V form a cross; arm pairs
-  // extend only from the center lines. Arms do NOT cross each other — they
-  // only cross the center lines. This avoids the 4-way mutual constraint
-  // between H and V pairs that makes the problem hard to solve.
-  //
-  // 13×13 crossings (0-indexed, m=6):
-  //   center-H (row 6, cols 2-10, len=9) ∩ center-V (col 6, rows 2-10, len=9) at (6,6)
-  //   center-H ∩ arm-V-A (col 3, rows 4-8, len=5) at (6,3): center-H[1] = arm-V-A[2]
-  //   center-H ∩ arm-V-B (col 9, rows 4-8, len=5) at (6,9): center-H[7] = arm-V-B[2]
-  //   center-V ∩ arm-H-A (row 3, cols 4-8, len=5) at (3,6): center-V[1] = arm-H-A[2]
-  //   center-V ∩ arm-H-B (row 9, cols 4-8, len=5) at (9,6): center-V[7] = arm-H-B[2]
-  //   (arm-V and arm-H do NOT cross each other)
-  //
-  // 11×11 crossings (m=5):
-  //   center-H (row 5, cols 2-8, len=7) ∩ center-V (col 5, rows 2-8, len=7) at (5,5)
-  //   center-H ∩ arm-V-A (col 3, rows 3-7, len=5) at (5,3): center-H[1] = arm-V-A[2]
-  //   center-H ∩ arm-V-B (col 7, rows 3-7, len=5) at (5,7): center-H[5] = arm-V-B[2]
-  //   center-V ∩ arm-H-A (row 3, cols 3-7, len=5) at (3,5): center-V[1] = arm-H-A[2]
-  //   center-V ∩ arm-H-B (row 7, cols 3-7, len=5) at (7,5): center-V[5] = arm-H-B[2]
-
+  // Plus-cross topology: center H/V cross at center cell; arm pairs extend from
+  // center lines only (arms never cross each other, only the center word).
   if (size >= 13) {
-    // Processing order: center-H first (has most constraints), then arms.
-    // center-H and center-V are both singletons with mutual constraint at center.
-    addH(m, 2, size - 4);       // center-H: row 6, cols 2-10, len=9
-    addV(m, 2, size - 4);       // center-V: col 6, rows 2-10, len=9
-    // arm-V pair (col 3 ↔ col 9, rows 4-8, len=5): cross center-H only
-    addV(m - 3, m - 2, 5);     // col 3, rows 4-8 ↔ col 9, rows 4-8
-    // arm-H pair (row 3 ↔ row 9, cols 4-8, len=5): cross center-V only
-    addH(m - 3, m - 2, 5);     // row 3, cols 4-8 ↔ row 9, cols 4-8
+    addH(m, 2, size - 4);    // center-H singleton
+    addV(m, 2, size - 4);    // center-V singleton
+    addV(m - 3, m - 2, 5);  // arm-V pair (crosses center-H)
+    addH(m - 3, m - 2, 5);  // arm-H pair (crosses center-V)
   } else {
-    // 11×11: same topology, smaller scale
-    addH(m, 2, size - 4);       // center-H: row 5, cols 2-8, len=7
-    addV(m, 2, size - 4);       // center-V: col 5, rows 2-8, len=7
-    // arm-V pair (col 3 ↔ col 7, rows 3-7, len=5)
-    addV(m - 2, m - 2, 5);     // col 3, rows 3-7 ↔ col 7, rows 3-7
-    // arm-H pair (row 3 ↔ row 7, cols 3-7, len=5)
-    addH(m - 2, m - 2, 5);     // row 3, cols 3-7 ↔ row 7, cols 3-7
+    addH(m, 2, size - 4);   // center-H singleton
+    addV(m, 2, size - 4);   // center-V singleton
+    addV(m - 2, m - 2, 5);  // arm-V pair
+    addH(m - 2, m - 2, 5);  // arm-H pair
   }
 
   // Flatten groups → indexed slots, track group membership
@@ -714,7 +664,6 @@ export function makeCrossword(words: string[], size: number): CrosswordResult {
     }
   }
 
-  // ── Step 2: Compute H×V intersections ─────────────────────────────────────
   const intersections: Intersection[] = [];
   for (let i = 0; i < slots.length; i++) {
     for (let j = i + 1; j < slots.length; j++) {
@@ -732,21 +681,11 @@ export function makeCrossword(words: string[], size: number): CrosswordResult {
     }
   }
 
-  // ── Step 3: Word pool ──────────────────────────────────────────────────────
   const slotLens = new Set(slots.map(s => s.len));
   const pool = [...new Set(
     words.map(w => w.toUpperCase().replace(/[^A-Z]/g, ""))
          .filter(w => w.length >= 3 && slotLens.has(w.length))
   )];
-
-  // ── Step 4: Group-aware backtracking ──────────────────────────────────────
-  // Fill GROUPS, not individual slots. For a pair-group [A, B]:
-  //   - Try word W for slot A.
-  //   - Find word X for slot B (same length, consistent with crossing letters).
-  //   - If found: assign W→A, X→B, continue.
-  //   - If not: try next W.
-  //   - If no W works: leave group empty (both A and B stay '#').
-  // For a singleton group [A]: fill normally (it's self-symmetric).
 
   const assignment: (string | null)[] = Array(slots.length).fill(null);
 
@@ -771,7 +710,6 @@ export function makeCrossword(words: string[], size: number): CrosswordResult {
     if (!hasLen) return btGroups(gi + 1, usedWords);
 
     if (gs.length === 1) {
-      // Self-symmetric singleton slot
       const idxA = gs[0];
       const cands = shuf(pool.filter(w => w.length === len && !usedWords.has(w)));
       for (const w of cands) {
@@ -783,7 +721,6 @@ export function makeCrossword(words: string[], size: number): CrosswordResult {
         usedWords.delete(w);
       }
     } else {
-      // Symmetric pair [A, B] — fill both or neither
       const idxA = gs[0], idxB = gs[1];
       const candsA = shuf(pool.filter(w => w.length === len && !usedWords.has(w)));
       for (const wA of candsA) {
@@ -804,26 +741,12 @@ export function makeCrossword(words: string[], size: number): CrosswordResult {
       }
     }
 
-    // Group cannot be filled with the current assignment. Skip it — both slots
-    // in the pair remain '#', preserving 180° symmetry. We do NOT backtrack here
-    // because the plus-topology ensures arm-V ↔ arm-H independence: an arm can
-    // be empty without affecting the other arms.
+    // Group cannot be filled; skip (both slots stay '#', symmetry preserved).
     return btGroups(gi + 1, usedWords);
   }
 
   btGroups(0, new Set<string>());
 
-  // ── Step 5: Build grid ────────────────────────────────────────────────────
-  // All cells start '#'. Write letters only for filled slots.
-  // Symmetry proof:
-  //   - Every letter cell belongs to a filled slot.
-  //   - Every filled slot was filled as part of a group.
-  //   - For singleton groups: the slot is self-symmetric, so the letter cells
-  //     are self-symmetric.
-  //   - For pair groups: slot A and slot B are 180°-mirrors, so the letter
-  //     cells of A and B are 180°-mirrors of each other.
-  //   - Therefore all letter-cell regions are 180°-rotationally symmetric.
-  //   - All remaining '#' cells are also symmetric (complement of symmetric set).
   const grid: string[][] = Array.from({ length: size }, () => Array(size).fill("#"));
 
   for (let i = 0; i < slots.length; i++) {
@@ -836,7 +759,6 @@ export function makeCrossword(words: string[], size: number): CrosswordResult {
     }
   }
 
-  // ── Step 6: Build clue lists ───────────────────────────────────────────────
   const acrossList: CrosswordClue[] = [];
   const downList: CrosswordClue[] = [];
   const nums: Record<string, number> = {};
@@ -864,6 +786,12 @@ export function makeCrossword(words: string[], size: number): CrosswordResult {
         cellNum++;
       }
     }
+  }
+
+  const MIN_CLUES = 2;
+  if (acrossList.length < MIN_CLUES || downList.length < MIN_CLUES) {
+    const empty: string[][] = Array.from({ length: size }, () => Array(size).fill("#"));
+    return { grid: empty, across: [], down: [], size, nums: {} };
   }
 
   return { grid: grid as string[][], across: acrossList, down: downList, size, nums };
