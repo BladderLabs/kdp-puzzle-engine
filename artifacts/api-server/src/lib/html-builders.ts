@@ -220,6 +220,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     "Maze": "Find your way from the START (top-left) to the FINISH (bottom-right) by following open passages. No diagonal moves — up, down, left, right only.",
     "Number Search": "Find all the number sequences hidden in the grid. Numbers can run horizontally, vertically, or diagonally — both forward and backward.",
     "Cryptogram": "Each puzzle contains a famous quote encoded with a substitution cipher. Every letter has been replaced by a different letter. Decode the cipher to reveal the hidden message.",
+    "Crossword": "Fill in the white squares using the numbered clues. Each number in a white square begins a word — solve the Across clues left-to-right and the Down clues top-to-bottom. Black squares separate words.",
   };
   const tipMap: Record<string, string> = {
     "Word Search": "Scan for uncommon letters like Q, Z, X first.",
@@ -227,6 +228,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     "Maze": "Try working backward from the finish for harder mazes.",
     "Number Search": "Look for repeated digits as anchors.",
     "Cryptogram": "Short words (A, I, THE, AND) reveal common patterns.",
+    "Crossword": "Start with the shortest clues — 3-letter answers give you crossing letters that unlock longer words.",
   };
   const htxt = htxtMap[PT] || htxtMap["Word Search"];
   const tip = tipMap[PT] || tipMap["Word Search"];

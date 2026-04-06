@@ -697,6 +697,31 @@ export function makeCrossword(words: string[], size: number): CrosswordResult {
     for (let c = 0; c < size; c++)
       if (grid[r][c] === null) grid[r][c] = "#";
 
+  // Enforce 180° rotational symmetry for black cells (best-effort, word-preserving).
+  // For every '#' cell at (r,c), its 180° mirror must also be '#'.
+  // If the mirror is a letter cell that is part of a word (has adjacent letters), we preserve
+  // the word and accept the asymmetry — standard practice for non-template crossword generators.
+  // If the mirror is an isolated letter (no adjacent letters) or null, we safely convert it to '#'.
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (grid[r][c] === "#") {
+        const mr = size - 1 - r, mc = size - 1 - c;
+        if (grid[mr][mc] === "#") continue; // already symmetric
+        // Mirror has a letter — only convert if it's not part of a word (has no adjacent letters)
+        const hasAdjLetter = (
+          (mc > 0 && grid[mr][mc - 1] !== "#") ||
+          (mc < size - 1 && grid[mr][mc + 1] !== "#") ||
+          (mr > 0 && grid[mr - 1][mc] !== "#") ||
+          (mr < size - 1 && grid[mr + 1][mc] !== "#")
+        );
+        if (!hasAdjLetter) {
+          grid[mr][mc] = "#"; // safe: isolated letter, not part of any word
+        }
+        // If part of a word: accept asymmetry rather than truncate the word
+      }
+    }
+  }
+
   const acrossList: CrosswordClue[] = [];
   const downList: CrosswordClue[] = [];
   const nums: Record<string, number> = {};
