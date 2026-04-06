@@ -747,7 +747,6 @@ export function makeCrossword(words: string[], size: number): CrosswordResult {
 
   btGroups(0, new Set<string>());
 
-  // Scan a completed grid and derive numbered clues via standard crossword numbering.
   function gridToResult(g: string[][]): CrosswordResult | null {
     const across: CrosswordClue[] = [];
     const down: CrosswordClue[] = [];
@@ -794,21 +793,21 @@ export function makeCrossword(words: string[], size: number): CrosswordResult {
   const primary = gridToResult(primaryGrid);
   if (primary) return primary;
 
-  // Fallback: find two words from the pool sharing a letter, place them crossing at center.
-  // Centering on the shared letter ensures 180°-symmetric white-cell pattern for the pair.
+  // Fallback: center H and V words at (m, m); require matching center letters so they cross.
   const allWords = [...new Set(
     words.map(w => w.toUpperCase().replace(/[^A-Z]/g, "")).filter(w => w.length >= 3)
   )];
   for (const wH of shuf(allWords)) {
+    const hHalf = Math.floor(wH.length / 2);
+    const hRow = m, hCol = m - hHalf;
+    if (hCol < 0 || hCol + wH.length > size) continue;
+    const centerLetterH = wH[hHalf];
     for (const wV of shuf(allWords.filter(w => w !== wH))) {
-      const sharedIdx = wH.split("").findIndex(ch => wV.includes(ch));
-      if (sharedIdx < 0) continue;
-      const vIdx = wV.indexOf(wH[sharedIdx]);
-      // Center the crossing point at grid center (row m, col m)
-      const hRow = m, hCol = m - sharedIdx;
-      const vCol = m, vRow = m - vIdx;
-      if (hCol < 0 || hCol + wH.length > size) continue;
+      const vHalf = Math.floor(wV.length / 2);
+      const vCol = m, vRow = m - vHalf;
       if (vRow < 0 || vRow + wV.length > size) continue;
+      // The crossing cell is (m, m): wH[hHalf] must equal wV[vHalf]
+      if (wV[vHalf] !== centerLetterH) continue;
       const fbGrid: string[][] = Array.from({ length: size }, () => Array(size).fill("#"));
       for (let k = 0; k < wH.length; k++) fbGrid[hRow][hCol + k] = wH[k];
       for (let k = 0; k < wV.length; k++) fbGrid[vRow + k][vCol] = wV[k];
@@ -817,7 +816,7 @@ export function makeCrossword(words: string[], size: number): CrosswordResult {
     }
   }
 
-  // Last resort: place the same word both H and V crossing at the center cell.
+  // Last resort: place one word both H and V centered at the grid center.
   const anyWord = allWords[0] || "PUZZLE";
   const lhCol = Math.max(0, m - Math.floor(anyWord.length / 2));
   const lvRow = Math.max(0, m - Math.floor(anyWord.length / 2));
@@ -826,13 +825,7 @@ export function makeCrossword(words: string[], size: number): CrosswordResult {
     for (let k = 0; k < anyWord.length; k++) lastGrid[m][lhCol + k] = anyWord[k];
   if (lvRow + anyWord.length <= size)
     for (let k = 0; k < anyWord.length; k++) lastGrid[lvRow + k][m] = anyWord[k];
-  return gridToResult(lastGrid) ?? {
-    grid: lastGrid,
-    across: [{ num: 1, clue: makeCrosswordClue(anyWord), answer: anyWord, row: m, col: lhCol, len: anyWord.length }],
-    down: [{ num: 1, clue: makeCrosswordClue(anyWord), answer: anyWord, row: lvRow, col: m, len: anyWord.length }],
-    size,
-    nums: { [`${m},${lhCol}`]: 1 },
-  };
+  return gridToResult(lastGrid) ?? { grid: lastGrid, across: [], down: [], size, nums: {} };
 }
 
 export const WORD_BANKS: Record<string, string[]> = {
