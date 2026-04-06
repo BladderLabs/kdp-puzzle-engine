@@ -552,7 +552,7 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
                 <div>
                   <label className="text-sm font-medium block mb-1.5">Solve-a-Day Tracker <span className="text-muted-foreground font-normal">(optional)</span></label>
                   <div className="flex flex-wrap gap-2">
-                    {[0, 7, 14, 21, 30, 50, 100].map(days => (
+                    {[0, 30, 60, 90].map(days => (
                       <button
                         key={days}
                         type="button"

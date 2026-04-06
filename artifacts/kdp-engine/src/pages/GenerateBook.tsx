@@ -438,6 +438,7 @@ export function GenerateBook() {
                   variant="outline"
                   className="w-full text-base"
                   style={{ borderColor: GOLD + "99", color: GOLD + "cc" }}
+                  disabled={!interiorBlobRef.current || !coverBlobRef.current}
                   onClick={async () => {
                     if (!interiorBlobRef.current || !coverBlobRef.current) return;
                     const JSZip = (await import("jszip")).default;

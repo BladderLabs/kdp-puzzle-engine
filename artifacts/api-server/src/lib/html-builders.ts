@@ -98,13 +98,27 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
 
   const puzzles: unknown[] = [];
 
+  // In progressive mode: thirds are Easy / Medium / Hard
+  // In uniform mode: all puzzles use the single selected DF
+  const progressiveDiffs: string[] = [];
+  if (opts.difficultyMode === "progressive") {
+    const t1 = Math.round(PC / 3);
+    const t2 = Math.round(2 * PC / 3);
+    for (let i = 0; i < PC; i++) {
+      progressiveDiffs.push(i < t1 ? "Easy" : i < t2 ? "Medium" : "Hard");
+    }
+  }
+
+  const getPuzzleDiff = (i: number) => opts.difficultyMode === "progressive" ? progressiveDiffs[i] : DF;
+
   for (let i = 0; i < PC; i++) {
+    const pDiff = getPuzzleDiff(i);
     switch (PT) {
       case "Word Search":
         puzzles.push(makeWordSearch(shuf(wordBank).slice(0, Math.min(wordBank.length, wpp)), gsz));
         break;
       case "Sudoku":
-        puzzles.push(makeSudoku(DF));
+        puzzles.push(makeSudoku(pDiff));
         break;
       case "Maze":
         puzzles.push(makeMaze(LP ? 12 : 15, LP ? 12 : 15));
@@ -156,20 +170,15 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
   const gut = Math.max(0.5, gutterIn(totP));
   // pS = first puzzle page (1-based); frontMatter pages + section divider 1 if hasSections
   const pS = frontMatter + (hasSections ? 1 : 0) + 1;
-  // +2 for Level2+3 dividers (Level1 already baked into pS offset), +4 for notes
-  const aS = pS + PC + (hasSections ? 2 : 0) + 4;
+  // aS = answer key start page: right after puzzles + mid-book section dividers
+  const aS = pS + PC + (hasSections ? 2 : 0);
   // puzzle page helper: accounts for section-divider pages inserted mid-book
   const puzzlePageOf = (i: number) => pS + i + (hasSections ? (i >= sec2 ? 2 : i >= sec1 ? 1 : 0) : 0);
-  // notes start page (right after all puzzles + section dividers)
-  const notesStartPage = pS + PC + (hasSections ? 2 : 0);
 
   // Decorative rule between label and grid (shared across all puzzle types)
   const ornamentRule = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;"><div style="flex:1;height:1px;background:#ccc;"></div><div style="font-family:'Source Code Pro',monospace;font-size:10px;color:#aaa;">◆</div><div style="flex:1;height:1px;background:#ccc;"></div></div>`;
 
   // Per-puzzle progress indicator: difficulty dots + time estimate + checkbox
-  const diffDots = DF === "Easy" ? "\u25CF\u25CF\u25CB\u25CB\u25CB"
-    : DF === "Hard" ? "\u25CF\u25CF\u25CF\u25CF\u25CF"
-    : "\u25CF\u25CF\u25CF\u25CB\u25CB";
   const timeMap: Record<string, Record<string, string>> = {
     "Word Search":   { Easy: "~5 min",  Medium: "~10 min", Hard: "~20 min" },
     "Sudoku":        { Easy: "~10 min", Medium: "~20 min", Hard: "~40 min" },
@@ -178,8 +187,13 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     "Cryptogram":    { Easy: "~3 min",  Medium: "~8 min",  Hard: "~15 min" },
     "Crossword":     { Easy: "~8 min",  Medium: "~15 min", Hard: "~30 min" },
   };
-  const timeEst = (timeMap[PT] || timeMap["Word Search"])[DF] || "~10 min";
-  const progressBadge = `<span style="display:inline-flex;align-items:center;gap:6px;padding:2px 6px;border:1px solid #ddd;border-radius:4px;background:#fafafa;"><span style="letter-spacing:3px;font-size:11px;color:#555;">${diffDots}</span><span style="font-size:9px;color:#777;font-family:'Source Code Pro',monospace;">${timeEst}</span><span style="display:inline-block;width:12px;height:12px;border:1.5px solid #aaa;border-radius:2px;margin-left:2px;"></span></span>`;
+  const makeProgressBadge = (d: string) => {
+    const dots = d === "Easy" ? "\u25CF\u25CF\u25CB\u25CB\u25CB"
+      : d === "Hard" ? "\u25CF\u25CF\u25CF\u25CF\u25CF"
+      : "\u25CF\u25CF\u25CF\u25CB\u25CB";
+    const est = (timeMap[PT] || timeMap["Word Search"])[d] || "~10 min";
+    return `<span style="display:inline-flex;align-items:center;gap:6px;padding:2px 6px;border:1px solid #ddd;border-radius:4px;background:#fafafa;"><span style="letter-spacing:3px;font-size:11px;color:#555;">${dots}</span><span style="font-size:9px;color:#777;font-family:'Source Code Pro',monospace;">${est}</span><span style="display:inline-block;width:12px;height:12px;border:1.5px solid #aaa;border-radius:2px;margin-left:2px;"></span></span>`;
+  };
 
   let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${T}</title>` +
     `<link rel="preconnect" href="https://fonts.googleapis.com">` +
@@ -436,32 +450,34 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
 
   // ── Puzzle pages ─────────────────────────────────────────────────────────
   // Section-divider page builder (full page, B&W, bold centered)
-  const sectionDivider = (level: string, subtitle: string, pageNum: number) =>
+  // label = "EASY PUZZLES" etc., rangeStr = "Puzzles 1–33" etc.
+  const sectionDivider = (label: string, rangeStr: string, pageNum: number) =>
     `<div class="pg in"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:${trimH}in;text-align:center;">` +
     `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:5px;color:#bbb;text-transform:uppercase;margin-bottom:20px;">Progressive Difficulty</div>` +
     `<div style="width:48px;height:2px;background:#333;margin-bottom:20px;"></div>` +
-    `<div style="font-family:Lora,serif;font-size:34px;font-weight:700;color:#222;margin-bottom:8px;">${level}</div>` +
-    `<div style="font-family:Lora,serif;font-size:14px;font-style:italic;color:#666;margin-bottom:20px;">${subtitle}</div>` +
+    `<div style="font-family:Lora,serif;font-size:34px;font-weight:700;color:#222;margin-bottom:8px;">${label}</div>` +
+    `<div style="font-family:Lora,serif;font-size:14px;font-style:italic;color:#666;margin-bottom:20px;">${rangeStr}</div>` +
     `<div style="width:48px;height:2px;background:#333;"></div>` +
     `</div><div class="ft"><span></span><span class="ft-pg">&mdash; ${pageNum} &mdash;</span></div></div>`;
 
   // Emit Level 1 section divider before first puzzle (only when hasSections)
   if (hasSections) {
-    html += sectionDivider("Level 1", "Warm-Up Puzzles", currentPage);
+    html += sectionDivider("EASY PUZZLES", `Puzzles 1\u2013${sec1}`, currentPage);
     currentPage++;
   }
 
   for (let i = 0; i < PC; i++) {
     // Emit Level 2 & 3 section dividers between puzzle groups
     if (hasSections && i === sec1) {
-      html += sectionDivider("Level 2", "Challenging Puzzles", pS + sec1);
+      html += sectionDivider("MEDIUM PUZZLES", `Puzzles ${sec1 + 1}\u2013${sec2}`, pS + sec1);
     }
     if (hasSections && i === sec2) {
-      html += sectionDivider("Level 3", "Expert Puzzles", pS + sec2 + 1);
+      html += sectionDivider("HARD PUZZLES", `Puzzles ${sec2 + 1}\u2013${PC}`, pS + sec2 + 1);
     }
     const pN = puzzlePageOf(i);
     const lb = "#" + String(i + 1).padStart(2, "0");
     const pz = puzzles[i] as Record<string, unknown>;
+    const progressBadge = makeProgressBadge(getPuzzleDiff(i));
     // LP ornamental separator embedded at bottom of every 10th puzzle page
     // (inside the .pg div — no effect on page count or computeTotalPages)
     const lpSep = (LP && (i + 1) % 10 === 0 && i < PC - 1)
@@ -600,23 +616,6 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         `</table>`;
       html += `<div class="pg in"><div class="hd"><span class="hd-title">${T}</span>${progressBadge}</div><div style="padding-top:0.2in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">CRYPTOGRAM</span></div>${ornamentRule}<div style="font-family:'Source Code Pro',monospace;font-size:${LP ? 16 : 13}px;color:#222;line-height:2.8;word-spacing:4px;">${cipherDisplay}</div><div style="margin-top:20px;">${cgKeyTable}</div>${lpSep}</div><div class="ft"><span>${T} — ${AU}</span><span class="ft-pg">&mdash; ${pN} &mdash;</span></div></div>`;
     }
-  }
-
-  // ── Notes pages (4 ruled pages) ──────────────────────────────────────────
-  for (let n = 0; n < 4; n++) {
-    const notesPg = notesStartPage + n;
-    const lineCount = LP ? 18 : 24;
-    const lineH = LP ? 0.36 : 0.28;
-    let noteLines = "";
-    for (let l = 0; l < lineCount; l++)
-      noteLines += `<div style="width:100%;height:${lineH}in;border-bottom:1px solid #ccc;margin-bottom:0;"></div>`;
-    const notesTitle = n === 0 ? "Notes" : "&nbsp;";
-    html += `<div class="pg in"><div class="hd"><span class="hd-title">${T}</span><span>Notes</span></div>` +
-      `<div style="padding-top:0.2in;">` +
-      `<div style="font-family:Lora,serif;font-size:${n === 0 ? "22px" : "0px"};font-weight:700;color:#222;margin-bottom:${n === 0 ? "14px" : "0px"};">${notesTitle}</div>` +
-      `${n === 0 ? `<div style="width:36px;height:2px;background:#333;margin-bottom:14px;"></div>` : ""}` +
-      noteLines +
-      `</div><div class="ft"><span>${T} — ${AU}</span><span class="ft-pg">&mdash; ${notesPg} &mdash;</span></div></div>`;
   }
 
   // ── Answer key pages ─────────────────────────────────────────────────────
@@ -817,6 +816,23 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
       html += `<div class="pg in"><div class="hd"><span class="hd-title">Answer Key</span><span>Crossword</span></div><div style="padding-top:0.2in;">${akBanner}${gs}</div><div class="ft"><span>${T} — ${AU}</span><span class="ft-pg">&mdash; ${akP} &mdash;</span></div></div>`;
       akP++;
     }
+  }
+
+  // ── Notes pages (4 ruled pages) — appear after answer key ────────────────
+  for (let n = 0; n < 4; n++) {
+    const notesPg = aS + aP + n;
+    const lineCount = LP ? 18 : 24;
+    const lineH = LP ? 0.36 : 0.28;
+    let noteLines = "";
+    for (let l = 0; l < lineCount; l++)
+      noteLines += `<div style="width:100%;height:${lineH}in;border-bottom:1px solid #ccc;margin-bottom:0;"></div>`;
+    const notesTitle = n === 0 ? "Notes" : "&nbsp;";
+    html += `<div class="pg in"><div class="hd"><span class="hd-title">${T}</span><span>Notes</span></div>` +
+      `<div style="padding-top:0.2in;">` +
+      `<div style="font-family:Lora,serif;font-size:${n === 0 ? "22px" : "0px"};font-weight:700;color:#222;margin-bottom:${n === 0 ? "14px" : "0px"};">${notesTitle}</div>` +
+      `${n === 0 ? `<div style="width:36px;height:2px;background:#333;margin-bottom:14px;"></div>` : ""}` +
+      noteLines +
+      `</div><div class="ft"><span>${T} — ${AU}</span><span class="ft-pg">&mdash; ${notesPg} &mdash;</span></div></div>`;
   }
 
   html += "</body></html>";
