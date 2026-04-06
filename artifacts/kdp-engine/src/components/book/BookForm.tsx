@@ -350,7 +350,7 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
                           {THEMES.map(t => (
                             <SelectItem key={t.value} value={t.value}>
                               <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <span style={{ display: "inline-flex", width: 22, height: 22, borderRadius: "50%", background: `linear-gradient(135deg, ${t.bg} 50%, ${t.ac} 50%)`, border: "1px solid #ccc", flexShrink: 0 }} />
+                                <span style={{ display: "inline-flex", width: 12, height: 12, borderRadius: "50%", background: t.ac, border: `1px solid ${t.ac}88`, flexShrink: 0 }} />
                                 {t.label}
                               </span>
                             </SelectItem>
