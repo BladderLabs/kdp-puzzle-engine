@@ -747,17 +747,8 @@ export function makeCrossword(words: string[], size: number): CrosswordResult {
 
   btGroups(0, new Set<string>());
 
-  function buildResult(asgn: (string | null)[]): CrosswordResult | null {
-    const g: string[][] = Array.from({ length: size }, () => Array(size).fill("#"));
-    for (let i = 0; i < slots.length; i++) {
-      const w = asgn[i];
-      if (!w) continue;
-      const s = slots[i];
-      const dr = s.dir === "V" ? 1 : 0, dc = s.dir === "H" ? 1 : 0;
-      for (let k = 0; k < w.length; k++) {
-        g[s.row + dr * k][s.col + dc * k] = w[k];
-      }
-    }
+  // Scan a completed grid and derive numbered clues via standard crossword numbering.
+  function gridToResult(g: string[][]): CrosswordResult | null {
     const across: CrosswordClue[] = [];
     const down: CrosswordClue[] = [];
     const ns: Record<string, number> = {};
@@ -785,15 +776,26 @@ export function makeCrossword(words: string[], size: number): CrosswordResult {
         }
       }
     }
-    if (across.length < 2 || down.length < 2) return null;
+    if (across.length < 1 || down.length < 1) return null;
     return { grid: g, across, down, size, nums: ns };
   }
 
-  const primary = buildResult(assignment);
+  // Build grid from backtracking assignment and attempt to derive clues.
+  const primaryGrid: string[][] = Array.from({ length: size }, () => Array(size).fill("#"));
+  for (let i = 0; i < slots.length; i++) {
+    const w = assignment[i];
+    if (!w) continue;
+    const s = slots[i];
+    const dr = s.dir === "V" ? 1 : 0, dc = s.dir === "H" ? 1 : 0;
+    for (let k = 0; k < w.length; k++) {
+      primaryGrid[s.row + dr * k][s.col + dc * k] = w[k];
+    }
+  }
+  const primary = gridToResult(primaryGrid);
   if (primary) return primary;
 
-  // Fallback: build a minimal valid crossword using two crossing words from the pool.
-  // Pick one H word and one V word that share a common letter, place them crossing at center.
+  // Fallback: find two words from the pool sharing a letter, place them crossing at center.
+  // Centering on the shared letter ensures 180°-symmetric white-cell pattern for the pair.
   const allWords = [...new Set(
     words.map(w => w.toUpperCase().replace(/[^A-Z]/g, "")).filter(w => w.length >= 3)
   )];
@@ -802,40 +804,34 @@ export function makeCrossword(words: string[], size: number): CrosswordResult {
       const sharedIdx = wH.split("").findIndex(ch => wV.includes(ch));
       if (sharedIdx < 0) continue;
       const vIdx = wV.indexOf(wH[sharedIdx]);
+      // Center the crossing point at grid center (row m, col m)
       const hRow = m, hCol = m - sharedIdx;
       const vCol = m, vRow = m - vIdx;
       if (hCol < 0 || hCol + wH.length > size) continue;
       if (vRow < 0 || vRow + wV.length > size) continue;
-      const fallbackGrid: string[][] = Array.from({ length: size }, () => Array(size).fill("#"));
-      for (let k = 0; k < wH.length; k++) fallbackGrid[hRow][hCol + k] = wH[k];
-      for (let k = 0; k < wV.length; k++) fallbackGrid[vRow + k][vCol] = wV[k];
-      return {
-        grid: fallbackGrid,
-        across: [{ num: 1, clue: makeCrosswordClue(wH), answer: wH, row: hRow, col: hCol, len: wH.length }],
-        down: [{ num: 1, clue: makeCrosswordClue(wV), answer: wV, row: vRow, col: vCol, len: wV.length }],
-        size,
-        nums: { [`${hRow},${hCol}`]: 1 },
-      };
+      const fbGrid: string[][] = Array.from({ length: size }, () => Array(size).fill("#"));
+      for (let k = 0; k < wH.length; k++) fbGrid[hRow][hCol + k] = wH[k];
+      for (let k = 0; k < wV.length; k++) fbGrid[vRow + k][vCol] = wV[k];
+      const fb = gridToResult(fbGrid);
+      if (fb) return fb;
     }
   }
 
-  // Last resort: single H word across center, single V word down center (same word if no pair found)
+  // Last resort: place the same word both H and V crossing at the center cell.
   const anyWord = allWords[0] || "PUZZLE";
-  const hRow = m, hCol = m - Math.floor(anyWord.length / 2);
-  const vRow = m - Math.floor(anyWord.length / 2), vCol = m;
+  const lhCol = Math.max(0, m - Math.floor(anyWord.length / 2));
+  const lvRow = Math.max(0, m - Math.floor(anyWord.length / 2));
   const lastGrid: string[][] = Array.from({ length: size }, () => Array(size).fill("#"));
-  if (hCol >= 0 && hCol + anyWord.length <= size) {
-    for (let k = 0; k < anyWord.length; k++) lastGrid[hRow][hCol + k] = anyWord[k];
-  }
-  if (vRow >= 0 && vRow + anyWord.length <= size) {
-    for (let k = 0; k < anyWord.length; k++) lastGrid[vRow + k][vCol] = anyWord[k];
-  }
-  return {
+  if (lhCol + anyWord.length <= size)
+    for (let k = 0; k < anyWord.length; k++) lastGrid[m][lhCol + k] = anyWord[k];
+  if (lvRow + anyWord.length <= size)
+    for (let k = 0; k < anyWord.length; k++) lastGrid[lvRow + k][m] = anyWord[k];
+  return gridToResult(lastGrid) ?? {
     grid: lastGrid,
-    across: [{ num: 1, clue: makeCrosswordClue(anyWord), answer: anyWord, row: hRow, col: hCol < 0 ? 0 : hCol, len: anyWord.length }],
-    down: [{ num: 1, clue: makeCrosswordClue(anyWord), answer: anyWord, row: vRow < 0 ? 0 : vRow, col: vCol, len: anyWord.length }],
+    across: [{ num: 1, clue: makeCrosswordClue(anyWord), answer: anyWord, row: m, col: lhCol, len: anyWord.length }],
+    down: [{ num: 1, clue: makeCrosswordClue(anyWord), answer: anyWord, row: lvRow, col: m, len: anyWord.length }],
     size,
-    nums: { [`${hRow},${hCol < 0 ? 0 : hCol}`]: 1 },
+    nums: { [`${m},${lhCol}`]: 1 },
   };
 }
 
