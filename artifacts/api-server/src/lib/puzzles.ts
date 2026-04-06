@@ -604,159 +604,239 @@ function makeCrosswordClue(word: string): string {
 }
 
 export function makeCrossword(words: string[], size: number): CrosswordResult {
-  type Cell = string | null;
-  const grid: Cell[][] = Array.from({ length: size }, () => Array(size).fill(null));
-  interface PlacedWord { word: string; row: number; col: number; dir: "H" | "V" }
-  const placedList: PlacedWord[] = [];
+  // ── White-cell template crossword with guaranteed 180° rotational symmetry ──
+  //
+  // Core insight: define SLOTS (word positions) as symmetric pairs.
+  // A slot pair = slot A + its 180°-mirror slot B (same length, same direction).
+  // Backtracking fills PAIRS: if slot A gets word W, slot B must get word X
+  // (same length, consistent crossing letters). If no X is found, neither A
+  // nor B gets a word — both remain '#'. This is the ONLY way to guarantee
+  // strict rotational symmetry without any post-pass correction.
+  //
+  // Self-symmetric slots (whose 180° mirror is themselves, e.g. center H/V
+  // on an odd-sized grid) are filled once.
+  //
+  // No post-pass symmetry correction. No "accept asymmetry" fallback.
+  // ──────────────────────────────────────────────────────────────────────────
 
-  // ── Step 1: Pre-seed symmetric black cells to establish 180° symmetric skeleton ──
-  // For each seeded cell (r, c), its 180° mirror (size-1-r, size-1-c) is also seeded.
-  // This guarantees a deterministic symmetric black-cell base before word placement.
-  const seedBlack = (r: number, c: number) => {
-    if (r >= 0 && r < size && c >= 0 && c < size) {
-      grid[r][c] = "#";
-      grid[size - 1 - r][size - 1 - c] = "#";
-    }
-  };
-  // Border frame — always '#', trivially symmetric
-  for (let i = 0; i < size; i++) { seedBlack(0, i); seedBlack(i, 0); }
-  // Interior symmetric separators (deterministic, size-relative, avoids center row)
-  const q = Math.max(2, Math.floor(size / 4));      // ≈3 for 13, ≈2 for 11
-  const m = Math.floor(size / 2);                    // center index (6 for 13, 5 for 11)
-  seedBlack(q, q);               // (3,3)↔(9,9) for 13×13 — upper/lower diagonal
-  seedBlack(q, size - 1 - q);    // (3,9)↔(9,3) — cross diagonal
-  seedBlack(q + 1, m);           // (4,6)↔(8,6) — center-column near-center (not on center row)
-  // Note: center row (row m) is intentionally left clear for the first word's placement
+  interface Slot { row: number; col: number; len: number; dir: "H" | "V" }
+  // A SlotGroup is either [A] (self-symmetric) or [A, B] (symmetric pair)
+  type SlotGroup = [Slot] | [Slot, Slot];
+  interface Intersection { a: number; posA: number; b: number; posB: number }
 
-  // ── Step 2: canPlace — words may be ADJACENT to '#' cells (proper crossword behavior) ──
-  function canPlace(word: string, row: number, col: number, dir: "H" | "V", requireIntersection: boolean): boolean {
-    const dr = dir === "V" ? 1 : 0, dc = dir === "H" ? 1 : 0;
-    if (row < 0 || col < 0) return false;
-    if (row + dr * (word.length - 1) >= size) return false;
-    if (col + dc * (word.length - 1) >= size) return false;
-    // Pre/post cells: must be empty (null) or '#' (black separator) — not a letter
-    const preR = row - dr, preC = col - dc;
-    if (preR >= 0 && preC >= 0 && grid[preR][preC] !== null && grid[preR][preC] !== "#") return false;
-    const postR = row + dr * word.length, postC = col + dc * word.length;
-    if (postR < size && postC < size && grid[postR][postC] !== null && grid[postR][postC] !== "#") return false;
-    let intersections = 0;
-    for (let k = 0; k < word.length; k++) {
-      const r = row + dr * k, c = col + dc * k;
-      const current = grid[r][c];
-      if (current !== null) {
-        if (current !== word[k]) return false; // '#' or wrong letter — blocked
-        intersections++;
-      } else {
-        // Adjacent cells (perpendicular direction): only letters block — '#' separators are OK
-        if (dir === "H") {
-          if (r > 0 && grid[r - 1][c] !== null && grid[r - 1][c] !== "#") return false;
-          if (r < size - 1 && grid[r + 1][c] !== null && grid[r + 1][c] !== "#") return false;
-        } else {
-          if (c > 0 && grid[r][c - 1] !== null && grid[r][c - 1] !== "#") return false;
-          if (c < size - 1 && grid[r][c + 1] !== null && grid[r][c + 1] !== "#") return false;
-        }
-      }
-    }
-    return requireIntersection ? intersections > 0 : true;
-  }
+  const m = Math.floor(size / 2);
 
-  function doPlace(word: string, row: number, col: number, dir: "H" | "V") {
-    const dr = dir === "V" ? 1 : 0, dc = dir === "H" ? 1 : 0;
-    for (let k = 0; k < word.length; k++) grid[row + dr * k][col + dc * k] = word[k];
-    placedList.push({ word, row, col, dir });
-  }
+  // ── Step 1: Define symmetric slot groups ──────────────────────────────────
+  // addH(r, cStart, len): adds H slot at (r, cStart) + its 180°-mirror.
+  // addV(c, rStart, len): adds V slot at (rStart, c) + its 180°-mirror.
+  // Mirror of H(r, cStart, len): H(size-1-r, size-1-(cStart+len-1), len)
+  // Mirror of V(c, rStart, len): V(size-1-c, size-1-(rStart+len-1), len)
 
-  const maxLen = size - 2;
-  const cleanWords = [...new Set(
-    words.map(w => w.toUpperCase().replace(/[^A-Z]/g, "")).filter(w => w.length >= 3 && w.length <= maxLen)
-  )].sort((a, b) => b.length - a.length).slice(0, 20);
+  const groups: SlotGroup[] = [];
 
-  for (let wi = 0; wi < cleanWords.length; wi++) {
-    const word = cleanWords[wi];
-    if (placedList.length === 0) {
-      // Place first word horizontally near center, using canPlace to respect pre-seeded '#' cells
-      const baseRow = Math.floor(size / 2);
-      let firstPlaced = false;
-      outer0: for (let dr2 = 0; dr2 <= 2 && !firstPlaced; dr2++) {
-        for (const r of [baseRow, baseRow - dr2, baseRow + dr2]) {
-          if (r <= 0 || r >= size - 1) continue;
-          for (let c2 = 1; c2 + word.length < size - 1; c2++) {
-            if (canPlace(word, r, c2, "H", false)) {
-              doPlace(word, r, c2, "H");
-              firstPlaced = true;
-              break outer0;
-            }
-          }
-        }
-      }
-      if (!firstPlaced) doPlace(word, baseRow, 1, "H"); // absolute fallback
-      continue;
-    }
-    let didPlace = false;
-    outerLoop: for (const p of shuf([...placedList])) {
-      const perpDir: "H" | "V" = p.dir === "H" ? "V" : "H";
-      const dr = p.dir === "V" ? 1 : 0, dc = p.dir === "H" ? 1 : 0;
-      for (let k = 0; k < p.word.length; k++) {
-        const existR = p.row + dr * k, existC = p.col + dc * k;
-        for (let j = 0; j < word.length; j++) {
-          if (word[j] !== p.word[k]) continue;
-          const newRow = perpDir === "V" ? existR - j : existR;
-          const newCol = perpDir === "H" ? existC - j : existC;
-          if (canPlace(word, newRow, newCol, perpDir, true)) {
-            doPlace(word, newRow, newCol, perpDir);
-            didPlace = true;
-            break outerLoop;
-          }
-        }
-      }
-    }
-    if (!didPlace && placedList.length <= 2) {
-      outer2: for (const dir of shuf(["H", "V"] as ("H" | "V")[])) {
-        const dr = dir === "V" ? 1 : 0, dc = dir === "H" ? 1 : 0;
-        for (let r = 1; r < size - 1; r++) {
-          for (let c = 1; c < size - 1; c++) {
-            if (r + dr * (word.length - 1) >= size - 1) continue;
-            if (c + dc * (word.length - 1) >= size - 1) continue;
-            if (canPlace(word, r, c, dir, false)) {
-              doPlace(word, r, c, dir);
-              didPlace = true;
-              break outer2;
-            }
-          }
-        }
-      }
+  function addH(r: number, cStart: number, len: number) {
+    if (cStart < 0 || cStart + len > size) return;
+    const a: Slot = { row: r, col: cStart, len, dir: "H" };
+    const mr = size - 1 - r;
+    const mc = size - 1 - (cStart + len - 1);
+    if (mr === r && mc === cStart) {
+      groups.push([a]);
+    } else {
+      if (mc < 0 || mc + len > size || mr < 0 || mr >= size) return;
+      groups.push([a, { row: mr, col: mc, len, dir: "H" }]);
     }
   }
 
-  for (let r = 0; r < size; r++)
-    for (let c = 0; c < size; c++)
-      if (grid[r][c] === null) grid[r][c] = "#";
+  function addV(c: number, rStart: number, len: number) {
+    if (rStart < 0 || rStart + len > size) return;
+    const a: Slot = { row: rStart, col: c, len, dir: "V" };
+    const mc = size - 1 - c;
+    const mr = size - 1 - (rStart + len - 1);
+    if (mc === c && mr === rStart) {
+      groups.push([a]);
+    } else {
+      if (mr < 0 || mr + len > size || mc < 0 || mc >= size) return;
+      groups.push([a, { row: mr, col: mc, len, dir: "V" }]);
+    }
+  }
 
-  // Enforce 180° rotational symmetry for black cells (best-effort, word-preserving).
-  // For every '#' cell at (r,c), its 180° mirror must also be '#'.
-  // If the mirror is a letter cell that is part of a word (has adjacent letters), we preserve
-  // the word and accept the asymmetry — standard practice for non-template crossword generators.
-  // If the mirror is an isolated letter (no adjacent letters) or null, we safely convert it to '#'.
-  for (let r = 0; r < size; r++) {
-    for (let c = 0; c < size; c++) {
-      if (grid[r][c] === "#") {
-        const mr = size - 1 - r, mc = size - 1 - c;
-        if (grid[mr][mc] === "#") continue; // already symmetric
-        // Mirror has a letter — only convert if it's not part of a word (has no adjacent letters)
-        const hasAdjLetter = (
-          (mc > 0 && grid[mr][mc - 1] !== "#") ||
-          (mc < size - 1 && grid[mr][mc + 1] !== "#") ||
-          (mr > 0 && grid[mr - 1][mc] !== "#") ||
-          (mr < size - 1 && grid[mr + 1][mc] !== "#")
-        );
-        if (!hasAdjLetter) {
-          grid[mr][mc] = "#"; // safe: isolated letter, not part of any word
-        }
-        // If part of a word: accept asymmetry rather than truncate the word
+  // ── Hard-coded symmetric slot layouts ─────────────────────────────────────
+  //
+  // "Plus/cross" topology: center-H and center-V form a cross; arm pairs
+  // extend only from the center lines. Arms do NOT cross each other — they
+  // only cross the center lines. This avoids the 4-way mutual constraint
+  // between H and V pairs that makes the problem hard to solve.
+  //
+  // 13×13 crossings (0-indexed, m=6):
+  //   center-H (row 6, cols 2-10, len=9) ∩ center-V (col 6, rows 2-10, len=9) at (6,6)
+  //   center-H ∩ arm-V-A (col 3, rows 4-8, len=5) at (6,3): center-H[1] = arm-V-A[2]
+  //   center-H ∩ arm-V-B (col 9, rows 4-8, len=5) at (6,9): center-H[7] = arm-V-B[2]
+  //   center-V ∩ arm-H-A (row 3, cols 4-8, len=5) at (3,6): center-V[1] = arm-H-A[2]
+  //   center-V ∩ arm-H-B (row 9, cols 4-8, len=5) at (9,6): center-V[7] = arm-H-B[2]
+  //   (arm-V and arm-H do NOT cross each other)
+  //
+  // 11×11 crossings (m=5):
+  //   center-H (row 5, cols 2-8, len=7) ∩ center-V (col 5, rows 2-8, len=7) at (5,5)
+  //   center-H ∩ arm-V-A (col 3, rows 3-7, len=5) at (5,3): center-H[1] = arm-V-A[2]
+  //   center-H ∩ arm-V-B (col 7, rows 3-7, len=5) at (5,7): center-H[5] = arm-V-B[2]
+  //   center-V ∩ arm-H-A (row 3, cols 3-7, len=5) at (3,5): center-V[1] = arm-H-A[2]
+  //   center-V ∩ arm-H-B (row 7, cols 3-7, len=5) at (7,5): center-V[5] = arm-H-B[2]
+
+  if (size >= 13) {
+    // Processing order: center-H first (has most constraints), then arms.
+    // center-H and center-V are both singletons with mutual constraint at center.
+    addH(m, 2, size - 4);       // center-H: row 6, cols 2-10, len=9
+    addV(m, 2, size - 4);       // center-V: col 6, rows 2-10, len=9
+    // arm-V pair (col 3 ↔ col 9, rows 4-8, len=5): cross center-H only
+    addV(m - 3, m - 2, 5);     // col 3, rows 4-8 ↔ col 9, rows 4-8
+    // arm-H pair (row 3 ↔ row 9, cols 4-8, len=5): cross center-V only
+    addH(m - 3, m - 2, 5);     // row 3, cols 4-8 ↔ row 9, cols 4-8
+  } else {
+    // 11×11: same topology, smaller scale
+    addH(m, 2, size - 4);       // center-H: row 5, cols 2-8, len=7
+    addV(m, 2, size - 4);       // center-V: col 5, rows 2-8, len=7
+    // arm-V pair (col 3 ↔ col 7, rows 3-7, len=5)
+    addV(m - 2, m - 2, 5);     // col 3, rows 3-7 ↔ col 7, rows 3-7
+    // arm-H pair (row 3 ↔ row 7, cols 3-7, len=5)
+    addH(m - 2, m - 2, 5);     // row 3, cols 3-7 ↔ row 7, cols 3-7
+  }
+
+  // Flatten groups → indexed slots, track group membership
+  const slots: Slot[] = [];
+  const groupOf: number[] = [];  // slot index → group index
+  const groupSlots: number[][] = []; // group index → [slot indices]
+  for (let g = 0; g < groups.length; g++) {
+    groupSlots.push([]);
+    for (const s of groups[g]) {
+      groupSlots[g].push(slots.length);
+      groupOf.push(g);
+      slots.push(s);
+    }
+  }
+
+  // ── Step 2: Compute H×V intersections ─────────────────────────────────────
+  const intersections: Intersection[] = [];
+  for (let i = 0; i < slots.length; i++) {
+    for (let j = i + 1; j < slots.length; j++) {
+      const si = slots[i], sj = slots[j];
+      if (si.dir === sj.dir) continue;
+      const h = si.dir === "H" ? si : sj;
+      const v = si.dir === "H" ? sj : si;
+      const hi = si.dir === "H" ? i : j;
+      const vi = si.dir === "H" ? j : i;
+      const posH = v.col - h.col;
+      const posV = h.row - v.row;
+      if (posH >= 0 && posH < h.len && posV >= 0 && posV < v.len) {
+        intersections.push({ a: hi, posA: posH, b: vi, posB: posV });
       }
     }
   }
 
+  // ── Step 3: Word pool ──────────────────────────────────────────────────────
+  const slotLens = new Set(slots.map(s => s.len));
+  const pool = [...new Set(
+    words.map(w => w.toUpperCase().replace(/[^A-Z]/g, ""))
+         .filter(w => w.length >= 3 && slotLens.has(w.length))
+  )];
+
+  // ── Step 4: Group-aware backtracking ──────────────────────────────────────
+  // Fill GROUPS, not individual slots. For a pair-group [A, B]:
+  //   - Try word W for slot A.
+  //   - Find word X for slot B (same length, consistent with crossing letters).
+  //   - If found: assign W→A, X→B, continue.
+  //   - If not: try next W.
+  //   - If no W works: leave group empty (both A and B stay '#').
+  // For a singleton group [A]: fill normally (it's self-symmetric).
+
+  const assignment: (string | null)[] = Array(slots.length).fill(null);
+
+  function letterOk(slotIdx: number, w: string): boolean {
+    for (const ix of intersections) {
+      let posInW = -1, otherIdx = -1, posInOther = -1;
+      if (ix.a === slotIdx) { posInW = ix.posA; otherIdx = ix.b; posInOther = ix.posB; }
+      else if (ix.b === slotIdx) { posInW = ix.posB; otherIdx = ix.a; posInOther = ix.posA; }
+      else continue;
+      const other = assignment[otherIdx];
+      if (other !== null && other[posInOther] !== w[posInW]) return false;
+    }
+    return true;
+  }
+
+  function btGroups(gi: number, usedWords: Set<string>): boolean {
+    if (gi === groups.length) return true;
+    const gs = groupSlots[gi];
+    const len = slots[gs[0]].len;
+    // If no words of this length exist anywhere in the pool, skip unconditionally.
+    const hasLen = pool.some(w => w.length === len);
+    if (!hasLen) return btGroups(gi + 1, usedWords);
+
+    if (gs.length === 1) {
+      // Self-symmetric singleton slot
+      const idxA = gs[0];
+      const cands = shuf(pool.filter(w => w.length === len && !usedWords.has(w)));
+      for (const w of cands) {
+        if (!letterOk(idxA, w)) continue;
+        assignment[idxA] = w;
+        usedWords.add(w);
+        if (btGroups(gi + 1, usedWords)) return true;
+        assignment[idxA] = null;
+        usedWords.delete(w);
+      }
+    } else {
+      // Symmetric pair [A, B] — fill both or neither
+      const idxA = gs[0], idxB = gs[1];
+      const candsA = shuf(pool.filter(w => w.length === len && !usedWords.has(w)));
+      for (const wA of candsA) {
+        if (!letterOk(idxA, wA)) continue;
+        assignment[idxA] = wA;
+        usedWords.add(wA);
+        const candsB = shuf(pool.filter(w => w.length === len && !usedWords.has(w)));
+        for (const wB of candsB) {
+          if (!letterOk(idxB, wB)) continue;
+          assignment[idxB] = wB;
+          usedWords.add(wB);
+          if (btGroups(gi + 1, usedWords)) return true;
+          assignment[idxB] = null;
+          usedWords.delete(wB);
+        }
+        assignment[idxA] = null;
+        usedWords.delete(wA);
+      }
+    }
+
+    // Group cannot be filled with the current assignment. Skip it — both slots
+    // in the pair remain '#', preserving 180° symmetry. We do NOT backtrack here
+    // because the plus-topology ensures arm-V ↔ arm-H independence: an arm can
+    // be empty without affecting the other arms.
+    return btGroups(gi + 1, usedWords);
+  }
+
+  btGroups(0, new Set<string>());
+
+  // ── Step 5: Build grid ────────────────────────────────────────────────────
+  // All cells start '#'. Write letters only for filled slots.
+  // Symmetry proof:
+  //   - Every letter cell belongs to a filled slot.
+  //   - Every filled slot was filled as part of a group.
+  //   - For singleton groups: the slot is self-symmetric, so the letter cells
+  //     are self-symmetric.
+  //   - For pair groups: slot A and slot B are 180°-mirrors, so the letter
+  //     cells of A and B are 180°-mirrors of each other.
+  //   - Therefore all letter-cell regions are 180°-rotationally symmetric.
+  //   - All remaining '#' cells are also symmetric (complement of symmetric set).
+  const grid: string[][] = Array.from({ length: size }, () => Array(size).fill("#"));
+
+  for (let i = 0; i < slots.length; i++) {
+    const w = assignment[i];
+    if (!w) continue;
+    const s = slots[i];
+    const dr = s.dir === "V" ? 1 : 0, dc = s.dir === "H" ? 1 : 0;
+    for (let k = 0; k < w.length; k++) {
+      grid[s.row + dr * k][s.col + dc * k] = w[k];
+    }
+  }
+
+  // ── Step 6: Build clue lists ───────────────────────────────────────────────
   const acrossList: CrosswordClue[] = [];
   const downList: CrosswordClue[] = [];
   const nums: Record<string, number> = {};
