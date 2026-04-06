@@ -102,8 +102,9 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
   // In uniform mode: all puzzles use the single selected DF
   const progressiveDiffs: string[] = [];
   if (opts.difficultyMode === "progressive") {
-    const t1 = Math.round(PC / 3);
-    const t2 = Math.round(2 * PC / 3);
+    // Clamp boundaries for low puzzle counts (same logic as hasSections sec1/sec2 below)
+    const t1 = PC < 3 ? PC : Math.max(1, Math.round(PC / 3));
+    const t2 = PC < 3 ? PC : Math.max(t1 + 1, Math.round(2 * PC / 3));
     for (let i = 0; i < PC; i++) {
       progressiveDiffs.push(i < t1 ? "Easy" : i < t2 ? "Medium" : "Hard");
     }
@@ -154,10 +155,13 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
   const trimH = LP ? 11 : 9;
 
   const progressive = opts.difficultyMode === "progressive";
-  // Enrichment pack: section dividers appear in progressive mode for any puzzle count
+  // Enrichment pack: section dividers appear in progressive mode for any puzzle count.
+  // For very small books (PC < 3) we still insert 3 dividers but all puzzles land in the first section.
   const hasSections = progressive;
-  const sec1 = Math.round(PC / 3);
-  const sec2 = Math.round(2 * PC / 3);
+  // sec1 = index of first Medium puzzle; sec2 = index of first Hard puzzle.
+  // Clamp so each boundary is at least 1 and strictly increasing (handles PC=1,2,3 edge cases).
+  const sec1 = PC < 3 ? PC : Math.max(1, Math.round(PC / 3));
+  const sec2 = PC < 3 ? PC : Math.max(sec1 + 1, Math.round(2 * PC / 3));
 
   const hasDedication = !!opts.dedication;
   const hasTracker = !!opts.challengeDays;

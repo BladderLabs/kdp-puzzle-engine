@@ -525,6 +525,18 @@ components:
           type: string
         volumeNumber:
           type: integer
+        dedication:
+          type: string
+          description: Optional dedication text added as a front-matter page
+        difficultyMode:
+          type: string
+          enum: [uniform, progressive]
+          default: uniform
+          description: "uniform = all puzzles same difficulty; progressive = Easy → Medium → Hard sections"
+        challengeDays:
+          type: integer
+          enum: [30, 60, 90]
+          description: Adds a Solve-a-Day tracker page for 30, 60, or 90 days
       required:
         - title
         - puzzleType
@@ -566,6 +578,17 @@ components:
           type: string
         volumeNumber:
           type: integer
+        dedication:
+          type: string
+          description: Optional dedication text added as a front-matter page
+        difficultyMode:
+          type: string
+          enum: [uniform, progressive]
+          default: uniform
+        challengeDays:
+          type: integer
+          enum: [30, 60, 90]
+          description: Adds a Solve-a-Day tracker page for 30, 60, or 90 days
       required:
         - title
         - puzzleType
@@ -609,6 +632,17 @@ components:
           type: string
         volumeNumber:
           type: integer
+        dedication:
+          type: string
+          description: Optional dedication text added as a front-matter page
+        difficultyMode:
+          type: string
+          enum: [uniform, progressive]
+          default: uniform
+        challengeDays:
+          type: integer
+          enum: [30, 60, 90]
+          description: Adds a Solve-a-Day tracker page for 30, 60, or 90 days
         createdAt:
           type: string
           format: date-time
