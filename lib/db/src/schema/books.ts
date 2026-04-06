@@ -20,6 +20,9 @@ export const booksTable = pgTable("books", {
   coverImageUrl: text("cover_image_url"),
   niche: text("niche"),
   volumeNumber: integer("volume_number").notNull().default(1),
+  dedication: text("dedication"),
+  difficultyMode: text("difficulty_mode").notNull().default("uniform"),
+  challengeDays: integer("challenge_days"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

@@ -42,6 +42,9 @@ router.post("/books", async (req, res) => {
       coverImageUrl: data.coverImageUrl ?? null,
       niche: data.niche ?? null,
       volumeNumber: data.volumeNumber ?? 1,
+      dedication: data.dedication ?? null,
+      difficultyMode: data.difficultyMode ?? "uniform",
+      challengeDays: data.challengeDays ?? null,
     }).returning();
     res.status(201).json({ ...book, words: book.words ?? [] });
   } catch (err) {
@@ -83,6 +86,9 @@ router.put("/books/:id", async (req, res) => {
       coverImageUrl: data.coverImageUrl ?? null,
       niche: data.niche ?? null,
       volumeNumber: data.volumeNumber ?? 1,
+      dedication: data.dedication ?? null,
+      difficultyMode: data.difficultyMode ?? "uniform",
+      challengeDays: data.challengeDays ?? null,
       updatedAt: new Date(),
     }).where(eq(booksTable.id, id)).returning();
     if (!book) { res.status(404).json({ error: "Book not found" }); return; }
@@ -127,6 +133,9 @@ router.post("/books/:id/clone", async (req, res) => {
       coverImageUrl: source.coverImageUrl,
       niche: source.niche,
       volumeNumber: nextVol,
+      dedication: source.dedication,
+      difficultyMode: source.difficultyMode ?? "uniform",
+      challengeDays: source.challengeDays,
     }).returning();
     res.status(201).json({ ...clone, words: clone.words ?? [] });
   } catch (err) {

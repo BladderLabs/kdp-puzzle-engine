@@ -71,6 +71,9 @@ const formSchema = z.object({
   coverImageUrl: z.string().optional(),
   niche: z.string().optional(),
   volumeNumber: z.coerce.number().optional(),
+  dedication: z.string().optional(),
+  difficultyMode: z.string().default("uniform"),
+  challengeDays: z.coerce.number().optional(),
 });
 
 export type BookFormValues = z.infer<typeof formSchema>;
@@ -102,6 +105,9 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
       coverImageUrl: initialValues?.coverImageUrl || "",
       niche: initialValues?.niche || "",
       volumeNumber: initialValues?.volumeNumber ?? 0,
+      dedication: initialValues?.dedication || "",
+      difficultyMode: initialValues?.difficultyMode || "uniform",
+      challengeDays: initialValues?.challengeDays ?? undefined,
     }
   });
 
@@ -500,6 +506,69 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
                     <FormMessage />
                   </FormItem>
                 )} />
+
+                {/* Dedication page */}
+                <FormField control={form.control} name="dedication" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Dedication <span className="text-muted-foreground font-normal">(optional — adds a dedication page)</span></FormLabel>
+                    <FormControl>
+                      <Textarea
+                        className="h-20 text-sm"
+                        placeholder="e.g. To my grandmother, whose love of puzzles inspired this book."
+                        {...field}
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground mt-0.5">Leave blank to skip the dedication page.</p>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                {/* Difficulty mode */}
+                <div>
+                  <label className="text-sm font-medium block mb-1.5">Difficulty Mode</label>
+                  <div className="flex gap-2">
+                    {[
+                      { value: "uniform", label: "Uniform", desc: "All puzzles at the same difficulty" },
+                      { value: "progressive", label: "Progressive", desc: "Easy → Medium → Hard sections" },
+                    ].map(opt => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => form.setValue("difficultyMode", opt.value)}
+                        className={`flex-1 text-xs px-3 py-2 rounded-md border transition-colors text-left ${
+                          form.watch("difficultyMode") === opt.value
+                            ? "bg-amber-500 text-black border-amber-500 font-semibold"
+                            : "border-border text-muted-foreground hover:border-amber-400/60"
+                        }`}
+                      >
+                        <div className="font-semibold">{opt.label}</div>
+                        <div className="text-[10px] opacity-80">{opt.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Solve-a-Day Tracker */}
+                <div>
+                  <label className="text-sm font-medium block mb-1.5">Solve-a-Day Tracker <span className="text-muted-foreground font-normal">(optional)</span></label>
+                  <div className="flex flex-wrap gap-2">
+                    {[0, 7, 14, 21, 30, 50, 100].map(days => (
+                      <button
+                        key={days}
+                        type="button"
+                        onClick={() => form.setValue("challengeDays", days === 0 ? undefined : days)}
+                        className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                          (form.watch("challengeDays") ?? 0) === days
+                            ? "bg-amber-500 text-black border-amber-500 font-semibold"
+                            : "border-border text-muted-foreground hover:border-amber-400/60"
+                        }`}
+                      >
+                        {days === 0 ? "None" : `${days}-Day`}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Adds a daily completion tracker page at the front of your book.</p>
+                </div>
 
                 <Button type="submit" disabled={isSubmitting} size="lg" className="w-full text-base">
                   {isSubmitting ? "Saving…" : "Save Project →"}

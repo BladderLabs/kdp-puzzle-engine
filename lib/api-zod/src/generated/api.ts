@@ -35,6 +35,9 @@ export const ListBooksResponseItem = zod.object({
   coverImageUrl: zod.string().optional(),
   niche: zod.string().optional(),
   volumeNumber: zod.number().optional(),
+  dedication: zod.string().optional(),
+  difficultyMode: zod.string().optional(),
+  challengeDays: zod.number().optional(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -60,6 +63,9 @@ export const CreateBookBody = zod.object({
   coverImageUrl: zod.string().optional(),
   niche: zod.string().optional(),
   volumeNumber: zod.number().optional(),
+  dedication: zod.string().optional(),
+  difficultyMode: zod.string().optional(),
+  challengeDays: zod.number().optional(),
 });
 
 /**
@@ -87,6 +93,9 @@ export const GetBookResponse = zod.object({
   coverImageUrl: zod.string().optional(),
   niche: zod.string().optional(),
   volumeNumber: zod.number().optional(),
+  dedication: zod.string().optional(),
+  difficultyMode: zod.string().optional(),
+  challengeDays: zod.number().optional(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -115,6 +124,9 @@ export const UpdateBookBody = zod.object({
   coverImageUrl: zod.string().optional(),
   niche: zod.string().optional(),
   volumeNumber: zod.number().optional(),
+  dedication: zod.string().optional(),
+  difficultyMode: zod.string().optional(),
+  challengeDays: zod.number().optional(),
 });
 
 export const UpdateBookResponse = zod.object({
@@ -135,6 +147,9 @@ export const UpdateBookResponse = zod.object({
   coverImageUrl: zod.string().optional(),
   niche: zod.string().optional(),
   volumeNumber: zod.number().optional(),
+  dedication: zod.string().optional(),
+  difficultyMode: zod.string().optional(),
+  challengeDays: zod.number().optional(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -195,6 +210,9 @@ export const GenerateBookBody = zod.object({
   coverImageUrl: zod.string().optional(),
   series: zod.string().optional(),
   volumeNumber: zod.number().optional(),
+  dedication: zod.string().optional(),
+  difficultyMode: zod.string().optional(),
+  challengeDays: zod.number().optional(),
 });
 
 export const GenerateBookResponse = zod.object({

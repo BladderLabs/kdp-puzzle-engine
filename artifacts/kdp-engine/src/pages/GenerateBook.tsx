@@ -126,6 +126,9 @@ export function GenerateBook() {
       wordCategory: book.wordCategory ?? undefined,
       coverImageUrl: book.coverImageUrl ?? undefined,
       volumeNumber: book.volumeNumber ?? 0,
+      dedication: book.dedication ?? undefined,
+      difficultyMode: book.difficultyMode ?? "uniform",
+      challengeDays: book.challengeDays ?? undefined,
     };
 
     try {
@@ -210,7 +213,10 @@ export function GenerateBook() {
     : book.puzzleType === "Number Search" ? (book.largePrint ? 9 : 12)
     : (book.largePrint ? 6 : 8);
   const pc = book.puzzleCount ?? 100;
-  const totP = 3 + pc + Math.ceil(pc / aPer);
+  const progressive = book.difficultyMode === "progressive";
+  const frontMatter = 3 + (book.dedication ? 1 : 0) + (book.challengeDays ? 1 : 0);
+  const dividers = progressive && pc >= 30 ? 3 : 0;
+  const totP = frontMatter + 4 + pc + Math.ceil(pc / aPer) + dividers;
   const spineW = totP * thick + 0.06;
 
   const isGenerating = status === "generating" || status === "pdf_interior" || status === "pdf_cover";
@@ -425,6 +431,24 @@ export function GenerateBook() {
                   onClick={() => coverBlobRef.current && downloadBlob(coverBlobRef.current, `${bookSlug}-cover.pdf`)}
                 >
                   Download Cover PDF (Full Wrap)
+                </Button>
+
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="w-full text-base"
+                  style={{ borderColor: GOLD + "99", color: GOLD + "cc" }}
+                  onClick={async () => {
+                    if (!interiorBlobRef.current || !coverBlobRef.current) return;
+                    const JSZip = (await import("jszip")).default;
+                    const zip = new JSZip();
+                    zip.file(`${bookSlug}-interior.pdf`, interiorBlobRef.current);
+                    zip.file(`${bookSlug}-cover.pdf`, coverBlobRef.current);
+                    const zipBlob = await zip.generateAsync({ type: "blob" });
+                    downloadBlob(zipBlob, `${bookSlug}-kdp-bundle.zip`);
+                  }}
+                >
+                  Download Both (ZIP Bundle)
                 </Button>
               </div>
 

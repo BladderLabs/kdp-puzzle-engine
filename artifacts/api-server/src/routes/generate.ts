@@ -24,6 +24,9 @@ function toOpts(data: ReturnType<typeof GenerateBookBody.parse>): CoverBuildOpts
     wordCategory: data.wordCategory ?? undefined,
     volumeNumber: data.volumeNumber ?? 0,
     coverImageUrl: data.coverImageUrl,
+    dedication: data.dedication ?? undefined,
+    difficultyMode: data.difficultyMode ?? "uniform",
+    challengeDays: data.challengeDays ?? undefined,
   };
 }
 

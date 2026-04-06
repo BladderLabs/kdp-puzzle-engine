@@ -106,6 +106,9 @@ export interface CreateBookBody {
   coverImageUrl?: string;
   niche?: string;
   volumeNumber?: number;
+  dedication?: string;
+  difficultyMode?: string;
+  challengeDays?: number;
 }
 
 export interface Book {
@@ -126,6 +129,9 @@ export interface Book {
   coverImageUrl?: string;
   niche?: string;
   volumeNumber?: number;
+  dedication?: string;
+  difficultyMode?: string;
+  challengeDays?: number;
   createdAt: string;
   updatedAt: string;
 }

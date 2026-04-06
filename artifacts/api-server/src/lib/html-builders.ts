@@ -9,16 +9,20 @@ export function computeTotalPages(opts: BuildOpts): number {
   const PT = opts.puzzleType || "Word Search";
   const PC = opts.puzzleCount || 100;
   const LP = opts.largePrint !== false;
+  const progressive = opts.difficultyMode === "progressive";
   const aPer = PT === "Word Search" ? (LP ? 4 : 6)
     : PT === "Sudoku" ? (LP ? 6 : 8)
     : PT === "Maze" ? (LP ? 4 : 6)
     : PT === "Number Search" ? (LP ? 9 : 12)
     : PT === "Crossword" ? (LP ? 4 : 6)
     : (LP ? 6 : 8);
-  // Front matter: title(1) + dedication(2) + how-to-play(3) + toc(4) + tracker(5)
-  // Section dividers: 3 pages when PC >= 30
-  // Back matter: 4 notes pages + answer key pages
-  return 9 + PC + Math.ceil(PC / aPer) + (PC >= 30 ? 3 : 0);
+  // Front matter: title(1) + htp(2) + toc(3)
+  // Optional: dedication (+1), tracker (+1)
+  // Section dividers: 3 pages in progressive mode when PC >= 30
+  // Back matter: 4 notes pages (always) + answer key pages
+  const frontMatter = 3 + (opts.dedication ? 1 : 0) + (opts.challengeDays ? 1 : 0);
+  const dividers = progressive && PC >= 30 ? 3 : 0;
+  return frontMatter + 4 + PC + Math.ceil(PC / aPer) + dividers;
 }
 
 export function escapeHtml(s: string): string {
@@ -50,6 +54,9 @@ export interface BuildOpts {
   wordCategory?: string;
   series?: string;
   volumeNumber?: number;
+  dedication?: string;
+  difficultyMode?: string;
+  challengeDays?: number;
 }
 
 export interface BuildResult {
@@ -132,17 +139,23 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
   const trimW = LP ? 8.5 : 6;
   const trimH = LP ? 11 : 9;
 
-  // Enrichment pack: section dividers appear for 30+ puzzle books
-  const hasSections = PC >= 30;
+  const progressive = opts.difficultyMode === "progressive";
+  // Enrichment pack: section dividers appear in progressive mode for 30+ puzzle books
+  const hasSections = progressive && PC >= 30;
   const sec1 = Math.round(PC / 3);
   const sec2 = Math.round(2 * PC / 3);
 
+  const hasDedication = !!opts.dedication;
+  const hasTracker = !!opts.challengeDays;
+  const challengeDays = opts.challengeDays || 30;
+
   const aP = Math.ceil(PC / aPer);
-  // Pages: title(1)+dedication(2)+htp(3)+toc(4)+tracker(5) + section dividers(3 if PC>=30) + PC + notes(4) + aP
-  const totP = 9 + PC + aP + (hasSections ? 3 : 0);
+  // Pages: title(1) + optional dedication + htp + toc + optional tracker + section dividers + PC + notes(4) + aP
+  const frontMatter = 1 + (hasDedication ? 1 : 0) + 1 + 1 + (hasTracker ? 1 : 0);
+  const totP = frontMatter + (hasSections ? 3 : 0) + PC + 4 + aP;
   const gut = Math.max(0.5, gutterIn(totP));
-  // pS = first puzzle page; aS = answer key start page
-  const pS = hasSections ? 7 : 6;
+  // pS = first puzzle page (1-based); frontMatter pages + section divider 1 if hasSections
+  const pS = frontMatter + (hasSections ? 1 : 0) + 1;
   // +2 for Level2+3 dividers (Level1 already baked into pS offset), +4 for notes
   const aS = pS + PC + (hasSections ? 2 : 0) + 4;
   // puzzle page helper: accounts for section-divider pages inserted mid-book
@@ -202,16 +215,20 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     `</div>` +
     `</div></div>`;
 
-  // ── Dedication page ───────────────────────────────────────────────────────
-  html += `<div class="pg in"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:${trimH}in;text-align:center;">` +
-    `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:4px;color:#bbb;text-transform:uppercase;margin-bottom:28px;">Dedication</div>` +
-    `<div style="width:40px;height:1px;background:#ddd;margin-bottom:28px;"></div>` +
-    `<div style="font-family:Lora,serif;font-style:italic;font-size:15px;color:#555;line-height:1.9;max-width:3.5in;">` +
-    `To everyone who believes a quiet mind is a gift worth giving&mdash;` +
-    `<br/>may these pages bring you many moments of peace and joy.` +
-    `</div>` +
-    `<div style="width:40px;height:1px;background:#ddd;margin-top:28px;"></div>` +
-    `</div><div class="ft"><span></span><span class="ft-pg">&mdash; 2 &mdash;</span></div></div>`;
+  // ── Dedication page (optional) ────────────────────────────────────────────
+  let currentPage = 2;
+  if (hasDedication) {
+    const escapedDedication = escapeHtml(opts.dedication!);
+    html += `<div class="pg in"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:${trimH}in;text-align:center;">` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:4px;color:#bbb;text-transform:uppercase;margin-bottom:28px;">Dedication</div>` +
+      `<div style="width:40px;height:1px;background:#ddd;margin-bottom:28px;"></div>` +
+      `<div style="font-family:Lora,serif;font-style:italic;font-size:15px;color:#555;line-height:1.9;max-width:3.5in;">` +
+      escapedDedication +
+      `</div>` +
+      `<div style="width:40px;height:1px;background:#ddd;margin-top:28px;"></div>` +
+      `</div><div class="ft"><span></span><span class="ft-pg">&mdash; ${currentPage} &mdash;</span></div></div>`;
+    currentPage++;
+  }
 
   // ── How-to-Play page ─────────────────────────────────────────────────────
   const htxtMap: Record<string, string> = {
@@ -377,7 +394,8 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     `<div style="font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:3px;color:#333;font-weight:600;margin-bottom:6px;">TIP</div>` +
     `<div style="font-family:Lora,serif;font-size:12px;color:#444;">${tip}</div></div>` +
     (LP ? `<div style="margin-top:20px;font-family:Source Code Pro,monospace;font-size:10px;letter-spacing:2px;color:#666;text-align:center;">LARGE PRINT EDITION</div>` : "") +
-    `</div><div class="ft"><span>${T} — ${AU}</span><span class="ft-pg">&mdash; 3 &mdash;</span></div></div>`;
+    `</div><div class="ft"><span>${T} — ${AU}</span><span class="ft-pg">&mdash; ${currentPage} &mdash;</span></div></div>`;
+  currentPage++;
 
   // ── Table of Contents ────────────────────────────────────────────────────
   let tocR = "";
@@ -390,11 +408,12 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     `<div style="padding-top:0.3in;"><div style="font-family:Lora,serif;font-size:26px;font-weight:700;color:#222;margin-bottom:16px;">Table of Contents</div>` +
     `<div style="columns:2;column-gap:32px;">${tocR}</div>` +
     `<div style="margin-top:20px;font-family:'Source Code Pro',monospace;font-size:10px;color:#333;letter-spacing:2px;font-weight:600;">ANSWER KEY &mdash; PAGE ${aS}</div></div>` +
-    `<div class="ft"><span>${T} — ${AU}</span><span class="ft-pg">&mdash; 4 &mdash;</span></div></div>`;
+    `<div class="ft"><span>${T} — ${AU}</span><span class="ft-pg">&mdash; ${currentPage} &mdash;</span></div></div>`;
+  currentPage++;
 
-  // ── Solve-a-Day Tracker ───────────────────────────────────────────────────
-  {
-    const days = Array.from({ length: 30 }, (_, d) => d + 1);
+  // ── Solve-a-Day Tracker (optional) ───────────────────────────────────────
+  if (hasTracker) {
+    const days = Array.from({ length: challengeDays }, (_, d) => d + 1);
     const chkBox = `<div style="display:inline-block;width:13px;height:13px;border:1.5px solid #aaa;border-radius:2px;"></div>`;
     const dayRows = days.map(d => {
       const label = String(d).padStart(2, "0");
@@ -407,11 +426,12 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     }).join("");
     html += `<div class="pg in"><div class="hd"><span class="hd-title">${T}</span><span>Tracker</span></div>` +
       `<div style="padding-top:0.2in;">` +
-      `<div style="font-family:Lora,serif;font-size:22px;font-weight:700;color:#222;margin-bottom:6px;">30-Day Solve-a-Day Tracker</div>` +
+      `<div style="font-family:Lora,serif;font-size:22px;font-weight:700;color:#222;margin-bottom:6px;">${challengeDays}-Day Solve-a-Day Tracker</div>` +
       `<div style="font-family:Lora,serif;font-size:12px;font-style:italic;color:#666;margin-bottom:14px;">Check off each day as you complete a puzzle — track your streak!</div>` +
       `<div style="width:40px;height:2px;background:#333;margin-bottom:14px;"></div>` +
       `<div style="display:grid;grid-template-columns:1fr 1fr;column-gap:20px;">${dayRows}</div>` +
-      `</div><div class="ft"><span>${T} — ${AU}</span><span class="ft-pg">&mdash; 5 &mdash;</span></div></div>`;
+      `</div><div class="ft"><span>${T} — ${AU}</span><span class="ft-pg">&mdash; ${currentPage} &mdash;</span></div></div>`;
+    currentPage++;
   }
 
   // ── Puzzle pages ─────────────────────────────────────────────────────────
@@ -427,7 +447,8 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
 
   // Emit Level 1 section divider before first puzzle (only when hasSections)
   if (hasSections) {
-    html += sectionDivider("Level 1", "Warm-Up Puzzles", 6);
+    html += sectionDivider("Level 1", "Warm-Up Puzzles", currentPage);
+    currentPage++;
   }
 
   for (let i = 0; i < PC; i++) {
