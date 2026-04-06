@@ -343,6 +343,33 @@ export const PreviewPuzzlesResponse = zod.object({
           key: zod.record(zod.string(), zod.string()),
         })
         .optional(),
+      crossword: zod
+        .object({
+          grid: zod.array(zod.array(zod.string())),
+          across: zod.array(
+            zod.object({
+              num: zod.number(),
+              clue: zod.string(),
+              answer: zod.string(),
+              row: zod.number(),
+              col: zod.number(),
+              len: zod.number(),
+            })
+          ),
+          down: zod.array(
+            zod.object({
+              num: zod.number(),
+              clue: zod.string(),
+              answer: zod.string(),
+              row: zod.number(),
+              col: zod.number(),
+              len: zod.number(),
+            })
+          ),
+          size: zod.number(),
+          nums: zod.record(zod.string(), zod.number()),
+        })
+        .optional(),
     }),
   ),
   puzzleType: zod.string(),

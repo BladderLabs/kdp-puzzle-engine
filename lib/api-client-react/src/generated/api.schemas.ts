@@ -186,6 +186,23 @@ export interface CryptogramData {
   key: CryptogramDataKey;
 }
 
+export interface CrosswordClueData {
+  num: number;
+  clue: string;
+  answer: string;
+  row: number;
+  col: number;
+  len: number;
+}
+
+export interface CrosswordData {
+  grid: string[][];
+  across: CrosswordClueData[];
+  down: CrosswordClueData[];
+  size: number;
+  nums: Record<string, number>;
+}
+
 export interface PuzzleData {
   type?: string;
   wordSearch?: WordSearchData;
@@ -193,6 +210,7 @@ export interface PuzzleData {
   maze?: MazeData;
   numberSearch?: NumberSearchData;
   cryptogram?: CryptogramData;
+  crossword?: CrosswordData;
 }
 
 export interface PreviewResult {

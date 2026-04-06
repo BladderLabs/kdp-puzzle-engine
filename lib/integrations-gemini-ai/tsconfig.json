@@ -4,9 +4,10 @@
     "composite": true,
     "declarationMap": true,
     "emitDeclarationOnly": true,
+    "noEmitOnError": false,
     "outDir": "dist",
     "rootDir": "src",
-    "types": ["node"]
+    "typeRoots": ["../../node_modules/@types", "./node_modules/@types"]
   },
   "include": ["src"]
 }

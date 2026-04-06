@@ -195,5 +195,74 @@ function PuzzleRenderer({ puzzle, type }: { puzzle: PuzzleData; type: string }) 
     );
   }
 
+  if (type === "Crossword" && puzzle.crossword) {
+    const cw = puzzle.crossword;
+    const CELL = 18;
+    const numMap: Record<string, number> = cw.nums || {};
+    return (
+      <div className="space-y-3 overflow-auto">
+        {/* Grid */}
+        <div className="flex justify-center">
+          <table style={{ borderCollapse: "collapse" }} aria-label="Crossword grid preview">
+            <tbody>
+              {cw.grid.map((row, r) => (
+                <tr key={r}>
+                  {row.map((cell, c) => {
+                    const isBlack = cell === "#";
+                    const num = numMap[`${r},${c}`];
+                    return (
+                      <td
+                        key={c}
+                        style={{
+                          width: CELL,
+                          height: CELL,
+                          background: isBlack ? "#111" : "#fff",
+                          border: "1px solid #555",
+                          position: "relative",
+                          verticalAlign: "bottom",
+                          textAlign: "center",
+                          padding: 0,
+                          fontSize: 7,
+                          fontFamily: "monospace",
+                          fontWeight: "bold",
+                          color: "#000",
+                        }}
+                      >
+                        {!isBlack && num && (
+                          <span style={{ position: "absolute", top: 0, left: 1, fontSize: 5, color: "#555", lineHeight: 1 }}>
+                            {num}
+                          </span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {/* Clues */}
+        <div className="grid grid-cols-2 gap-x-3 text-[9px]">
+          <div>
+            <div className="font-bold text-[10px] mb-1 text-gray-700">ACROSS</div>
+            {cw.across.slice(0, 8).map((cl) => (
+              <div key={cl.num} className="leading-snug text-gray-600">
+                <span className="font-bold text-gray-800">{cl.num}.</span> {cl.clue}
+              </div>
+            ))}
+          </div>
+          <div>
+            <div className="font-bold text-[10px] mb-1 text-gray-700">DOWN</div>
+            {cw.down.slice(0, 8).map((cl) => (
+              <div key={cl.num} className="leading-snug text-gray-600">
+                <span className="font-bold text-gray-800">{cl.num}.</span> {cl.clue}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return <div className="text-sm text-gray-400 text-center py-4">Puzzle type not recognized</div>;
 }

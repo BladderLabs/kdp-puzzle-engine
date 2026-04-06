@@ -532,7 +532,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
       html += `<div class="pg in"><div class="hd"><span class="hd-title">${T}</span>${progressBadge}</div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">NUMBER SEARCH</span></div>${ornamentRule}${g}${ch}${lpSep}</div><div class="ft"><span>${T} — ${AU}</span><span class="ft-pg">&mdash; ${pN} &mdash;</span></div></div>`;
 
     } else if (PT === "Crossword") {
-      const cw = pz as CrosswordResult;
+      const cw = pz as unknown as CrosswordResult;
       const cxCellSz = LP ? 52 : 36;
       const cxNumF = LP ? 9 : 7;
       let cxG = `<table style="border-collapse:collapse;margin:4px auto;">`;

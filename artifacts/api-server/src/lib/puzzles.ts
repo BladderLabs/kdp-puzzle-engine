@@ -609,29 +609,51 @@ export function makeCrossword(words: string[], size: number): CrosswordResult {
   interface PlacedWord { word: string; row: number; col: number; dir: "H" | "V" }
   const placedList: PlacedWord[] = [];
 
+  // ── Step 1: Pre-seed symmetric black cells to establish 180° symmetric skeleton ──
+  // For each seeded cell (r, c), its 180° mirror (size-1-r, size-1-c) is also seeded.
+  // This guarantees a deterministic symmetric black-cell base before word placement.
+  const seedBlack = (r: number, c: number) => {
+    if (r >= 0 && r < size && c >= 0 && c < size) {
+      grid[r][c] = "#";
+      grid[size - 1 - r][size - 1 - c] = "#";
+    }
+  };
+  // Border frame — always '#', trivially symmetric
+  for (let i = 0; i < size; i++) { seedBlack(0, i); seedBlack(i, 0); }
+  // Interior symmetric separators (deterministic, size-relative, avoids center row)
+  const q = Math.max(2, Math.floor(size / 4));      // ≈3 for 13, ≈2 for 11
+  const m = Math.floor(size / 2);                    // center index (6 for 13, 5 for 11)
+  seedBlack(q, q);               // (3,3)↔(9,9) for 13×13 — upper/lower diagonal
+  seedBlack(q, size - 1 - q);    // (3,9)↔(9,3) — cross diagonal
+  seedBlack(q + 1, m);           // (4,6)↔(8,6) — center-column near-center (not on center row)
+  // Note: center row (row m) is intentionally left clear for the first word's placement
+
+  // ── Step 2: canPlace — words may be ADJACENT to '#' cells (proper crossword behavior) ──
   function canPlace(word: string, row: number, col: number, dir: "H" | "V", requireIntersection: boolean): boolean {
     const dr = dir === "V" ? 1 : 0, dc = dir === "H" ? 1 : 0;
     if (row < 0 || col < 0) return false;
     if (row + dr * (word.length - 1) >= size) return false;
     if (col + dc * (word.length - 1) >= size) return false;
+    // Pre/post cells: must be empty (null) or '#' (black separator) — not a letter
     const preR = row - dr, preC = col - dc;
-    if (preR >= 0 && preC >= 0 && grid[preR][preC] !== null) return false;
+    if (preR >= 0 && preC >= 0 && grid[preR][preC] !== null && grid[preR][preC] !== "#") return false;
     const postR = row + dr * word.length, postC = col + dc * word.length;
-    if (postR < size && postC < size && grid[postR][postC] !== null) return false;
+    if (postR < size && postC < size && grid[postR][postC] !== null && grid[postR][postC] !== "#") return false;
     let intersections = 0;
     for (let k = 0; k < word.length; k++) {
       const r = row + dr * k, c = col + dc * k;
       const current = grid[r][c];
       if (current !== null) {
-        if (current !== word[k]) return false;
+        if (current !== word[k]) return false; // '#' or wrong letter — blocked
         intersections++;
       } else {
+        // Adjacent cells (perpendicular direction): only letters block — '#' separators are OK
         if (dir === "H") {
-          if (r > 0 && grid[r - 1][c] !== null) return false;
-          if (r < size - 1 && grid[r + 1][c] !== null) return false;
+          if (r > 0 && grid[r - 1][c] !== null && grid[r - 1][c] !== "#") return false;
+          if (r < size - 1 && grid[r + 1][c] !== null && grid[r + 1][c] !== "#") return false;
         } else {
-          if (c > 0 && grid[r][c - 1] !== null) return false;
-          if (c < size - 1 && grid[r][c + 1] !== null) return false;
+          if (c > 0 && grid[r][c - 1] !== null && grid[r][c - 1] !== "#") return false;
+          if (c < size - 1 && grid[r][c + 1] !== null && grid[r][c + 1] !== "#") return false;
         }
       }
     }
@@ -652,9 +674,22 @@ export function makeCrossword(words: string[], size: number): CrosswordResult {
   for (let wi = 0; wi < cleanWords.length; wi++) {
     const word = cleanWords[wi];
     if (placedList.length === 0) {
-      const row = Math.floor(size / 2);
-      const col = Math.floor((size - word.length) / 2);
-      doPlace(word, row, col, "H");
+      // Place first word horizontally near center, using canPlace to respect pre-seeded '#' cells
+      const baseRow = Math.floor(size / 2);
+      let firstPlaced = false;
+      outer0: for (let dr2 = 0; dr2 <= 2 && !firstPlaced; dr2++) {
+        for (const r of [baseRow, baseRow - dr2, baseRow + dr2]) {
+          if (r <= 0 || r >= size - 1) continue;
+          for (let c2 = 1; c2 + word.length < size - 1; c2++) {
+            if (canPlace(word, r, c2, "H", false)) {
+              doPlace(word, r, c2, "H");
+              firstPlaced = true;
+              break outer0;
+            }
+          }
+        }
+      }
+      if (!firstPlaced) doPlace(word, baseRow, 1, "H"); // absolute fallback
       continue;
     }
     let didPlace = false;
