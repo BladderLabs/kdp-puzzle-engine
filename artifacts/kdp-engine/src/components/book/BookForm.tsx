@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -14,7 +14,7 @@ import { PreviewPane } from "./PreviewPane";
 import { CoverPreview } from "./CoverPreview";
 import type { NicheResult } from "@workspace/api-client-react";
 
-const PUZZLE_TYPES = ["Word Search", "Sudoku", "Maze", "Number Search", "Cryptogram"] as const;
+const PUZZLE_TYPES = ["Word Search", "Sudoku", "Maze", "Number Search", "Cryptogram", "Crossword"] as const;
 const DIFFICULTIES = ["Easy", "Medium", "Hard"] as const;
 const WORD_CATEGORIES = [
   { value: "General",   label: "General" },
@@ -119,6 +119,8 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
   const [customNiche, setCustomNiche] = useState<string>(
     NICHE_PICKS.some(n => n.value === (initialValues?.niche || "")) ? "" : (initialValues?.niche || "")
   );
+  const [isGeneratingAICover, setIsGeneratingAICover] = useState(false);
+  const [aiCoverError, setAiCoverError] = useState<string | null>(null);
 
   // Dynamic title formula hint
   const lpTag = largePrint ? "Large Print " : "";
@@ -130,6 +132,19 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
     const lpNote = largePrint ? "in large print for easy reading " : "";
     return `Discover ${puzzleCount} carefully crafted ${difficulty.toLowerCase()} ${puzzleType} puzzles ${lpNote}— perfect for brain training, relaxation, and daily fun! Each puzzle is laid out on its own page with generous space for working through solutions. A complete answer key is included at the back. Whether you're a beginner or an experienced solver, this collection offers hours of satisfying mental exercise. Makes a wonderful gift for puzzle enthusiasts of all ages!`;
   };
+
+  // Track the last auto-generated description so we can update it when key fields change
+  const lastGeneratedRef = useRef<string>("");
+  useEffect(() => {
+    const newTemplate = generateDescTemplate();
+    const currentVal = form.getValues("backDescription") || "";
+    // Auto-update only if the field currently contains the previously auto-generated template
+    if (currentVal && currentVal === lastGeneratedRef.current && newTemplate !== currentVal) {
+      lastGeneratedRef.current = newTemplate;
+      form.setValue("backDescription", newTemplate);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [puzzleCount, puzzleType, difficulty, largePrint]);
 
   const applyNicheData = (data: NicheResult) => {
     if (data.words?.length) form.setValue("words", data.words.join("\n"));
@@ -153,12 +168,39 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
     }
   }, [onApplyRef]);
 
-  const aPer = puzzleType === "Word Search" ? (largePrint ? 9 : 12)
+  const generateAICover = async () => {
+    setIsGeneratingAICover(true);
+    setAiCoverError(null);
+    try {
+      const theme = form.getValues("theme") || "midnight";
+      const coverStyle = form.getValues("coverStyle") || "classic";
+      const title = form.getValues("title") || "";
+      const currentPuzzleType = form.getValues("puzzleType") || "Word Search";
+      const res = await fetch("/api/gemini/cover-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ theme, style: coverStyle, title, puzzleType: currentPuzzleType }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(err.error || `Server error ${res.status}`);
+      }
+      const data = await res.json() as { dataUrl: string };
+      form.setValue("coverImageUrl", data.dataUrl);
+    } catch (e) {
+      setAiCoverError((e as Error).message || "Failed to generate AI cover.");
+    } finally {
+      setIsGeneratingAICover(false);
+    }
+  };
+
+  const aPer = puzzleType === "Word Search" ? (largePrint ? 4 : 6)
     : puzzleType === "Sudoku" ? (largePrint ? 6 : 8)
     : puzzleType === "Maze" ? (largePrint ? 4 : 6)
     : puzzleType === "Number Search" ? (largePrint ? 9 : 12)
+    : puzzleType === "Crossword" ? (largePrint ? 4 : 6)
     : (largePrint ? 6 : 8);
-  const totP = 3 + puzzleCount + Math.ceil(puzzleCount / aPer);
+  const totP = 9 + puzzleCount + Math.ceil(puzzleCount / aPer) + (puzzleCount >= 30 ? 3 : 0);
   const thick = paperType === "cream" ? 0.0025 : 0.002252;
   const spineW = totP * thick + 0.06;
 
@@ -377,9 +419,29 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
                 {/* Cover Image URL */}
                 <FormField control={form.control} name="coverImageUrl" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Cover Image URL <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
-                    <FormControl><Input placeholder="https://i.ibb.co/…/my-cover.jpg" {...field} /></FormControl>
-                    <CardDescription className="text-xs">Upload your image to imgbb.com (free) and paste the direct link here. Appears on the front cover.</CardDescription>
+                    <FormLabel>Cover Image <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
+                    <div className="flex gap-2">
+                      <FormControl><Input placeholder="https://i.ibb.co/…/my-cover.jpg" {...field} value={field.value?.startsWith("data:") ? "(AI-generated image)" : (field.value || "")} onChange={(e) => { if (!e.target.value || !e.target.value.startsWith("data:")) field.onChange(e); }} /></FormControl>
+                      {field.value?.startsWith("data:") && (
+                        <Button type="button" variant="outline" size="sm" className="shrink-0 text-xs" onClick={() => form.setValue("coverImageUrl", "")}>Clear</Button>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={generateAICover}
+                        disabled={isGeneratingAICover}
+                        className="text-xs border-violet-500/50 text-violet-400 hover:bg-violet-500/10 hover:text-violet-300 disabled:opacity-50"
+                      >
+                        {isGeneratingAICover ? (
+                          <span className="flex items-center gap-1.5"><svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Generating...</span>
+                        ) : "✨ Generate AI Cover Art"}
+                      </Button>
+                      <CardDescription className="text-xs">AI creates cover art from your theme &amp; style. Or paste an image URL.</CardDescription>
+                    </div>
+                    {aiCoverError && <p className="text-xs text-destructive mt-1">{aiCoverError}</p>}
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -430,7 +492,7 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
                       <Textarea
                         className="h-28 text-sm"
                         placeholder="Click to auto-fill a publish-ready template…"
-                        onFocus={() => { if (!field.value) field.onChange(generateDescTemplate()); }}
+                        onFocus={() => { if (!field.value) { const t = generateDescTemplate(); lastGeneratedRef.current = t; field.onChange(t); } }}
                         {...field}
                       />
                     </FormControl>

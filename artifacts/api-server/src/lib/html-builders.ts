@@ -1,7 +1,8 @@
 import {
   shuf, makeWordSearch, makeSudoku, makeMaze, makeNumberSearch,
-  makeCryptogramFromQuote, WORD_BANKS, QUOTE_BANK,
+  makeCryptogramFromQuote, makeCrossword, WORD_BANKS, QUOTE_BANK,
 } from "./puzzles";
+import type { CrosswordResult, CrosswordClue } from "./puzzles";
 
 /** Compute total page count from config without generating any puzzles. */
 export function computeTotalPages(opts: BuildOpts): number {
@@ -12,8 +13,12 @@ export function computeTotalPages(opts: BuildOpts): number {
     : PT === "Sudoku" ? (LP ? 6 : 8)
     : PT === "Maze" ? (LP ? 4 : 6)
     : PT === "Number Search" ? (LP ? 9 : 12)
+    : PT === "Crossword" ? (LP ? 4 : 6)
     : (LP ? 6 : 8);
-  return 3 + PC + Math.ceil(PC / aPer);
+  // Front matter: title(1) + dedication(2) + how-to-play(3) + toc(4) + tracker(5)
+  // Section dividers: 3 pages when PC >= 30
+  // Back matter: 4 notes pages + answer key pages
+  return 9 + PC + Math.ceil(PC / aPer) + (PC >= 30 ? 3 : 0);
 }
 
 export function escapeHtml(s: string): string {
@@ -108,6 +113,9 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         puzzles.push(makeCryptogramFromQuote(QUOTE_BANK[cryptoQuotePool[cryptoQIdx++]]));
         break;
       }
+      case "Crossword":
+        puzzles.push(makeCrossword(shuf(wordBank).slice(0, Math.min(wordBank.length, 20)), LP ? 11 : 13));
+        break;
       default:
         puzzles.push(makeWordSearch(shuf(wordBank).slice(0, Math.min(wordBank.length, wpp)), gsz));
     }
@@ -117,16 +125,30 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     : PT === "Sudoku" ? (LP ? 6 : 8)
     : PT === "Maze" ? (LP ? 4 : 6)
     : PT === "Number Search" ? (LP ? 9 : 12)
+    : PT === "Crossword" ? (LP ? 4 : 6)
     : (LP ? 6 : 8); // Cryptogram
 
   // Physical trim size: Large Print = 8.5"x11", Standard = 6"x9"
   const trimW = LP ? 8.5 : 6;
   const trimH = LP ? 11 : 9;
 
+  // Enrichment pack: section dividers appear for 30+ puzzle books
+  const hasSections = PC >= 30;
+  const sec1 = Math.round(PC / 3);
+  const sec2 = Math.round(2 * PC / 3);
+
   const aP = Math.ceil(PC / aPer);
-  const totP = 3 + PC + aP;
+  // Pages: title(1)+dedication(2)+htp(3)+toc(4)+tracker(5) + section dividers(3 if PC>=30) + PC + notes(4) + aP
+  const totP = 9 + PC + aP + (hasSections ? 3 : 0);
   const gut = Math.max(0.5, gutterIn(totP));
-  const pS = 5, aS = pS + PC;
+  // pS = first puzzle page; aS = answer key start page
+  const pS = hasSections ? 7 : 6;
+  // +2 for Level2+3 dividers (Level1 already baked into pS offset), +4 for notes
+  const aS = pS + PC + (hasSections ? 2 : 0) + 4;
+  // puzzle page helper: accounts for section-divider pages inserted mid-book
+  const puzzlePageOf = (i: number) => pS + i + (hasSections ? (i >= sec2 ? 2 : i >= sec1 ? 1 : 0) : 0);
+  // notes start page (right after all puzzles + section dividers)
+  const notesStartPage = pS + PC + (hasSections ? 2 : 0);
 
   // Decorative rule between label and grid (shared across all puzzle types)
   const ornamentRule = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;"><div style="flex:1;height:1px;background:#ccc;"></div><div style="font-family:'Source Code Pro',monospace;font-size:10px;color:#aaa;">◆</div><div style="flex:1;height:1px;background:#ccc;"></div></div>`;
@@ -141,6 +163,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     "Maze":          { Easy: "~3 min",  Medium: "~8 min",  Hard: "~15 min" },
     "Number Search": { Easy: "~5 min",  Medium: "~10 min", Hard: "~20 min" },
     "Cryptogram":    { Easy: "~3 min",  Medium: "~8 min",  Hard: "~15 min" },
+    "Crossword":     { Easy: "~8 min",  Medium: "~15 min", Hard: "~30 min" },
   };
   const timeEst = (timeMap[PT] || timeMap["Word Search"])[DF] || "~10 min";
   const progressBadge = `<span style="display:inline-flex;align-items:center;gap:6px;padding:2px 6px;border:1px solid #ddd;border-radius:4px;background:#fafafa;"><span style="letter-spacing:3px;font-size:11px;color:#555;">${diffDots}</span><span style="font-size:9px;color:#777;font-family:'Source Code Pro',monospace;">${timeEst}</span><span style="display:inline-block;width:12px;height:12px;border:1.5px solid #aaa;border-radius:2px;margin-left:2px;"></span></span>`;
@@ -178,6 +201,17 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     `Published via Amazon KDP` +
     `</div>` +
     `</div></div>`;
+
+  // ── Dedication page ───────────────────────────────────────────────────────
+  html += `<div class="pg in"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:${trimH}in;text-align:center;">` +
+    `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:4px;color:#bbb;text-transform:uppercase;margin-bottom:28px;">Dedication</div>` +
+    `<div style="width:40px;height:1px;background:#ddd;margin-bottom:28px;"></div>` +
+    `<div style="font-family:Lora,serif;font-style:italic;font-size:15px;color:#555;line-height:1.9;max-width:3.5in;">` +
+    `To everyone who believes a quiet mind is a gift worth giving&mdash;` +
+    `<br/>may these pages bring you many moments of peace and joy.` +
+    `</div>` +
+    `<div style="width:40px;height:1px;background:#ddd;margin-top:28px;"></div>` +
+    `</div><div class="ft"><span></span><span class="ft-pg">&mdash; 2 &mdash;</span></div></div>`;
 
   // ── How-to-Play page ─────────────────────────────────────────────────────
   const htxtMap: Record<string, string> = {
@@ -293,6 +327,43 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
       `</div>` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:9px;color:#555;">"THE" encoded &rarr; <strong>QEV</strong> &nbsp;|&nbsp; decode by reversing the mapping</div>` +
       `</div>`;
+  } else if (PT === "Crossword") {
+    // 5×5 mini example: CRANE across row 2, GRADE down col 2 (A intersects at row 2 col 2)
+    const cxGrid = [
+      ["#","#","G","#","#"],
+      ["#","#","R","#","#"],
+      ["C","R","A","N","E"],
+      ["#","#","D","#","#"],
+      ["#","#","E","#","#"],
+    ];
+    const cxNums: Record<string,number> = {"0,2":1,"2,0":2};
+    const cxCellSz = 22;
+    let cxTable = `<table style="border-collapse:collapse;margin:6px auto;">`;
+    for (let r = 0; r < 5; r++) {
+      cxTable += "<tr>";
+      for (let c = 0; c < 5; c++) {
+        const cell = cxGrid[r][c];
+        const num = cxNums[`${r},${c}`];
+        if (cell === "#") {
+          cxTable += `<td style="width:${cxCellSz}px;height:${cxCellSz}px;background:#333;border:1px solid #555;"></td>`;
+        } else {
+          cxTable += `<td style="width:${cxCellSz}px;height:${cxCellSz}px;border:1px solid #999;background:#fff;position:relative;vertical-align:top;">` +
+            (num ? `<span style="position:absolute;top:1px;left:2px;font-family:'Source Code Pro',monospace;font-size:6px;color:#555;line-height:1;">${num}</span>` : "") +
+            `</td>`;
+        }
+      }
+      cxTable += "</tr>";
+    }
+    cxTable += "</table>";
+    miniEx = `<div style="margin-bottom:20px;text-align:center;">` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:2px;color:#888;text-transform:uppercase;margin-bottom:8px;">Example — fill white cells using the numbered clues:</div>` +
+      cxTable +
+      `<div style="display:inline-flex;gap:28px;justify-content:center;margin-top:8px;text-align:left;">` +
+      `<div><div style="font-family:'Source Code Pro',monospace;font-size:8px;font-weight:700;color:#333;letter-spacing:2px;margin-bottom:3px;">ACROSS</div><div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#555;">2. Large wading bird (5)</div></div>` +
+      `<div><div style="font-family:'Source Code Pro',monospace;font-size:8px;font-weight:700;color:#333;letter-spacing:2px;margin-bottom:3px;">DOWN</div><div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#555;">1. A score or mark (5)</div></div>` +
+      `</div>` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:8px;color:#777;margin-top:6px;">Numbers show where entries start &mdash; fill across or down from each</div>` +
+      `</div>`;
   }
 
   html += `<div class="pg in"><div class="hd"><span class="hd-title">${T}</span><span>${DF} &middot; ${PT}</span></div>` +
@@ -310,7 +381,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
   let tocR = "";
   const mx = Math.min(PC, 42);
   for (let i = 0; i < mx; i++)
-    tocR += `<div style="display:flex;justify-content:space-between;font-family:'Source Code Pro',monospace;font-size:11px;color:#555;padding:2px 0;border-bottom:1px dotted #ddd;"><span>Puzzle #${String(i + 1).padStart(2, "0")}</span><span>${pS + i}</span></div>`;
+    tocR += `<div style="display:flex;justify-content:space-between;font-family:'Source Code Pro',monospace;font-size:11px;color:#555;padding:2px 0;border-bottom:1px dotted #ddd;"><span>Puzzle #${String(i + 1).padStart(2, "0")}</span><span>${puzzlePageOf(i)}</span></div>`;
   if (PC > 42)
     tocR += `<div style="font-family:Lora,serif;font-size:11px;color:#777;padding:6px 0;font-style:italic;">&hellip; and ${PC - 42} more</div>`;
   html += `<div class="pg in"><div class="hd"><span class="hd-title">${T}</span><span>${DF} &middot; ${PT}</span></div>` +
@@ -319,9 +390,53 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
     `<div style="margin-top:20px;font-family:'Source Code Pro',monospace;font-size:10px;color:#333;letter-spacing:2px;font-weight:600;">ANSWER KEY &mdash; PAGE ${aS}</div></div>` +
     `<div class="ft"><span>${T} — ${AU}</span><span class="ft-pg">&mdash; 4 &mdash;</span></div></div>`;
 
+  // ── Solve-a-Day Tracker ───────────────────────────────────────────────────
+  {
+    const days = Array.from({ length: 30 }, (_, d) => d + 1);
+    const chkBox = `<div style="display:inline-block;width:13px;height:13px;border:1.5px solid #aaa;border-radius:2px;"></div>`;
+    const dayRows = days.map(d => {
+      const label = String(d).padStart(2, "0");
+      return `<div style="display:flex;align-items:center;gap:8px;padding:3px 6px;border-bottom:1px solid #f0f0f0;">` +
+        `<span style="font-family:'Source Code Pro',monospace;font-size:10px;font-weight:600;color:#666;min-width:26px;">Day ${label}</span>` +
+        chkBox +
+        `<div style="flex:1;height:1px;border-bottom:1px dotted #ddd;margin:0 8px;"></div>` +
+        `<span style="font-family:'Source Code Pro',monospace;font-size:8px;color:#bbb;letter-spacing:1px;">TIME ____</span>` +
+        `</div>`;
+    }).join("");
+    html += `<div class="pg in"><div class="hd"><span class="hd-title">${T}</span><span>Tracker</span></div>` +
+      `<div style="padding-top:0.2in;">` +
+      `<div style="font-family:Lora,serif;font-size:22px;font-weight:700;color:#222;margin-bottom:6px;">30-Day Solve-a-Day Tracker</div>` +
+      `<div style="font-family:Lora,serif;font-size:12px;font-style:italic;color:#666;margin-bottom:14px;">Check off each day as you complete a puzzle — track your streak!</div>` +
+      `<div style="width:40px;height:2px;background:#333;margin-bottom:14px;"></div>` +
+      `<div style="display:grid;grid-template-columns:1fr 1fr;column-gap:20px;">${dayRows}</div>` +
+      `</div><div class="ft"><span>${T} — ${AU}</span><span class="ft-pg">&mdash; 5 &mdash;</span></div></div>`;
+  }
+
   // ── Puzzle pages ─────────────────────────────────────────────────────────
+  // Section-divider page builder (full page, B&W, bold centered)
+  const sectionDivider = (level: string, subtitle: string, pageNum: number) =>
+    `<div class="pg in"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:${trimH}in;text-align:center;">` +
+    `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:5px;color:#bbb;text-transform:uppercase;margin-bottom:20px;">Progressive Difficulty</div>` +
+    `<div style="width:48px;height:2px;background:#333;margin-bottom:20px;"></div>` +
+    `<div style="font-family:Lora,serif;font-size:34px;font-weight:700;color:#222;margin-bottom:8px;">${level}</div>` +
+    `<div style="font-family:Lora,serif;font-size:14px;font-style:italic;color:#666;margin-bottom:20px;">${subtitle}</div>` +
+    `<div style="width:48px;height:2px;background:#333;"></div>` +
+    `</div><div class="ft"><span></span><span class="ft-pg">&mdash; ${pageNum} &mdash;</span></div></div>`;
+
+  // Emit Level 1 section divider before first puzzle (only when hasSections)
+  if (hasSections) {
+    html += sectionDivider("Level 1", "Warm-Up Puzzles", 6);
+  }
+
   for (let i = 0; i < PC; i++) {
-    const pN = pS + i;
+    // Emit Level 2 & 3 section dividers between puzzle groups
+    if (hasSections && i === sec1) {
+      html += sectionDivider("Level 2", "Challenging Puzzles", pS + sec1);
+    }
+    if (hasSections && i === sec2) {
+      html += sectionDivider("Level 3", "Expert Puzzles", pS + sec2 + 1);
+    }
+    const pN = puzzlePageOf(i);
     const lb = "#" + String(i + 1).padStart(2, "0");
     const pz = puzzles[i] as Record<string, unknown>;
     // LP ornamental separator embedded at bottom of every 10th puzzle page
@@ -414,6 +529,37 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         `</div></div>`;
       html += `<div class="pg in"><div class="hd"><span class="hd-title">${T}</span>${progressBadge}</div><div style="padding-top:0.15in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">NUMBER SEARCH</span></div>${ornamentRule}${g}${ch}${lpSep}</div><div class="ft"><span>${T} — ${AU}</span><span class="ft-pg">&mdash; ${pN} &mdash;</span></div></div>`;
 
+    } else if (PT === "Crossword") {
+      const cw = pz as CrosswordResult;
+      const cxCellSz = LP ? 52 : 36;
+      const cxNumF = LP ? 9 : 7;
+      let cxG = `<table style="border-collapse:collapse;margin:4px auto;">`;
+      for (let r = 0; r < cw.size; r++) {
+        cxG += "<tr>";
+        for (let c = 0; c < cw.size; c++) {
+          const cell = cw.grid[r][c];
+          const num = cw.nums[`${r},${c}`];
+          if (cell === "#") {
+            cxG += `<td style="width:${cxCellSz}px;height:${cxCellSz}px;background:#222;border:1px solid #444;"></td>`;
+          } else {
+            cxG += `<td style="width:${cxCellSz}px;height:${cxCellSz}px;border:1px solid #888;background:#fff;position:relative;vertical-align:top;">` +
+              (num ? `<span style="position:absolute;top:2px;left:2px;font-family:'Source Code Pro',monospace;font-size:${cxNumF}px;color:#555;line-height:1;">${num}</span>` : "") +
+              `</td>`;
+          }
+        }
+        cxG += "</tr>";
+      }
+      cxG += "</table>";
+      const cxClueF = LP ? 10 : 8;
+      let acClues = `<div style="font-family:'Source Code Pro',monospace;font-size:${cxClueF + 1}px;font-weight:700;color:#222;letter-spacing:2px;margin-bottom:4px;">ACROSS</div>`;
+      for (const cl of cw.across)
+        acClues += `<div style="font-family:'Source Code Pro',monospace;font-size:${cxClueF}px;color:#333;line-height:1.55;">${cl.num}. ${escapeHtml(cl.clue)} (${cl.len})</div>`;
+      let dnClues = `<div style="font-family:'Source Code Pro',monospace;font-size:${cxClueF + 1}px;font-weight:700;color:#222;letter-spacing:2px;margin-bottom:4px;">DOWN</div>`;
+      for (const cl of cw.down)
+        dnClues += `<div style="font-family:'Source Code Pro',monospace;font-size:${cxClueF}px;color:#333;line-height:1.55;">${cl.num}. ${escapeHtml(cl.clue)} (${cl.len})</div>`;
+      const cxClueBox = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;padding:8px 10px;border:1px solid #ddd;background:#fafaf8;border-radius:3px;">${acClues ? `<div>${acClues}</div>` : ""}<div>${dnClues}</div></div>`;
+      html += `<div class="pg in"><div class="hd"><span class="hd-title">${T}</span>${progressBadge}</div><div style="padding-top:0.1in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">CROSSWORD</span></div>${ornamentRule}${cxG}${cxClueBox}${lpSep}</div><div class="ft"><span>${T} — ${AU}</span><span class="ft-pg">&mdash; ${pN} &mdash;</span></div></div>`;
+
     } else if (PT === "Cryptogram") {
       const cg = pz as { cipher: string; plain: string };
       const cipherDisplay = cg.cipher.split("").map(ch =>
@@ -431,6 +577,23 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         `</table>`;
       html += `<div class="pg in"><div class="hd"><span class="hd-title">${T}</span>${progressBadge}</div><div style="padding-top:0.2in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">CRYPTOGRAM</span></div>${ornamentRule}<div style="font-family:'Source Code Pro',monospace;font-size:${LP ? 16 : 13}px;color:#222;line-height:2.8;word-spacing:4px;">${cipherDisplay}</div><div style="margin-top:20px;">${cgKeyTable}</div>${lpSep}</div><div class="ft"><span>${T} — ${AU}</span><span class="ft-pg">&mdash; ${pN} &mdash;</span></div></div>`;
     }
+  }
+
+  // ── Notes pages (4 ruled pages) ──────────────────────────────────────────
+  for (let n = 0; n < 4; n++) {
+    const notesPg = notesStartPage + n;
+    const lineCount = LP ? 18 : 24;
+    const lineH = LP ? 0.36 : 0.28;
+    let noteLines = "";
+    for (let l = 0; l < lineCount; l++)
+      noteLines += `<div style="width:100%;height:${lineH}in;border-bottom:1px solid #ccc;margin-bottom:0;"></div>`;
+    const notesTitle = n === 0 ? "Notes" : "&nbsp;";
+    html += `<div class="pg in"><div class="hd"><span class="hd-title">${T}</span><span>Notes</span></div>` +
+      `<div style="padding-top:0.2in;">` +
+      `<div style="font-family:Lora,serif;font-size:${n === 0 ? "22px" : "0px"};font-weight:700;color:#222;margin-bottom:${n === 0 ? "14px" : "0px"};">${notesTitle}</div>` +
+      `${n === 0 ? `<div style="width:36px;height:2px;background:#333;margin-bottom:14px;"></div>` : ""}` +
+      noteLines +
+      `</div><div class="ft"><span>${T} — ${AU}</span><span class="ft-pg">&mdash; ${notesPg} &mdash;</span></div></div>`;
   }
 
   // ── Answer key pages ─────────────────────────────────────────────────────
@@ -598,6 +761,39 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
       html += `<div class="pg in"><div class="hd"><span class="hd-title">Answer Key</span><span>Cryptogram</span></div><div style="padding-top:0.2in;">${akBanner}${gs}</div><div class="ft"><span>${T} — ${AU}</span><span class="ft-pg">&mdash; ${akP} &mdash;</span></div></div>`;
       akP++;
     }
+
+  } else if (PT === "Crossword") {
+    const akCols = LP ? 2 : 3;
+    const akCS = LP ? 16 : 10;
+    const akFS = LP ? 9 : 6;
+    for (let p = 0; p < PC; p += aPer) {
+      const batch = (puzzles.slice(p, p + aPer)) as CrosswordResult[];
+      const akBanner = p === 0 ? `<div style="text-align:center;border-bottom:2px solid #555;padding-bottom:8px;margin-bottom:14px;">` +
+        `<div style="font-family:Lora,serif;font-size:20px;font-weight:700;color:#222;letter-spacing:2px;text-transform:uppercase;">Answer Key</div>` +
+        `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:3px;color:#777;margin-top:4px;">CROSSWORD</div>` +
+        `</div>` : "";
+      let gs = `<div style="display:grid;grid-template-columns:repeat(${akCols},1fr);gap:${LP ? 24 : 14}px;justify-items:center;">`;
+      batch.forEach((cw, idx) => {
+        let m = `<div style="text-align:center;"><div style="font-family:'Source Code Pro',monospace;font-size:${LP ? 10 : 8}px;color:#555;font-weight:700;margin-bottom:4px;">PUZZLE #${String(p + idx + 1).padStart(2, "0")}</div><table style="border-collapse:collapse;margin:0 auto;">`;
+        for (let r = 0; r < cw.size; r++) {
+          m += "<tr>";
+          for (let c = 0; c < cw.size; c++) {
+            const cell = cw.grid[r][c];
+            if (cell === "#") {
+              m += `<td style="width:${akCS}px;height:${akCS}px;background:#333;border:1px solid #555;"></td>`;
+            } else {
+              m += `<td style="width:${akCS}px;height:${akCS}px;border:1px solid #ccc;text-align:center;vertical-align:middle;font-family:'Source Code Pro',monospace;font-size:${akFS}px;font-weight:700;color:#222;background:#f5f5f0;">${cell}</td>`;
+            }
+          }
+          m += "</tr>";
+        }
+        m += "</table></div>";
+        gs += m;
+      });
+      gs += "</div>";
+      html += `<div class="pg in"><div class="hd"><span class="hd-title">Answer Key</span><span>Crossword</span></div><div style="padding-top:0.2in;">${akBanner}${gs}</div><div class="ft"><span>${T} — ${AU}</span><span class="ft-pg">&mdash; ${akP} &mdash;</span></div></div>`;
+      akP++;
+    }
   }
 
   html += "</body></html>";
@@ -752,9 +948,11 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const puzzleTexture = `<div style="position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden;z-index:0;pointer-events:none;font-family:'Source Code Pro',monospace;font-size:13px;letter-spacing:5px;line-height:2;padding:0.3in;opacity:0.05;color:${ac};word-break:break-all;">${txLetters.repeat(20)}</div>`;
 
 
-  // Sanitize coverImageUrl: only allow http(s) URLs with non-private hostnames (SSRF mitigation)
+  // Sanitize coverImageUrl: allow http(s) URLs (SSRF-validated) or data: URLs from Gemini image generation
   const rawUrl = opts.coverImageUrl || "";
   function isSafeImageUrl(url: string): boolean {
+    // Allow base64 data URLs (generated by Gemini image generation on server-side)
+    if (/^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(url)) return true;
     if (!/^https?:\/\//i.test(url)) return false;
     try {
       const parsed = new URL(url);
@@ -769,8 +967,9 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       return true;
     } catch { return false; }
   }
+  // Data URLs don't need HTML-escaping of the URL itself since they're used inside src="..."
   const safeImgUrl = isSafeImageUrl(rawUrl)
-    ? rawUrl.replace(/"/g, "%22").replace(/'/g, "%27").replace(/</g, "%3C").replace(/>/g, "%3E")
+    ? (rawUrl.startsWith("data:") ? rawUrl : rawUrl.replace(/"/g, "%22").replace(/'/g, "%27").replace(/</g, "%3C").replace(/>/g, "%3E"))
     : "";
 
   // Image block: safe URL → fixed 4.5in × 4in centered img with accent border & shadow;
@@ -783,10 +982,11 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   }
 
   // Back cover: exactly 5-line centered checkmark list (spec-required wording/order, always 5 lines)
+  const formatLabel = isLargePrint ? "Large Print Format (8.5\u22c5 × 11\")" : "Standard Format (6\" × 9\")";
   const cleanFeatures = [
     `&#10003; ${PC} Unique Puzzles`,
     `&#10003; ${opts.difficulty || "Medium"} Difficulty Level`,
-    `&#10003; Large Print Format`,
+    `&#10003; ${formatLabel}`,
     `&#10003; One Puzzle Per Page`,
     `&#10003; Complete Solutions Included`,
   ];

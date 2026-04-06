@@ -5,6 +5,7 @@ import generateRouter from "./generate";
 import nicheRouter from "./niche";
 import conversationsRouter from "./anthropic/conversations";
 import ideasRouter from "./anthropic/ideas";
+import geminiCoverImageRouter from "./gemini/cover-image";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(generateRouter);
 router.use(nicheRouter);
 router.use(conversationsRouter);
 router.use(ideasRouter);
+router.use(geminiCoverImageRouter);
 
 export default router;

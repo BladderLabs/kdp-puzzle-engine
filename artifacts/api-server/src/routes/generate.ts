@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
+import { zipSync } from "fflate";
 import { GenerateBookBody, PreviewPuzzlesBody, CoverPreviewBody } from "@workspace/api-zod";
 import { buildInteriorHTML, buildCoverHTML, computeTotalPages, type BuildOpts, type CoverBuildOpts } from "../lib/html-builders";
-import { makeWordSearch, makeSudoku, makeMaze, makeNumberSearch, makeCryptogram, shuf, DEFWORDS } from "../lib/puzzles";
+import { makeWordSearch, makeSudoku, makeMaze, makeNumberSearch, makeCryptogram, makeCrossword, shuf, DEFWORDS } from "../lib/puzzles";
 import { htmlToPdf } from "../lib/pdf";
 
 const router: IRouter = Router();
@@ -192,12 +193,51 @@ router.post("/puzzles/preview", (req, res) => {
         puzzles.push({ type: "Number Search", numberSearch: makeNumberSearch(gsz) });
       } else if (pt === "Cryptogram") {
         puzzles.push({ type: "Cryptogram", cryptogram: makeCryptogram() });
+      } else if (pt === "Crossword") {
+        const bank = words.length >= 5 ? shuf(words).slice(0, 20) : DEFWORDS.slice(0, 20);
+        puzzles.push({ type: "Crossword", crossword: makeCrossword(bank, lp ? 11 : 13) });
       }
     }
     res.json({ puzzles, puzzleType: pt });
   } catch (err) {
     req.log.error({ err }, "Failed to generate preview");
     res.status(400).json({ error: "Failed to generate preview" });
+  }
+});
+
+/**
+ * POST /bundle
+ * Generates interior + cover PDFs and returns them as a ZIP archive.
+ * Input: same body as /generate. Output: application/zip with interior.pdf and cover.pdf.
+ */
+router.post("/bundle", async (req, res) => {
+  try {
+    const opts = toOpts(GenerateBookBody.parse(req.body));
+    const interior = buildInteriorHTML(opts);
+    const cover = buildCoverHTML(opts, interior.totalPages);
+
+    req.log.info(`Generating ZIP bundle: ${interior.totalPages} pages, ${interior.trimW}"×${interior.trimH}"`);
+
+    const [interiorPdf, coverPdf] = await Promise.all([
+      htmlToPdf(interior.html, interior.trimW, interior.trimH),
+      htmlToPdf(cover.html, cover.fullW, cover.fullH),
+    ]);
+
+    const slug = opts.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 40);
+    const zipData = zipSync({
+      [`${slug}-interior.pdf`]: [new Uint8Array(interiorPdf), { level: 0 }],
+      [`${slug}-cover.pdf`]: [new Uint8Array(coverPdf), { level: 0 }],
+    });
+
+    res.set({
+      "Content-Type": "application/zip",
+      "Content-Disposition": `attachment; filename="${slug}-kdp-bundle.zip"`,
+      "Content-Length": zipData.length.toString(),
+    });
+    res.send(Buffer.from(zipData));
+  } catch (err) {
+    req.log.error({ err }, "Failed to generate ZIP bundle");
+    res.status(500).json({ error: "Failed to generate ZIP bundle" });
   }
 });
 

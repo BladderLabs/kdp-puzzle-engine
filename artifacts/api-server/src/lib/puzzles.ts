@@ -418,6 +418,317 @@ export function makeCryptogram(): CryptogramResult {
   return makeCryptogramFromQuote(quote);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Crossword generator
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CrosswordClue {
+  num: number;
+  clue: string;
+  answer: string;
+  row: number;
+  col: number;
+  len: number;
+}
+
+export interface CrosswordResult {
+  grid: string[][];
+  across: CrosswordClue[];
+  down: CrosswordClue[];
+  size: number;
+  nums: Record<string, number>;
+}
+
+const CROSSWORD_CLUES: Record<string, string> = {
+  PUZZLE: "A game to solve", BRAIN: "Thinking organ", SOLVE: "Find the answer",
+  GAME: "Fun activity", FIND: "Locate something", LETTER: "Alphabet character",
+  GRID: "Rows and columns layout", CLUE: "A helpful hint", ANSWER: "The solution",
+  LOGIC: "Reasoned thinking", LEARN: "Gain knowledge", SKILL: "Practiced ability",
+  HUNT: "Search for something", QUEST: "A seeking journey", DECODE: "Crack a cipher",
+  REVEAL: "Show what was hidden", UNLOCK: "Open a lock", STUDY: "Focus on learning",
+  FOCUS: "Concentrate attention", RELAX: "Rest and unwind", THINK: "Use your mind",
+  SMART: "Quick-witted", MIND: "The thinking self", QUICK: "Fast and ready",
+  SHARP: "Keen and alert", CLEVER: "Intelligent person", BRIGHT: "Smart and shining",
+  MASTER: "Expert at something", PATTERN: "Repeating design", RIDDLE: "A puzzling question",
+  CIPHER: "A coded message", WISDOM: "Deep understanding", REASON: "Think through a problem",
+  TRACE: "Follow a path", IMPROVE: "Get better at something", EFFORT: "Hard work applied",
+  FIGURE: "Work something out", DETAIL: "Small but important part",
+  PROBE: "Investigate thoroughly", NOTICE: "Become aware of",
+  ELEPHANT: "Largest land animal", GIRAFFE: "Tallest animal on earth",
+  DOLPHIN: "Smart sea mammal", CHEETAH: "Fastest land animal",
+  GORILLA: "Large great ape", PANTHER: "Black big cat", LEOPARD: "Spotted big cat",
+  JAGUAR: "Americas big cat", BUFFALO: "Large bovine", PEACOCK: "Bird with a stunning tail",
+  OSTRICH: "Largest flightless bird", FALCON: "Fast hunting bird",
+  OCTOPUS: "Eight-armed sea creature", LOBSTER: "Clawed seafood",
+  WALRUS: "Tusked Arctic animal", OTTER: "Playful river animal",
+  BEAVER: "Dam-building rodent", BADGER: "Burrowing nocturnal animal",
+  RABBIT: "Hopping soft-eared pet", FERRET: "Slim weasel-like pet",
+  LEMUR: "Ring-tailed primate", SLOTH: "Slow-moving tree dweller",
+  LYNX: "Wild spotted cat", COUGAR: "Mountain lion",
+  PUMA: "South American big cat", COYOTE: "Prairie wolf",
+  HYENA: "Laughing scavenger", ZEBRA: "Striped African horse",
+  BISON: "American buffalo", MOOSE: "Largest deer species",
+  FLAMINGO: "Pink wading bird", PENGUIN: "Antarctic flightless bird",
+  KANGAROO: "Pouched Australian animal", HEDGEHOG: "Spiny small mammal",
+  WOLVERINE: "Fierce mustelid", REINDEER: "Holiday sleigh puller",
+  STALLION: "Adult male horse", PELICAN: "Large-billed sea bird",
+  TOUCAN: "Tropical fruit bird", CONDOR: "Giant soaring bird",
+  SEAHORSE: "Tiny upright fish", MANATEE: "Sea cow",
+  NARWHAL: "Unicorn of the sea", CHIPMUNK: "Stripe-faced ground squirrel",
+  SQUIRREL: "Nut-hoarding tree rodent", HAMSTER: "Small cage pet",
+  CAPYBARA: "World largest rodent", GAZELLE: "Swift African antelope",
+  IMPALA: "Leaping antelope", CARIBOU: "Arctic deer",
+  MOUNTAIN: "High rocky peak", FOREST: "Dense woodland",
+  MEADOW: "Open grassy field", CANYON: "Deep rocky gorge",
+  GLACIER: "Slow-moving ice mass", VOLCANO: "Erupting fire mountain",
+  TUNDRA: "Frozen treeless plain", SAVANNA: "African grassland",
+  PLATEAU: "Flat-topped highland", RAVINE: "Deep narrow valley",
+  LAGOON: "Coastal shallow water", BOULDER: "Large rounded rock",
+  GRANITE: "Tough igneous rock", QUARTZ: "Common silica mineral",
+  CRYSTAL: "Clear mineral formation", FOSSIL: "Ancient preserved remains",
+  TORNADO: "Violent spinning storm", RAINBOW: "Arched colored spectrum",
+  AURORA: "Northern lights display", SUNSET: "Evening twilight glow",
+  SUNRISE: "Morning dawn", WILLOW: "Weeping tree species",
+  CEDAR: "Fragrant evergreen tree", RIVER: "Flowing freshwater",
+  STREAM: "Small water flow", OCEAN: "Vast salt water body",
+  VALLEY: "Low land between hills", DESERT: "Arid sandy landscape",
+  WATERFALL: "Cascading water drop", CAVERN: "Underground hollow",
+  GEYSER: "Spouting hot spring", BLIZZARD: "Severe snowstorm",
+  HURRICANE: "Tropical storm system", DROUGHT: "Long dry period",
+  LIGHTNING: "Electric sky flash", REDWOOD: "Tallest tree species",
+  LAVENDER: "Purple fragrant herb", PRAIRIE: "Flat open grassland",
+  JUNGLE: "Dense tropical forest", SPRING: "Natural water source",
+  CREEK: "Small waterway",
+  CHRISTMAS: "December celebration", HALLOWEEN: "Spooky October holiday",
+  CELEBRATE: "Mark a special occasion", FESTIVAL: "Community celebration",
+  PARADE: "Moving street procession", ORNAMENT: "Tree decoration",
+  WREATH: "Circular festive ring", CANDLE: "Wax flame light",
+  PUMPKIN: "Orange Halloween gourd", HOLIDAY: "Special day off",
+  CARNIVAL: "Colorful traveling fair", FAMILY: "Related group of people",
+  GARLAND: "Festive hanging decoration", STOCKING: "Christmas sock",
+  TINSEL: "Shiny holiday string", SNOWFLAKE: "Unique ice crystal",
+  MENORAH: "Hanukkah candleholder", LANTERN: "Portable light holder",
+  GRATITUDE: "Feeling of thankfulness", WARMTH: "Cozy comfortable feeling",
+  BAGUETTE: "Long French bread", BURRITO: "Wrapped Mexican dish",
+  SUSHI: "Japanese rice roll", RAMEN: "Japanese noodle soup",
+  PIZZA: "Italian flatbread dish", BREAD: "Baked flour staple",
+  MANGO: "Tropical sweet fruit", PAPAYA: "Orange tropical fruit",
+  AVOCADO: "Creamy green fruit", TIRAMISU: "Italian coffee dessert",
+  WAFFLE: "Grid-patterned cake", CREPE: "Thin French pancake",
+  CHEDDAR: "Sharp yellow cheese", BRIE: "Soft French cheese",
+  GOUDA: "Dutch round cheese", MOZZARELLA: "Classic pizza cheese",
+  PARMESAN: "Hard Italian cheese", LASAGNA: "Layered pasta bake",
+  RISOTTO: "Creamy Italian rice", PAELLA: "Spanish rice dish",
+  CROISSANT: "Buttery curved pastry", ENCHILADA: "Rolled tortilla dish",
+  EMPANADA: "Stuffed pastry turnover", TAMALE: "Corn dough wrap",
+  HUMMUS: "Chickpea dip spread", FALAFEL: "Fried chickpea ball",
+  SHAWARMA: "Rotisserie meat wrap", KEBAB: "Skewered grilled meat",
+  BAKLAVA: "Honey nut pastry", TEMPURA: "Japanese fried dish",
+  TERIYAKI: "Sweet soy glaze", DUMPLING: "Filled dough pouch",
+  ECLAIR: "Cream-filled pastry", MACARON: "Colorful French cookie",
+  MOUSSE: "Light airy dessert",
+  BASKETBALL: "Hoop shooting team sport", VOLLEYBALL: "Net-and-ball team sport",
+  MARATHON: "26 mile endurance race", ARCHERY: "Bow and arrow sport",
+  FENCING: "Sword dueling sport", BOXING: "Padded fist fighting",
+  SURFING: "Wave riding sport", TENNIS: "Racket net sport",
+  HOCKEY: "Stick and puck sport", CRICKET: "Bat and wicket sport",
+  SAILING: "Wind-powered boat sport", SWIMMING: "Aquatic racing sport",
+  GYMNASTICS: "Acrobatic floor sport", BADMINTON: "Shuttlecock net sport",
+  LACROSSE: "Stick and net sport", TRIATHLON: "Three-sport race",
+  CYCLING: "Bicycle racing sport", JAVELIN: "Throwing spear event",
+  DIVING: "Aerial water entry sport", KAYAKING: "Paddle water sport",
+  ROWING: "Oar-powered boat sport", CURLING: "Ice and stone sport",
+  JUDO: "Japanese throwing sport", KARATE: "Japanese striking art",
+  TAEKWONDO: "Korean kicking art", CLIMBING: "Ascent rock sport",
+  WEIGHTLIFTING: "Heavy barbell sport",
+  PASSPORT: "Official travel document", ADVENTURE: "Exciting risky journey",
+  JOURNEY: "Long travel trip", SAFARI: "African wildlife tour",
+  AIRPORT: "Air travel hub", HOSTEL: "Budget traveler lodging",
+  RESORT: "Luxury vacation stay", VILLA: "Vacation rental home",
+  CULTURE: "People shared customs", LANDMARK: "Famous recognizable site",
+  MONUMENT: "Memorial structure", TEMPLE: "Religious worship place",
+  CASTLE: "Fortified medieval building", SOUVENIR: "Travel keepsake item",
+  ITINERARY: "Trip schedule plan", EXPEDITION: "Organized exploration",
+  VOYAGE: "Long sea journey", EXCURSION: "Short side trip",
+  DEPARTURE: "Leaving point", ARRIVAL: "Reaching destination",
+  CUSTOMS: "Border inspection process", CATHEDRAL: "Large Christian church",
+  PALACE: "Royal residence", FORTRESS: "Military stronghold",
+  BAZAAR: "Middle Eastern market", HERITAGE: "Cultural legacy",
+  TRADITION: "Passed-down practice",
+  EXPERIMENT: "Controlled scientific test", ANALYSIS: "Detailed examination",
+  RESEARCH: "Systematic investigation", CHEMISTRY: "Study of matter",
+  BIOLOGY: "Study of life", PHYSICS: "Study of forces",
+  GEOLOGY: "Study of the earth", ASTRONOMY: "Study of stars",
+  GRAVITY: "Force pulling things down", ENERGY: "Capacity to do work",
+  MOLECULE: "Smallest chemical unit", ENZYME: "Biological catalyst",
+  HYPOTHESIS: "Scientific educated guess", MICROSCOPE: "Tiny object viewer",
+  TELESCOPE: "Distant object viewer", ELECTRON: "Negative atomic particle",
+  CATALYST: "Speeds up a reaction", EVOLUTION: "Species change over time",
+  VACCINE: "Disease prevention shot", BACTERIA: "Single-celled organisms",
+  QUANTUM: "Smallest energy packet", MOMENTUM: "Mass times velocity",
+  VELOCITY: "Speed with direction", FRICTION: "Resistance to motion",
+  INERTIA: "Resistance to change",
+  REVOLUTION: "Overthrow of government", EMPIRE: "Large ruled territory",
+  DYNASTY: "Ruling family line", REPUBLIC: "Elected government system",
+  PYRAMID: "Ancient Egyptian tomb", TREATY: "Signed peace agreement",
+  CIVILIZATION: "Organized ancient society", PHARAOH: "Ancient Egyptian ruler",
+  EMPEROR: "Supreme ruler of empire", ARTIFACT: "Historical object",
+  MANUSCRIPT: "Ancient handwritten text", ARCHAEOLOGY: "Study of ancient remains",
+  EQUATOR: "Earth middle latitude line", LATITUDE: "North-south position",
+  LONGITUDE: "East-west position line", HEMISPHERE: "Half of a globe",
+  CONTINENT: "Large land mass", PENINSULA: "Land surrounded by water",
+  FJORD: "Narrow coastal inlet", ISTHMUS: "Narrow land bridge",
+  AMAZON: "South American mighty river", HIMALAYAS: "World highest mountains",
+  SAHARA: "World largest hot desert", PACIFIC: "Earth largest ocean",
+  ATLANTIC: "Ocean between Americas and Europe",
+  SYMPHONY: "Orchestral composition", CONCERTO: "Soloist with orchestra",
+  HARMONY: "Combined musical tones", MELODY: "Main musical tune",
+  RHYTHM: "Beat and timing pattern", ORCHESTRA: "Full instrumental group",
+  SOPRANO: "Highest female vocal range", TENOR: "High male vocal range",
+  BLUES: "Soulful American music style", JAZZ: "Improvised American music",
+  CLARINET: "Woodwind reed instrument", TROMBONE: "Slide brass instrument",
+  CRESCENDO: "Gradually getting louder",
+  DIRECTOR: "Film scene controller", THRILLER: "Suspenseful film genre",
+  MYSTERY: "Unknown puzzle film genre", DIALOGUE: "Character spoken words",
+  MONTAGE: "Sequence of edited clips", NARRATIVE: "Story being told",
+  CLIMAX: "Story highest tension point", SEQUEL: "Follow-up to a film",
+  NEBULA: "Cosmic gas and dust cloud", GALAXY: "Billions of stars system",
+  SUPERNOVA: "Exploding dying star", SATELLITE: "Object orbiting a planet",
+  ASTRONAUT: "Space traveler", COMET: "Icy body with a tail",
+  CONSTELLATION: "Named star pattern in sky", ASTEROID: "Rocky space body",
+  SPACECRAFT: "Vehicle for space travel", ROVER: "Planet surface explorer",
+};
+
+function makeCrosswordClue(word: string): string {
+  return CROSSWORD_CLUES[word] || `${word.length}-letter word`;
+}
+
+export function makeCrossword(words: string[], size: number): CrosswordResult {
+  type Cell = string | null;
+  const grid: Cell[][] = Array.from({ length: size }, () => Array(size).fill(null));
+  interface PlacedWord { word: string; row: number; col: number; dir: "H" | "V" }
+  const placedList: PlacedWord[] = [];
+
+  function canPlace(word: string, row: number, col: number, dir: "H" | "V", requireIntersection: boolean): boolean {
+    const dr = dir === "V" ? 1 : 0, dc = dir === "H" ? 1 : 0;
+    if (row < 0 || col < 0) return false;
+    if (row + dr * (word.length - 1) >= size) return false;
+    if (col + dc * (word.length - 1) >= size) return false;
+    const preR = row - dr, preC = col - dc;
+    if (preR >= 0 && preC >= 0 && grid[preR][preC] !== null) return false;
+    const postR = row + dr * word.length, postC = col + dc * word.length;
+    if (postR < size && postC < size && grid[postR][postC] !== null) return false;
+    let intersections = 0;
+    for (let k = 0; k < word.length; k++) {
+      const r = row + dr * k, c = col + dc * k;
+      const current = grid[r][c];
+      if (current !== null) {
+        if (current !== word[k]) return false;
+        intersections++;
+      } else {
+        if (dir === "H") {
+          if (r > 0 && grid[r - 1][c] !== null) return false;
+          if (r < size - 1 && grid[r + 1][c] !== null) return false;
+        } else {
+          if (c > 0 && grid[r][c - 1] !== null) return false;
+          if (c < size - 1 && grid[r][c + 1] !== null) return false;
+        }
+      }
+    }
+    return requireIntersection ? intersections > 0 : true;
+  }
+
+  function doPlace(word: string, row: number, col: number, dir: "H" | "V") {
+    const dr = dir === "V" ? 1 : 0, dc = dir === "H" ? 1 : 0;
+    for (let k = 0; k < word.length; k++) grid[row + dr * k][col + dc * k] = word[k];
+    placedList.push({ word, row, col, dir });
+  }
+
+  const maxLen = size - 2;
+  const cleanWords = [...new Set(
+    words.map(w => w.toUpperCase().replace(/[^A-Z]/g, "")).filter(w => w.length >= 3 && w.length <= maxLen)
+  )].sort((a, b) => b.length - a.length).slice(0, 20);
+
+  for (let wi = 0; wi < cleanWords.length; wi++) {
+    const word = cleanWords[wi];
+    if (placedList.length === 0) {
+      const row = Math.floor(size / 2);
+      const col = Math.floor((size - word.length) / 2);
+      doPlace(word, row, col, "H");
+      continue;
+    }
+    let didPlace = false;
+    outerLoop: for (const p of shuf([...placedList])) {
+      const perpDir: "H" | "V" = p.dir === "H" ? "V" : "H";
+      const dr = p.dir === "V" ? 1 : 0, dc = p.dir === "H" ? 1 : 0;
+      for (let k = 0; k < p.word.length; k++) {
+        const existR = p.row + dr * k, existC = p.col + dc * k;
+        for (let j = 0; j < word.length; j++) {
+          if (word[j] !== p.word[k]) continue;
+          const newRow = perpDir === "V" ? existR - j : existR;
+          const newCol = perpDir === "H" ? existC - j : existC;
+          if (canPlace(word, newRow, newCol, perpDir, true)) {
+            doPlace(word, newRow, newCol, perpDir);
+            didPlace = true;
+            break outerLoop;
+          }
+        }
+      }
+    }
+    if (!didPlace && placedList.length <= 2) {
+      outer2: for (const dir of shuf(["H", "V"] as ("H" | "V")[])) {
+        const dr = dir === "V" ? 1 : 0, dc = dir === "H" ? 1 : 0;
+        for (let r = 1; r < size - 1; r++) {
+          for (let c = 1; c < size - 1; c++) {
+            if (r + dr * (word.length - 1) >= size - 1) continue;
+            if (c + dc * (word.length - 1) >= size - 1) continue;
+            if (canPlace(word, r, c, dir, false)) {
+              doPlace(word, r, c, dir);
+              didPlace = true;
+              break outer2;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  for (let r = 0; r < size; r++)
+    for (let c = 0; c < size; c++)
+      if (grid[r][c] === null) grid[r][c] = "#";
+
+  const acrossList: CrosswordClue[] = [];
+  const downList: CrosswordClue[] = [];
+  const nums: Record<string, number> = {};
+  let cellNum = 1;
+
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (grid[r][c] === "#") continue;
+      const isAcrossStart = (c === 0 || grid[r][c - 1] === "#") && c + 1 < size && grid[r][c + 1] !== "#";
+      const isDownStart = (r === 0 || grid[r - 1][c] === "#") && r + 1 < size && grid[r + 1][c] !== "#";
+      if (isAcrossStart || isDownStart) {
+        nums[`${r},${c}`] = cellNum;
+        if (isAcrossStart) {
+          let answer = "", cc = c;
+          while (cc < size && grid[r][cc] !== "#") { answer += grid[r][cc]; cc++; }
+          if (answer.length >= 2)
+            acrossList.push({ num: cellNum, clue: makeCrosswordClue(answer), answer, row: r, col: c, len: answer.length });
+        }
+        if (isDownStart) {
+          let answer = "", rr = r;
+          while (rr < size && grid[rr][c] !== "#") { answer += grid[rr][c]; rr++; }
+          if (answer.length >= 2)
+            downList.push({ num: cellNum, clue: makeCrosswordClue(answer), answer, row: r, col: c, len: answer.length });
+        }
+        cellNum++;
+      }
+    }
+  }
+
+  return { grid: grid as string[][], across: acrossList, down: downList, size, nums };
+}
+
 export const WORD_BANKS: Record<string, string[]> = {
   General: [
     "PUZZLE","SEARCH","WORDS","BRAIN","THINK","SOLVE","GAME","PLAY","FIND","HIDDEN",
