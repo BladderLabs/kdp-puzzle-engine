@@ -747,54 +747,96 @@ export function makeCrossword(words: string[], size: number): CrosswordResult {
 
   btGroups(0, new Set<string>());
 
-  const grid: string[][] = Array.from({ length: size }, () => Array(size).fill("#"));
-
-  for (let i = 0; i < slots.length; i++) {
-    const w = assignment[i];
-    if (!w) continue;
-    const s = slots[i];
-    const dr = s.dir === "V" ? 1 : 0, dc = s.dir === "H" ? 1 : 0;
-    for (let k = 0; k < w.length; k++) {
-      grid[s.row + dr * k][s.col + dc * k] = w[k];
-    }
-  }
-
-  const acrossList: CrosswordClue[] = [];
-  const downList: CrosswordClue[] = [];
-  const nums: Record<string, number> = {};
-  let cellNum = 1;
-
-  for (let r = 0; r < size; r++) {
-    for (let c = 0; c < size; c++) {
-      if (grid[r][c] === "#") continue;
-      const isAcrossStart = (c === 0 || grid[r][c - 1] === "#") && c + 1 < size && grid[r][c + 1] !== "#";
-      const isDownStart = (r === 0 || grid[r - 1][c] === "#") && r + 1 < size && grid[r + 1][c] !== "#";
-      if (isAcrossStart || isDownStart) {
-        nums[`${r},${c}`] = cellNum;
-        if (isAcrossStart) {
-          let answer = "", cc = c;
-          while (cc < size && grid[r][cc] !== "#") { answer += grid[r][cc]; cc++; }
-          if (answer.length >= 2)
-            acrossList.push({ num: cellNum, clue: makeCrosswordClue(answer), answer, row: r, col: c, len: answer.length });
-        }
-        if (isDownStart) {
-          let answer = "", rr = r;
-          while (rr < size && grid[rr][c] !== "#") { answer += grid[rr][c]; rr++; }
-          if (answer.length >= 2)
-            downList.push({ num: cellNum, clue: makeCrosswordClue(answer), answer, row: r, col: c, len: answer.length });
-        }
-        cellNum++;
+  function buildResult(asgn: (string | null)[]): CrosswordResult | null {
+    const g: string[][] = Array.from({ length: size }, () => Array(size).fill("#"));
+    for (let i = 0; i < slots.length; i++) {
+      const w = asgn[i];
+      if (!w) continue;
+      const s = slots[i];
+      const dr = s.dir === "V" ? 1 : 0, dc = s.dir === "H" ? 1 : 0;
+      for (let k = 0; k < w.length; k++) {
+        g[s.row + dr * k][s.col + dc * k] = w[k];
       }
     }
+    const across: CrosswordClue[] = [];
+    const down: CrosswordClue[] = [];
+    const ns: Record<string, number> = {};
+    let num = 1;
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        if (g[r][c] === "#") continue;
+        const isA = (c === 0 || g[r][c - 1] === "#") && c + 1 < size && g[r][c + 1] !== "#";
+        const isD = (r === 0 || g[r - 1][c] === "#") && r + 1 < size && g[r + 1][c] !== "#";
+        if (isA || isD) {
+          ns[`${r},${c}`] = num;
+          if (isA) {
+            let ans = "", cc = c;
+            while (cc < size && g[r][cc] !== "#") { ans += g[r][cc]; cc++; }
+            if (ans.length >= 2)
+              across.push({ num, clue: makeCrosswordClue(ans), answer: ans, row: r, col: c, len: ans.length });
+          }
+          if (isD) {
+            let ans = "", rr = r;
+            while (rr < size && g[rr][c] !== "#") { ans += g[rr][c]; rr++; }
+            if (ans.length >= 2)
+              down.push({ num, clue: makeCrosswordClue(ans), answer: ans, row: r, col: c, len: ans.length });
+          }
+          num++;
+        }
+      }
+    }
+    if (across.length < 2 || down.length < 2) return null;
+    return { grid: g, across, down, size, nums: ns };
   }
 
-  const MIN_CLUES = 2;
-  if (acrossList.length < MIN_CLUES || downList.length < MIN_CLUES) {
-    const empty: string[][] = Array.from({ length: size }, () => Array(size).fill("#"));
-    return { grid: empty, across: [], down: [], size, nums: {} };
+  const primary = buildResult(assignment);
+  if (primary) return primary;
+
+  // Fallback: build a minimal valid crossword using two crossing words from the pool.
+  // Pick one H word and one V word that share a common letter, place them crossing at center.
+  const allWords = [...new Set(
+    words.map(w => w.toUpperCase().replace(/[^A-Z]/g, "")).filter(w => w.length >= 3)
+  )];
+  for (const wH of shuf(allWords)) {
+    for (const wV of shuf(allWords.filter(w => w !== wH))) {
+      const sharedIdx = wH.split("").findIndex(ch => wV.includes(ch));
+      if (sharedIdx < 0) continue;
+      const vIdx = wV.indexOf(wH[sharedIdx]);
+      const hRow = m, hCol = m - sharedIdx;
+      const vCol = m, vRow = m - vIdx;
+      if (hCol < 0 || hCol + wH.length > size) continue;
+      if (vRow < 0 || vRow + wV.length > size) continue;
+      const fallbackGrid: string[][] = Array.from({ length: size }, () => Array(size).fill("#"));
+      for (let k = 0; k < wH.length; k++) fallbackGrid[hRow][hCol + k] = wH[k];
+      for (let k = 0; k < wV.length; k++) fallbackGrid[vRow + k][vCol] = wV[k];
+      return {
+        grid: fallbackGrid,
+        across: [{ num: 1, clue: makeCrosswordClue(wH), answer: wH, row: hRow, col: hCol, len: wH.length }],
+        down: [{ num: 1, clue: makeCrosswordClue(wV), answer: wV, row: vRow, col: vCol, len: wV.length }],
+        size,
+        nums: { [`${hRow},${hCol}`]: 1 },
+      };
+    }
   }
 
-  return { grid: grid as string[][], across: acrossList, down: downList, size, nums };
+  // Last resort: single H word across center, single V word down center (same word if no pair found)
+  const anyWord = allWords[0] || "PUZZLE";
+  const hRow = m, hCol = m - Math.floor(anyWord.length / 2);
+  const vRow = m - Math.floor(anyWord.length / 2), vCol = m;
+  const lastGrid: string[][] = Array.from({ length: size }, () => Array(size).fill("#"));
+  if (hCol >= 0 && hCol + anyWord.length <= size) {
+    for (let k = 0; k < anyWord.length; k++) lastGrid[hRow][hCol + k] = anyWord[k];
+  }
+  if (vRow >= 0 && vRow + anyWord.length <= size) {
+    for (let k = 0; k < anyWord.length; k++) lastGrid[vRow + k][vCol] = anyWord[k];
+  }
+  return {
+    grid: lastGrid,
+    across: [{ num: 1, clue: makeCrosswordClue(anyWord), answer: anyWord, row: hRow, col: hCol < 0 ? 0 : hCol, len: anyWord.length }],
+    down: [{ num: 1, clue: makeCrosswordClue(anyWord), answer: anyWord, row: vRow < 0 ? 0 : vRow, col: vCol, len: anyWord.length }],
+    size,
+    nums: { [`${hRow},${hCol < 0 ? 0 : hCol}`]: 1 },
+  };
 }
 
 export const WORD_BANKS: Record<string, string[]> = {

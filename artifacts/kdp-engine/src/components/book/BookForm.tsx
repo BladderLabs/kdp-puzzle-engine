@@ -194,7 +194,7 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
     }
   };
 
-  const aPer = puzzleType === "Word Search" ? (largePrint ? 4 : 6)
+  const aPer = puzzleType === "Word Search" ? (largePrint ? 9 : 12)
     : puzzleType === "Sudoku" ? (largePrint ? 6 : 8)
     : puzzleType === "Maze" ? (largePrint ? 4 : 6)
     : puzzleType === "Number Search" ? (largePrint ? 9 : 12)
