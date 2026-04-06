@@ -287,6 +287,60 @@ export function GenerateBook() {
             <p className="text-sm text-destructive text-center">{errorMsg}</p>
           )}
 
+          {status !== "done" && !isGenerating && (() => {
+            const checks = [
+              {
+                label: "Title is 6+ words",
+                pass: (book.title || "").trim().split(/\s+/).filter(Boolean).length >= 6,
+                fix: "Add a descriptive subtitle or expand your title",
+              },
+              {
+                label: "Subtitle is present",
+                pass: !!book.subtitle && book.subtitle.trim().length > 0,
+                fix: 'e.g. "Big Letters, Easy to Read — Perfect for Adults"',
+              },
+              {
+                label: "Author name set",
+                pass: !!book.author && book.author.trim().length > 0,
+                fix: "Enter a pen name or your real name in the Book Setup form",
+              },
+              {
+                label: `Puzzle count ≥ 50 (${book.puzzleCount ?? 0} puzzles)`,
+                pass: (book.puzzleCount ?? 0) >= 50,
+                fix: "Increase puzzle count to at least 50 for better value perception",
+              },
+              {
+                label: "Back cover description ≥ 80 words",
+                pass: (book.backDescription || "").trim().split(/\s+/).filter(Boolean).length >= 80,
+                fix: "Click the description field in Book Setup to auto-fill a template",
+              },
+            ];
+            const allPass = checks.every(c => c.pass);
+            return (
+              <div
+                className="rounded-lg p-4 space-y-2"
+                style={{ border: `1px solid ${allPass ? "#22c55e44" : "#f59e0b44"}`, background: allPass ? "#22c55e08" : "#f59e0b08" }}
+              >
+                <h3 className="text-sm font-bold" style={{ color: allPass ? "#22c55e" : GOLD }}>
+                  {allPass ? "✓ Ready to Publish" : "Publish Readiness Checklist"}
+                </h3>
+                <div className="space-y-1">
+                  {checks.map((c, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs">
+                      <span style={{ color: c.pass ? "#22c55e" : "#f59e0b", flexShrink: 0, marginTop: 1 }}>
+                        {c.pass ? "✓" : "⚠"}
+                      </span>
+                      <span className={c.pass ? "text-muted-foreground line-through" : "text-foreground"}>
+                        {c.label}
+                      </span>
+                      {!c.pass && <span className="text-muted-foreground italic">— {c.fix}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           {status !== "done" && (
             <Button
               size="lg"

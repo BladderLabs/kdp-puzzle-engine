@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -32,18 +32,27 @@ const WORD_CATEGORIES = [
   { value: "Space",     label: "Space" },
 ] as const;
 const THEMES = [
-  { value: "midnight",  label: "Midnight Gold" },
-  { value: "forest",    label: "Forest Ink" },
-  { value: "crimson",   label: "Crimson Fire" },
-  { value: "ocean",     label: "Ocean Sky" },
-  { value: "violet",    label: "Violet Glow" },
-  { value: "slate",     label: "Slate Orange" },
-  { value: "sunrise",   label: "Sunrise Pink" },
-  { value: "teal",      label: "Teal Wave" },
-  { value: "parchment", label: "Parchment Warm" },
-  { value: "sky",       label: "Sky Blue" },
-] as const;
+  { value: "midnight",  label: "Midnight Gold",   bg: "#0D1B3E", ac: "#F5C842" },
+  { value: "forest",    label: "Forest Green",    bg: "#1A3C1A", ac: "#6DCC50" },
+  { value: "crimson",   label: "Crimson Flame",   bg: "#280808", ac: "#FF3838" },
+  { value: "ocean",     label: "Ocean Breeze",    bg: "#C8E8F8", ac: "#1565A8" },
+  { value: "violet",    label: "Violet Gem",      bg: "#180635", ac: "#C060FF" },
+  { value: "slate",     label: "Slate Bullseye",  bg: "#252E3A", ac: "#FF8C38" },
+  { value: "sunrise",   label: "Warm Sunrise",    bg: "#FDF0E0", ac: "#D44000" },
+  { value: "teal",      label: "Deep Teal Hex",   bg: "#062020", ac: "#18D0A0" },
+  { value: "parchment", label: "Parchment Quill", bg: "#F5E4C0", ac: "#7B3A00" },
+  { value: "sky",       label: "Clear Sky",       bg: "#E0EFFF", ac: "#2050B8" },
+];
 const COVER_STYLES = ["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth"] as const;
+
+const NICHE_PICKS = [
+  { value: "Seniors & Large Print", titlePrefix: "Large Print", audience: "seniors" },
+  { value: "Kids Ages 8–12",        titlePrefix: "Kids'",       audience: "kids 8-12" },
+  { value: "Relaxation & Stress Relief", titlePrefix: "Relaxing", audience: "adults" },
+  { value: "Travel & On-the-Go",   titlePrefix: "Travel",      audience: "travelers" },
+  { value: "Holiday Gifts",        titlePrefix: "Holiday",     audience: "gift buyers" },
+  { value: "Other (custom)",       titlePrefix: "",            audience: "" },
+];
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -101,6 +110,26 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
   const paperType = form.watch("paperType");
   const largePrint = form.watch("largePrint");
   const wordsStr = form.watch("words") || "";
+  const difficulty = form.watch("difficulty") || "Medium";
+  const backDescription = form.watch("backDescription") || "";
+
+  const [nicheSelection, setNicheSelection] = useState<string>(
+    NICHE_PICKS.some(n => n.value === (initialValues?.niche || "")) ? (initialValues?.niche || "") : ""
+  );
+  const [customNiche, setCustomNiche] = useState<string>(
+    NICHE_PICKS.some(n => n.value === (initialValues?.niche || "")) ? "" : (initialValues?.niche || "")
+  );
+
+  // Dynamic title formula hint
+  const lpTag = largePrint ? "Large Print " : "";
+  const titleHint = `e.g. "${lpTag}${puzzleType} for Seniors: ${puzzleCount} Puzzles Vol. 1"`;
+  const subtitleHint = `e.g. "Big Letters, Easy to Read — Perfect for Adults & Beginners"`;
+
+  // Auto-fill back description template
+  const generateDescTemplate = () => {
+    const lpNote = largePrint ? "in large print for easy reading " : "";
+    return `Discover ${puzzleCount} carefully crafted ${difficulty.toLowerCase()} ${puzzleType} puzzles ${lpNote}— perfect for brain training, relaxation, and daily fun! Each puzzle is laid out on its own page with generous space for working through solutions. A complete answer key is included at the back. Whether you're a beginner or an experienced solver, this collection offers hours of satisfying mental exercise. Makes a wonderful gift for puzzle enthusiasts of all ages!`;
+  };
 
   const applyNicheData = (data: NicheResult) => {
     if (data.words?.length) form.setValue("words", data.words.join("\n"));
@@ -147,14 +176,16 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
                   <FormField control={form.control} name="title" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Title <span className="text-destructive">*</span></FormLabel>
-                      <FormControl><Input placeholder="100 Word Search Puzzles" {...field} /></FormControl>
+                      <FormControl><Input placeholder={`${largePrint ? "Large Print " : ""}${puzzleType}: ${puzzleCount} Puzzles`} {...field} /></FormControl>
+                      <p className="text-xs text-muted-foreground mt-0.5 font-mono">{titleHint}</p>
                       <FormMessage />
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="subtitle" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Subtitle</FormLabel>
-                      <FormControl><Input placeholder="Large Print Edition" {...field} /></FormControl>
+                      <FormControl><Input placeholder="Fun & Challenging for All Ages" {...field} /></FormControl>
+                      <p className="text-xs text-muted-foreground mt-0.5 font-mono">{subtitleHint}</p>
                       <FormMessage />
                     </FormItem>
                   )} />
@@ -316,7 +347,14 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                         <SelectContent>
-                          {THEMES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                          {THEMES.map(t => (
+                            <SelectItem key={t.value} value={t.value}>
+                              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ display: "inline-flex", width: 22, height: 22, borderRadius: "50%", background: `linear-gradient(135deg, ${t.bg} 50%, ${t.ac} 50%)`, border: "1px solid #ccc", flexShrink: 0 }} />
+                                {t.label}
+                              </span>
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -346,13 +384,57 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
                   </FormItem>
                 )} />
 
+                {/* Niche quick-picks */}
+                <div>
+                  <label className="text-sm font-medium">Target Niche <span className="text-muted-foreground font-normal">(optional)</span></label>
+                  <div className="flex flex-wrap gap-2 mt-1.5">
+                    {NICHE_PICKS.map(n => (
+                      <button
+                        key={n.value}
+                        type="button"
+                        onClick={() => {
+                          setNicheSelection(n.value);
+                          if (n.value !== "Other (custom)") {
+                            form.setValue("niche", n.value);
+                          }
+                        }}
+                        className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                          nicheSelection === n.value
+                            ? "bg-amber-500 text-black border-amber-500 font-semibold"
+                            : "border-border text-muted-foreground hover:border-amber-400/60"
+                        }`}
+                      >
+                        {n.value}
+                      </button>
+                    ))}
+                  </div>
+                  {nicheSelection === "Other (custom)" && (
+                    <input
+                      type="text"
+                      className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      placeholder="Describe your niche audience…"
+                      value={customNiche}
+                      onChange={e => { setCustomNiche(e.target.value); form.setValue("niche", e.target.value); }}
+                    />
+                  )}
+                  {nicheSelection && nicheSelection !== "Other (custom)" && (
+                    <p className="text-xs text-muted-foreground mt-1 font-mono">Title tip: start with "{NICHE_PICKS.find(n => n.value === nicheSelection)?.titlePrefix} {puzzleType}…"</p>
+                  )}
+                </div>
+
                 {/* Back description */}
                 <FormField control={form.control} name="backDescription" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Back Cover Description</FormLabel>
                     <FormControl>
-                      <Textarea className="h-20" placeholder="Short description printed on the back cover…" {...field} />
+                      <Textarea
+                        className="h-28 text-sm"
+                        placeholder="Click to auto-fill a publish-ready template…"
+                        onFocus={() => { if (!field.value) field.onChange(generateDescTemplate()); }}
+                        {...field}
+                      />
                     </FormControl>
+                    <p className="text-xs text-muted-foreground mt-0.5">Click the field to auto-fill a KDP-ready description template you can edit.</p>
                     <FormMessage />
                   </FormItem>
                 )} />
