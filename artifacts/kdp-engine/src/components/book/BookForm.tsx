@@ -118,6 +118,9 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
   const wordsStr = form.watch("words") || "";
   const difficulty = form.watch("difficulty") || "Medium";
   const backDescription = form.watch("backDescription") || "";
+  const dedication = form.watch("dedication");
+  const difficultyMode = form.watch("difficultyMode") || "uniform";
+  const challengeDays = form.watch("challengeDays");
 
   const [nicheSelection, setNicheSelection] = useState<string>(
     NICHE_PICKS.some(n => n.value === (initialValues?.niche || "")) ? (initialValues?.niche || "") : ""
@@ -206,7 +209,12 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
     : puzzleType === "Number Search" ? (largePrint ? 9 : 12)
     : puzzleType === "Crossword" ? (largePrint ? 4 : 6)
     : (largePrint ? 6 : 8);
-  const totP = 9 + puzzleCount + Math.ceil(puzzleCount / aPer) + (puzzleCount >= 30 ? 3 : 0);
+  const progressive = difficultyMode === "progressive";
+  const fmExtra = (dedication ? 1 : 0) + (challengeDays ? 1 : 0);
+  const dividers = progressive ? (puzzleCount < 3 ? 1 : 3) : 0;
+  // frontMatter: title(1) + htp(1) + toc(1) + dedication? + tracker?
+  // back matter: 4 notes pages + answer key pages
+  const totP = 3 + fmExtra + dividers + puzzleCount + 4 + Math.ceil(puzzleCount / aPer);
   const thick = paperType === "cream" ? 0.0025 : 0.002252;
   const spineW = totP * thick + 0.06;
 

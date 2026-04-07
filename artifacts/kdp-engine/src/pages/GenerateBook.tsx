@@ -215,7 +215,7 @@ export function GenerateBook() {
   const pc = book.puzzleCount ?? 100;
   const progressive = book.difficultyMode === "progressive";
   const frontMatter = 3 + (book.dedication ? 1 : 0) + (book.challengeDays ? 1 : 0);
-  const dividers = progressive ? 3 : 0;
+  const dividers = progressive ? (pc < 3 ? 1 : 3) : 0;
   const totP = frontMatter + 4 + pc + Math.ceil(pc / aPer) + dividers;
   const spineW = totP * thick + 0.06;
 

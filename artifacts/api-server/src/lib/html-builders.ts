@@ -18,10 +18,11 @@ export function computeTotalPages(opts: BuildOpts): number {
     : (LP ? 6 : 8);
   // Front matter: title(1) + htp(2) + toc(3)
   // Optional: dedication (+1), tracker (+1)
-  // Section dividers: 3 pages in progressive mode (always, for any puzzle count)
+  // Section dividers in progressive mode: always 1 Easy divider + Medium + Hard only when PC >= 3
   // Back matter: 4 notes pages (always) + answer key pages
   const frontMatter = 3 + (opts.dedication ? 1 : 0) + (opts.challengeDays ? 1 : 0);
-  const dividers = progressive ? 3 : 0;
+  // Mirrors hasSections sec1/sec2 clamping: PC<3 means only Easy divider renders (1 divider)
+  const dividers = progressive ? (PC < 3 ? 1 : 3) : 0;
   return frontMatter + 4 + PC + Math.ceil(PC / aPer) + dividers;
 }
 
@@ -168,16 +169,21 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
   const challengeDays = opts.challengeDays || 30;
 
   const aP = Math.ceil(PC / aPer);
+  // Actual number of section divider pages rendered:
+  // Progressive always renders an Easy divider (1); Medium/Hard dividers only if PC >= 3.
+  const numDividers = hasSections ? (PC < 3 ? 1 : 3) : 0;
   // Pages: title(1) + optional dedication + htp + toc + optional tracker + section dividers + PC + notes(4) + aP
   const frontMatter = 1 + (hasDedication ? 1 : 0) + 1 + 1 + (hasTracker ? 1 : 0);
-  const totP = frontMatter + (hasSections ? 3 : 0) + PC + 4 + aP;
+  const totP = frontMatter + numDividers + PC + 4 + aP;
   const gut = Math.max(0.5, gutterIn(totP));
-  // pS = first puzzle page (1-based); frontMatter pages + section divider 1 if hasSections
+  // pS = first puzzle page (1-based); frontMatter pages + Easy section divider if hasSections
   const pS = frontMatter + (hasSections ? 1 : 0) + 1;
+  // numMidDividers = dividers that appear mid-book (Medium + Hard); 2 if PC >= 3, 0 otherwise
+  const numMidDividers = hasSections && PC >= 3 ? 2 : 0;
   // aS = answer key start page: right after puzzles + mid-book section dividers
-  const aS = pS + PC + (hasSections ? 2 : 0);
+  const aS = pS + PC + numMidDividers;
   // puzzle page helper: accounts for section-divider pages inserted mid-book
-  const puzzlePageOf = (i: number) => pS + i + (hasSections ? (i >= sec2 ? 2 : i >= sec1 ? 1 : 0) : 0);
+  const puzzlePageOf = (i: number) => pS + i + (numMidDividers > 0 ? (i >= sec2 ? 2 : i >= sec1 ? 1 : 0) : 0);
 
   // Decorative rule between label and grid (shared across all puzzle types)
   const ornamentRule = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;"><div style="flex:1;height:1px;background:#ccc;"></div><div style="font-family:'Source Code Pro',monospace;font-size:10px;color:#aaa;">◆</div><div style="flex:1;height:1px;background:#ccc;"></div></div>`;
