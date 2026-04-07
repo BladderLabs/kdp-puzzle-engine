@@ -157,7 +157,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
 
   const progressive = opts.difficultyMode === "progressive";
   // Enrichment pack: section dividers appear in progressive mode for any puzzle count.
-  // For very small books (PC < 3) we still insert 3 dividers but all puzzles land in the first section.
+  // For very small books (PC < 3) only the Easy divider is rendered (1 page); Medium/Hard are skipped.
   const hasSections = progressive;
   // sec1 = index of first Medium puzzle; sec2 = index of first Hard puzzle.
   // Clamp so each boundary is at least 1 and strictly increasing (handles PC=1,2,3 edge cases).
