@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useCreateBook } from "@workspace/api-client-react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { BookForm, BookFormValues } from "@/components/book/BookForm";
 import { AiOpportunityCards } from "@/components/ai/AiOpportunityCards";
@@ -33,14 +33,21 @@ export function CreateBook() {
     <div className="max-w-5xl mx-auto space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">New Book</h1>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowAiCards(v => !v)}
-          className="border-violet-300 text-violet-700 hover:bg-violet-50"
-        >
-          ✨ {showAiCards ? "Hide AI Ideas" : "AI Market Ideas"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link href="/agent-create">
+            <Button variant="outline" size="sm" className="border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/70">
+              🧠 AI Create Book
+            </Button>
+          </Link>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAiCards(v => !v)}
+            className="border-violet-300 text-violet-700 hover:bg-violet-50"
+          >
+            ✨ {showAiCards ? "Hide AI Ideas" : "AI Market Ideas"}
+          </Button>
+        </div>
       </div>
 
       {showAiCards && (

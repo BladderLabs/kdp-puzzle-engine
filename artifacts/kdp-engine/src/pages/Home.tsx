@@ -334,11 +334,18 @@ export function Home() {
               {books?.length ?? 0} project{(books?.length ?? 0) !== 1 ? "s" : ""} saved
             </p>
           </div>
-          <Link href="/create">
-            <button className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm transition-colors shadow-lg shadow-amber-500/20">
-              + New Book
-            </button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/agent-create">
+              <button className="px-4 py-2.5 rounded-xl font-bold text-sm transition-colors border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/70">
+                🧠 AI Create
+              </button>
+            </Link>
+            <Link href="/create">
+              <button className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm transition-colors shadow-lg shadow-amber-500/20">
+                + New Book
+              </button>
+            </Link>
+          </div>
         </div>
 
         {/* ─── DISCOVER SECTION ─── */}
