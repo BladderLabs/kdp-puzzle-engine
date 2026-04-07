@@ -24,6 +24,9 @@ export interface Book {
   coverImageUrl?: string;
   niche?: string;
   volumeNumber?: number;
+  dedication?: string;
+  difficultyMode?: 'uniform' | 'progressive';
+  challengeDays?: 30 | 60 | 90;
   createdAt: Date;
   updatedAt: Date;
 }

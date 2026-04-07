@@ -28,4 +28,7 @@ export interface BookConfig {
   coverImageUrl?: string;
   series?: string;
   volumeNumber?: number;
+  dedication?: string;
+  difficultyMode?: 'uniform' | 'progressive';
+  challengeDays?: 30 | 60 | 90;
 }
