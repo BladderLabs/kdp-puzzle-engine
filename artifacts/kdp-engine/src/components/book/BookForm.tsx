@@ -144,6 +144,14 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
 
   // Track the last auto-generated description so we can update it when key fields change
   const lastGeneratedRef = useRef<string>("");
+  // Seed lastGeneratedRef on mount if existing description matches what the template would produce
+  useEffect(() => {
+    const initial = form.getValues("backDescription") || "";
+    if (initial && initial === generateDescTemplate()) {
+      lastGeneratedRef.current = initial;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     const newTemplate = generateDescTemplate();
     const currentVal = form.getValues("backDescription") || "";
