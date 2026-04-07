@@ -5,19 +5,17 @@ const GOLD = "#C8951A";
 
 type StageStatus = "pending" | "running" | "done" | "failed" | "needs_revision";
 
-interface Stage {
+interface StageConfig {
   id: string;
   label: string;
-  runningMsg: string;
-  doneMsg: string;
 }
 
-const STAGES: Stage[] = [
-  { id: "market_scout", label: "Market Scout", runningMsg: "Scanning KDP niches…", doneMsg: "Opportunity identified" },
-  { id: "content_architect", label: "Content Architect", runningMsg: "Crafting title & description…", doneMsg: "Content ready" },
-  { id: "cover_art", label: "Cover Art Director", runningMsg: "Generating AI illustration…", doneMsg: "Cover art created" },
-  { id: "qa_review", label: "QA Reviewer", runningMsg: "Running quality checks…", doneMsg: "Quality approved" },
-  { id: "assemble", label: "Assembling", runningMsg: "Saving to your library…", doneMsg: "Book saved!" },
+const STAGES: StageConfig[] = [
+  { id: "market_scout", label: "Market Scout" },
+  { id: "content_architect", label: "Content Architect" },
+  { id: "qa_review", label: "QA Reviewer" },
+  { id: "cover_art", label: "Cover Art Director" },
+  { id: "assemble", label: "Assembling" },
 ];
 
 interface StageState {
@@ -26,20 +24,29 @@ interface StageState {
   data: Record<string, unknown>;
 }
 
-const initStages = (): Record<string, StageState> =>
-  Object.fromEntries(STAGES.map(s => [s.id, { status: "pending", message: "", data: {} }]));
+interface CompletionInfo {
+  bookId: number;
+  title: string;
+  subtitle?: string;
+  puzzleType?: string;
+  puzzleCount?: number;
+  theme?: string;
+  hasCoverImage: boolean;
+  qaFailed: boolean;
+  descWordCount?: number;
+}
 
-function StageRow({ stage, state }: { stage: Stage; state: StageState }) {
+const initStages = (): Record<string, StageState> =>
+  Object.fromEntries(STAGES.map(s => [s.id, { status: "pending" as StageStatus, message: "", data: {} }]));
+
+function StageRow({ stage, state }: { stage: StageConfig; state: StageState }) {
   const icon =
     state.status === "done" ? (
       <span style={{ color: "#22c55e", fontSize: 18 }}>✓</span>
     ) : state.status === "failed" ? (
       <span style={{ color: "#ef4444", fontSize: 18 }}>✕</span>
     ) : state.status === "running" || state.status === "needs_revision" ? (
-      <svg className="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke={GOLD} strokeWidth="4" />
-        <path className="opacity-75" fill={GOLD} d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-      </svg>
+      <span style={{ color: GOLD, fontSize: 16, animation: "spin 1s linear infinite" }}>↻</span>
     ) : (
       <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 18 }}>○</span>
     );
@@ -54,7 +61,7 @@ function StageRow({ stage, state }: { stage: Stage; state: StageState }) {
       : "rgba(255,255,255,0.35)";
 
   return (
-    <div className="flex items-start gap-3 py-2">
+    <div className="flex items-start gap-3 py-2.5">
       <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center mt-0.5">{icon}</div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
@@ -73,7 +80,7 @@ function StageRow({ stage, state }: { stage: Stage; state: StageState }) {
           </p>
         )}
         {state.status === "done" && state.data.title && (
-          <p className="text-xs mt-1 font-medium" style={{ color: "rgba(255,255,255,0.65)" }}>
+          <p className="text-xs mt-1 italic" style={{ color: "rgba(255,255,255,0.55)" }}>
             "{String(state.data.title)}"
           </p>
         )}
@@ -88,12 +95,11 @@ export function AgentCreateBook() {
   const [running, setRunning] = useState(false);
   const [stages, setStages] = useState<Record<string, StageState>>(initStages);
   const [error, setError] = useState<string | null>(null);
-  const [completedBookId, setCompletedBookId] = useState<number | null>(null);
-  const [completedTitle, setCompletedTitle] = useState<string | null>(null);
-  const [coverDataUrl, setCoverDataUrl] = useState<string | null>(null);
+  const [completion, setCompletion] = useState<CompletionInfo | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const briefRef = useRef<string>("");
 
-  const updateStage = useCallback((stageId: string, patch: Partial<StageState> & { data?: Record<string, unknown> }) => {
+  const updateStage = useCallback((stageId: string, patch: Partial<Omit<StageState, "data">> & { data?: Record<string, unknown> }) => {
     setStages(prev => ({
       ...prev,
       [stageId]: {
@@ -104,12 +110,10 @@ export function AgentCreateBook() {
     }));
   }, []);
 
-  const handleStart = async () => {
+  const runPipeline = useCallback(async (currentBrief: string) => {
     setRunning(true);
     setError(null);
-    setCompletedBookId(null);
-    setCompletedTitle(null);
-    setCoverDataUrl(null);
+    setCompletion(null);
     setStages(initStages());
 
     const abort = new AbortController();
@@ -119,7 +123,7 @@ export function AgentCreateBook() {
       const res = await fetch("/api/agents/create-book", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brief: brief.trim() || undefined }),
+        body: JSON.stringify({ brief: currentBrief.trim() || undefined }),
         signal: abort.signal,
       });
 
@@ -130,8 +134,9 @@ export function AgentCreateBook() {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      let done_flag = false;
 
-      while (true) {
+      while (!done_flag) {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
@@ -142,41 +147,37 @@ export function AgentCreateBook() {
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
           try {
-            const event = JSON.parse(line.slice(6)) as {
-              stage?: string;
-              status?: string;
-              message?: string;
-              bookId?: number;
-              title?: string;
-              imagePreview?: string;
-              [key: string]: unknown;
-            };
+            const event = JSON.parse(line.slice(6)) as Record<string, unknown>;
 
-            if (event.stage === "done" && event.bookId) {
-              setCompletedBookId(event.bookId as number);
-              setCompletedTitle(event.title as string ?? null);
+            if (event.stage === "done" && typeof event.bookId === "number") {
+              setCompletion({
+                bookId: event.bookId,
+                title: typeof event.title === "string" ? event.title : "",
+                subtitle: typeof event.subtitle === "string" ? event.subtitle : undefined,
+                puzzleType: typeof event.puzzleType === "string" ? event.puzzleType : undefined,
+                puzzleCount: typeof event.puzzleCount === "number" ? event.puzzleCount : undefined,
+                theme: typeof event.theme === "string" ? event.theme : undefined,
+                hasCoverImage: event.hasCoverImage === true,
+                qaFailed: event.qaFailed === true,
+                descWordCount: typeof event.descWordCount === "number" ? event.descWordCount : undefined,
+              });
+              done_flag = true;
               break;
             }
 
             if (event.stage === "error") {
-              setError(event.message as string ?? "Pipeline error. Please retry.");
+              setError(typeof event.message === "string" ? event.message : "Pipeline error. Please retry.");
+              done_flag = true;
               break;
             }
 
-            if (event.stage && event.status) {
-              const { stage, status, message, imagePreview, ...rest } = event;
+            if (typeof event.stage === "string" && typeof event.status === "string") {
+              const { stage, status, message, ...rest } = event;
               updateStage(stage as string, {
                 status: status as StageStatus,
-                message: (message as string) ?? "",
+                message: typeof message === "string" ? message : "",
                 data: rest as Record<string, unknown>,
               });
-
-              if (stage === "cover_art" && status === "done" && event.hasImage && typeof event.imagePreview === "string") {
-                const fullDataUrl = event.imagePreview as string;
-                if (fullDataUrl.startsWith("data:")) {
-                  setCoverDataUrl(fullDataUrl);
-                }
-              }
             }
           } catch {
           }
@@ -189,24 +190,33 @@ export function AgentCreateBook() {
     } finally {
       setRunning(false);
     }
+  }, [updateStage]);
+
+  const handleStart = () => {
+    briefRef.current = brief;
+    runPipeline(brief);
   };
 
-  const handleReset = () => {
+  const handleRegenerate = () => {
+    runPipeline(briefRef.current);
+  };
+
+  const handleFullReset = () => {
     abortRef.current?.abort();
     setRunning(false);
     setStages(initStages());
     setError(null);
-    setCompletedBookId(null);
-    setCompletedTitle(null);
-    setCoverDataUrl(null);
+    setCompletion(null);
     setBrief("");
+    briefRef.current = "";
   };
 
-  const isComplete = completedBookId !== null && !running;
+  const isComplete = completion !== null && !running;
   const hasError = !!error && !running;
 
   return (
     <div className="min-h-screen">
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       <div className="max-w-2xl mx-auto px-4 py-10 space-y-8">
 
         {/* Header */}
@@ -218,7 +228,7 @@ export function AgentCreateBook() {
           </p>
         </div>
 
-        {/* Input card */}
+        {/* Input card — only show when idle and not yet complete */}
         {!running && !isComplete && (
           <div
             className="rounded-2xl p-6 space-y-4"
@@ -226,7 +236,10 @@ export function AgentCreateBook() {
           >
             <div>
               <label className="block text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,0.40)" }}>
-                Book idea <span style={{ color: "rgba(255,255,255,0.25)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(optional — leave blank for AI-driven market choice)</span>
+                Book idea{" "}
+                <span style={{ color: "rgba(255,255,255,0.25)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
+                  (optional — leave blank for AI-driven market choice)
+                </span>
               </label>
               <textarea
                 value={brief}
@@ -241,7 +254,6 @@ export function AgentCreateBook() {
                   outline: "none",
                 }}
                 maxLength={300}
-                disabled={running}
               />
               <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.25)" }}>
                 {brief.length}/300 characters
@@ -256,27 +268,26 @@ export function AgentCreateBook() {
 
             <button
               onClick={handleStart}
-              disabled={running}
-              className="w-full py-3.5 rounded-xl text-black font-bold text-base transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: running ? GOLD + "88" : GOLD, boxShadow: `0 4px 20px ${GOLD}30` }}
+              className="w-full py-3.5 rounded-xl text-black font-bold text-base transition-all duration-150"
+              style={{ background: GOLD, boxShadow: `0 4px 20px ${GOLD}30` }}
             >
               🧠 Start AI Pipeline
             </button>
 
             <p className="text-center text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>
-              Uses Replit AI credits · Market Scout → Content Architect → Cover Art Director → QA Reviewer
+              Uses Replit AI credits · Market Scout → Content Architect → QA → Cover Art → Assemble
             </p>
           </div>
         )}
 
-        {/* Pipeline progress */}
+        {/* Pipeline progress — show while running or after any non-fresh state */}
         {(running || isComplete || hasError) && (
           <div
             className="rounded-2xl p-6"
             style={{ background: "#0f0f0f", border: "1px solid rgba(255,255,255,0.08)" }}
           >
-            <h2 className="text-sm font-bold mb-4" style={{ color: GOLD + "cc", letterSpacing: "0.05em" }}>
-              PIPELINE PROGRESS
+            <h2 className="text-xs font-bold mb-4 uppercase tracking-widest" style={{ color: GOLD + "99" }}>
+              Pipeline Progress
             </h2>
             <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
               {STAGES.map(stage => (
@@ -293,7 +304,7 @@ export function AgentCreateBook() {
         )}
 
         {/* Completion card */}
-        {isComplete && completedBookId && (
+        {isComplete && completion && (
           <div
             className="rounded-2xl overflow-hidden"
             style={{ border: `1px solid ${GOLD}44`, background: GOLD + "08" }}
@@ -302,61 +313,87 @@ export function AgentCreateBook() {
               <div className="flex items-center gap-2">
                 <span style={{ color: GOLD, fontSize: 20 }}>◆</span>
                 <h2 className="font-bold" style={{ color: GOLD }}>Book Created!</h2>
+                {completion.qaFailed && (
+                  <span className="text-xs px-2 py-0.5 rounded ml-auto" style={{ background: "#f59e0b22", color: "#f59e0b", border: "1px solid #f59e0b44" }}>
+                    QA partial
+                  </span>
+                )}
               </div>
-              {completedTitle && (
-                <p className="text-sm mt-1 font-medium text-white/80 line-clamp-2">"{completedTitle}"</p>
+              <p className="text-sm mt-1 font-semibold text-white/90 leading-snug">"{completion.title}"</p>
+              {completion.subtitle && (
+                <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.50)" }}>{completion.subtitle}</p>
               )}
             </div>
 
             <div className="p-6 space-y-5">
-              {/* Cover preview */}
-              {coverDataUrl && (
-                <div className="flex justify-center">
-                  <img
-                    src={coverDataUrl}
-                    alt="AI-generated cover art"
-                    className="rounded-xl shadow-lg"
-                    style={{ maxWidth: 200, maxHeight: 280, objectFit: "cover", border: `1px solid ${GOLD}44` }}
-                  />
-                </div>
-              )}
-
-              {/* Stage summary */}
-              <div className="grid grid-cols-2 gap-2">
-                {STAGES.map(stage => (
-                  <div
-                    key={stage.id}
-                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs"
-                    style={{ background: "#22c55e10", border: "1px solid #22c55e22" }}
-                  >
-                    <span style={{ color: "#22c55e" }}>✓</span>
-                    <span style={{ color: "rgba(255,255,255,0.60)" }}>{stage.label}</span>
+              {/* Spec details */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {completion.puzzleType && (
+                  <div className="rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    <span style={{ color: "rgba(255,255,255,0.40)" }}>Type</span>
+                    <p className="font-semibold text-white/80 mt-0.5">{completion.puzzleType}</p>
                   </div>
-                ))}
+                )}
+                {completion.puzzleCount !== undefined && (
+                  <div className="rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    <span style={{ color: "rgba(255,255,255,0.40)" }}>Puzzles</span>
+                    <p className="font-semibold text-white/80 mt-0.5">{completion.puzzleCount}</p>
+                  </div>
+                )}
+                {completion.theme && (
+                  <div className="rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    <span style={{ color: "rgba(255,255,255,0.40)" }}>Theme</span>
+                    <p className="font-semibold text-white/80 mt-0.5 capitalize">{completion.theme}</p>
+                  </div>
+                )}
+                {completion.descWordCount !== undefined && (
+                  <div className="rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    <span style={{ color: "rgba(255,255,255,0.40)" }}>Description</span>
+                    <p className="font-semibold text-white/80 mt-0.5">{completion.descWordCount} words</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Cover art indicator */}
+              <div className="flex items-center gap-2 text-xs rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                <span style={{ color: completion.hasCoverImage ? "#22c55e" : "rgba(255,255,255,0.3)" }}>
+                  {completion.hasCoverImage ? "✓" : "○"}
+                </span>
+                <span style={{ color: "rgba(255,255,255,0.55)" }}>
+                  {completion.hasCoverImage ? "AI-generated cover art saved" : "SVG theme art (no AI cover)"}
+                </span>
               </div>
 
               {/* Action buttons */}
               <div className="space-y-3 pt-1">
                 <button
-                  onClick={() => setLocation(`/books/${completedBookId}`)}
+                  onClick={() => setLocation(`/books/${completion.bookId}`)}
                   className="w-full py-3 rounded-xl text-black font-bold text-sm transition-all"
                   style={{ background: GOLD, boxShadow: `0 4px 16px ${GOLD}30` }}
                 >
-                  Open & Edit Book →
+                  Open &amp; Edit Book →
                 </button>
                 <button
-                  onClick={() => setLocation(`/generate/${completedBookId}`)}
+                  onClick={() => setLocation(`/generate/${completion.bookId}`)}
                   className="w-full py-3 rounded-xl font-bold text-sm transition-all"
                   style={{ background: "transparent", border: `1px solid ${GOLD}66`, color: GOLD }}
                 >
                   Generate PDFs →
                 </button>
                 <button
-                  onClick={handleReset}
-                  className="w-full py-2.5 rounded-xl text-sm transition-all"
-                  style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.40)" }}
+                  onClick={handleRegenerate}
+                  disabled={running}
+                  className="w-full py-2.5 rounded-xl text-sm transition-all disabled:opacity-40"
+                  style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.50)" }}
                 >
-                  Regenerate (new variation)
+                  ↺ Regenerate (new variation)
+                </button>
+                <button
+                  onClick={handleFullReset}
+                  className="w-full py-2 text-xs transition-all"
+                  style={{ color: "rgba(255,255,255,0.25)" }}
+                >
+                  Start over with new brief
                 </button>
               </div>
             </div>
@@ -368,10 +405,23 @@ export function AgentCreateBook() {
           <div className="text-center">
             <button
               onClick={() => { abortRef.current?.abort(); setRunning(false); }}
-              className="text-sm underline-offset-2 hover:underline transition-colors"
+              className="text-sm transition-colors hover:opacity-80"
               style={{ color: "rgba(255,255,255,0.30)" }}
             >
               Cancel
+            </button>
+          </div>
+        )}
+
+        {/* Error retry */}
+        {hasError && (
+          <div className="text-center space-y-2">
+            <button
+              onClick={() => runPipeline(briefRef.current)}
+              className="px-6 py-2.5 rounded-xl text-sm font-bold transition-all"
+              style={{ background: GOLD + "22", border: `1px solid ${GOLD}55`, color: GOLD }}
+            >
+              Retry Pipeline
             </button>
           </div>
         )}

@@ -98,11 +98,8 @@ Be strict but fair. Only flag genuine issues that would hurt sales or violate KD
     messages: [{ role: "user", content: prompt }],
   });
 
-  const text = message.content[0].type === "text" ? message.content[0].text : "{}";
-  try {
-    const raw = parseModelJson(text);
-    return QAResultSchema.parse(raw);
-  } catch {
-    return { passed: true, issues: [], needs_revision: false };
-  }
+  const text = message.content[0].type === "text" ? message.content[0].text : "";
+  if (!text) throw new Error("QA Reviewer returned empty response");
+  const raw = parseModelJson(text);
+  return QAResultSchema.parse(raw);
 }
