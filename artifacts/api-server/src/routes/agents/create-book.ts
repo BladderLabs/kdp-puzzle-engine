@@ -5,7 +5,7 @@ import { db, booksTable } from "@workspace/db";
 import { runMarketScout, type MarketScoutResult } from "../../lib/agents/market-scout";
 import { runContentArchitect, type ContentArchitectResult } from "../../lib/agents/content-architect";
 import { runCoverArtDirector } from "../../lib/agents/cover-art-director";
-import { runQAReviewer } from "../../lib/agents/qa-reviewer";
+import { runQAReviewer, type QAIssue } from "../../lib/agents/qa-reviewer";
 
 const router: IRouter = Router();
 
@@ -20,7 +20,12 @@ function emit(res: Response, stage: string, status: string, data: Record<string,
 /**
  * POST /agents/create-book
  * Multi-agent KDP book creation pipeline with SSE streaming.
- * Stages: market_scout → content_architect → [qa_review + optional revision + re-qa] → cover_art → assemble
+ * Pipeline order:
+ *   1. market_scout   — research niche & puzzle config
+ *   2. content_architect — title, subtitle, description, words
+ *   3. cover_art      — AI-generated illustration (hasImage determined here)
+ *   4. qa_review      — 6-check gate on final assembled spec incl. hasImage
+ *   5. assemble       — persist to DB, emit done event
  */
 router.post("/agents/create-book", async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
@@ -36,6 +41,7 @@ router.post("/agents/create-book", async (req, res) => {
   emit(res, "market_scout", "running", { message: "Scanning KDP niches and market data…" });
   try {
     market = await runMarketScout(brief);
+    req.log.info({ niche: market.niche, puzzleType: market.puzzleType }, "Market Scout done");
     emit(res, "market_scout", "done", {
       message: `Best opportunity: ${market.nicheLabel} ${market.puzzleType} (${market.largePrint ? "Large Print" : "Standard"})`,
       niche: market.niche,
@@ -67,6 +73,7 @@ router.post("/agents/create-book", async (req, res) => {
   emit(res, "content_architect", "running", { message: "Crafting title, description, and puzzle words…" });
   try {
     content = await runContentArchitect(market, brief);
+    req.log.info({ title: content.title }, "Content Architect done");
     emit(res, "content_architect", "done", {
       message: `Title: "${content.title}"`,
       title: content.title,
@@ -81,27 +88,55 @@ router.post("/agents/create-book", async (req, res) => {
     return;
   }
 
-  // ─── Stage 3: QA Review (with one optional revision + re-check) ───
-  emit(res, "qa_review", "running", { message: "Running 6 KDP quality checks…" });
+  // ─── Stage 3: Cover Art Director (before QA so QA gets real hasImage) ───
+  emit(res, "cover_art", "running", { message: `Generating AI cover illustration for ${market.theme} theme…` });
+  let coverImageDataUrl: string | null = null;
+  let hasCoverImage = false;
+  try {
+    const result = await runCoverArtDirector(market.theme, market.puzzleType, market.coverStyle, content.title);
+    if (result) {
+      coverImageDataUrl = `data:${result.mimeType};base64,${result.b64_json}`;
+      hasCoverImage = true;
+      req.log.info({ mimeType: result.mimeType, b64Length: result.b64_json.length }, "Cover Art done");
+      emit(res, "cover_art", "done", {
+        message: "Cover illustration generated",
+        hasImage: true,
+      });
+    } else {
+      req.log.info("Cover Art returned null — using SVG theme art");
+      emit(res, "cover_art", "done", { message: "Cover art skipped (using SVG theme art)", hasImage: false });
+    }
+  } catch (err) {
+    req.log.error({ err }, "Cover Art Director failed — degrading to SVG");
+    emit(res, "cover_art", "done", { message: "Cover art unavailable — using SVG theme art", hasImage: false });
+  }
 
-  const buildQASpec = (c: ContentSpec) => ({
+  // ─── Stage 4: QA Review (with actual hasImage + one optional revision + re-check) ───
+  const buildQASpec = (c: ContentArchitectResult) => ({
     title: c.title,
     subtitle: c.subtitle,
     backDescription: c.backDescription,
     puzzleCount: market.puzzleCount,
     keywords: market.keywords,
-    hasImage: true,
+    hasImage: hasCoverImage,
     words: c.words,
     author: c.author,
   });
 
   let qaFailed = false;
+  let finalQAIssues: QAIssue[] = [];
+  let finalQAPassed = false;
+
+  emit(res, "qa_review", "running", { message: "Running 6 KDP quality checks…" });
   try {
     const qaResult = await runQAReviewer(buildQASpec(content));
+    req.log.info({ passed: qaResult.passed, issues: qaResult.issues.length }, "QA first pass done");
 
     if (!qaResult.needs_revision) {
+      finalQAIssues = qaResult.issues;
+      finalQAPassed = qaResult.passed;
       emit(res, "qa_review", "done", {
-        message: `All 6 checks passed`,
+        message: "All 6 checks passed",
         passed: true,
         issues: [],
         checksCount: 6,
@@ -120,6 +155,7 @@ router.post("/agents/create-book", async (req, res) => {
       try {
         const issueDescriptions = qaResult.issues.map(i => `${i.field}: ${i.problem} — Fix: ${i.fix}`);
         content = await runContentArchitect(market, brief, issueDescriptions);
+        req.log.info({ title: content.title }, "Content revision done");
         emit(res, "content_architect", "done", {
           message: `Revised: "${content.title}"`,
           title: content.title,
@@ -131,8 +167,13 @@ router.post("/agents/create-book", async (req, res) => {
         // Re-run QA on revised content — strict, no fallback
         emit(res, "qa_review", "running", { message: "Re-checking revised content…" });
         const reQA = await runQAReviewer(buildQASpec(content));
+        req.log.info({ passed: reQA.passed, issues: reQA.issues.length }, "QA re-check done");
+        finalQAIssues = reQA.issues;
+        finalQAPassed = reQA.passed;
         emit(res, "qa_review", "done", {
-          message: reQA.passed ? "All checks passed after revision" : `${reQA.issues.length} issue(s) remain — proceeding with best effort`,
+          message: reQA.passed
+            ? "All checks passed after revision"
+            : `${reQA.issues.length} issue(s) remain — proceeding with best effort`,
           passed: reQA.passed,
           issues: reQA.issues,
           checksCount: 6,
@@ -141,6 +182,7 @@ router.post("/agents/create-book", async (req, res) => {
         req.log.error({ revErr }, "Revision or re-QA failed");
         emit(res, "content_architect", "failed", { message: "Revision failed. Using original content.", revision: true });
         emit(res, "qa_review", "failed", { message: "Re-check failed. Proceeding with original content.", issues: qaResult.issues });
+        finalQAIssues = qaResult.issues;
         qaFailed = true;
       }
     }
@@ -150,25 +192,6 @@ router.post("/agents/create-book", async (req, res) => {
     res.write(`data: ${JSON.stringify({ stage: "error", message: "QA Reviewer failed unexpectedly. Please try again." })}\n\n`);
     res.end();
     return;
-  }
-
-  // ─── Stage 4: Cover Art Director ───
-  emit(res, "cover_art", "running", { message: `Generating AI cover illustration for ${market.theme} theme…` });
-  let coverImageDataUrl: string | null = null;
-  try {
-    const result = await runCoverArtDirector(market.theme, market.puzzleType, market.coverStyle, content.title);
-    if (result) {
-      coverImageDataUrl = `data:${result.mimeType};base64,${result.b64_json}`;
-      emit(res, "cover_art", "done", {
-        message: "Cover illustration generated",
-        hasImage: true,
-      });
-    } else {
-      emit(res, "cover_art", "done", { message: "Cover art skipped (using SVG theme art)", hasImage: false });
-    }
-  } catch (err) {
-    req.log.error({ err }, "Cover Art Director failed");
-    emit(res, "cover_art", "done", { message: "Cover art unavailable — using SVG theme art", hasImage: false });
   }
 
   // ─── Stage 5: Assemble & Save ───
@@ -196,21 +219,31 @@ router.post("/agents/create-book", async (req, res) => {
       challengeDays: null,
     }).returning();
 
+    req.log.info({ bookId: book.id, title: book.title }, "Book assembled and saved");
+
     emit(res, "assemble", "done", { message: "Book saved to your library!" });
-    res.write(
-      `data: ${JSON.stringify({
-        stage: "done",
-        bookId: book.id,
-        title: content.title,
-        subtitle: content.subtitle,
-        puzzleType: market.puzzleType,
-        puzzleCount: market.puzzleCount,
-        theme: market.theme,
-        hasCoverImage: !!coverImageDataUrl,
-        qaFailed,
-        descWordCount: content.backDescription.trim().split(/\s+/).filter(Boolean).length,
-      })}\n\n`,
-    );
+
+    // Send full cover data URL in the done event so frontend can display it
+    // (only if present — omit to reduce payload size when no cover was generated)
+    const donePayload: Record<string, unknown> = {
+      stage: "done",
+      bookId: book.id,
+      title: content.title,
+      subtitle: content.subtitle,
+      puzzleType: market.puzzleType,
+      puzzleCount: market.puzzleCount,
+      theme: market.theme,
+      hasCoverImage,
+      qaFailed,
+      qaPassed: finalQAPassed,
+      qaIssues: finalQAIssues,
+      descWordCount: content.backDescription.trim().split(/\s+/).filter(Boolean).length,
+    };
+    if (coverImageDataUrl) {
+      donePayload.coverDataUrl = coverImageDataUrl;
+    }
+
+    res.write(`data: ${JSON.stringify(donePayload)}\n\n`);
   } catch (err) {
     req.log.error({ err }, "Failed to save book to DB");
     emit(res, "assemble", "failed", { message: "Failed to save book. Please try again." });

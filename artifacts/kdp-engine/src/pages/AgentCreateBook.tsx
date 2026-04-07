@@ -13,8 +13,8 @@ interface StageConfig {
 const STAGES: StageConfig[] = [
   { id: "market_scout", label: "Market Scout" },
   { id: "content_architect", label: "Content Architect" },
-  { id: "qa_review", label: "QA Reviewer" },
   { id: "cover_art", label: "Cover Art Director" },
+  { id: "qa_review", label: "QA Reviewer" },
   { id: "assemble", label: "Assembling" },
 ];
 
@@ -22,6 +22,12 @@ interface StageState {
   status: StageStatus;
   message: string;
   data: Record<string, unknown>;
+}
+
+interface QAIssue {
+  field: string;
+  problem: string;
+  fix: string;
 }
 
 interface CompletionInfo {
@@ -32,7 +38,10 @@ interface CompletionInfo {
   puzzleCount?: number;
   theme?: string;
   hasCoverImage: boolean;
+  coverDataUrl?: string;
   qaFailed: boolean;
+  qaPassed: boolean;
+  qaIssues: QAIssue[];
   descWordCount?: number;
 }
 
@@ -46,7 +55,16 @@ function StageRow({ stage, state }: { stage: StageConfig; state: StageState }) {
     ) : state.status === "failed" ? (
       <span style={{ color: "#ef4444", fontSize: 18 }}>✕</span>
     ) : state.status === "running" || state.status === "needs_revision" ? (
-      <span style={{ color: GOLD, fontSize: 16, animation: "spin 1s linear infinite" }}>↻</span>
+      <span
+        style={{
+          color: GOLD,
+          fontSize: 16,
+          display: "inline-block",
+          animation: "kdp-spin 1s linear infinite",
+        }}
+      >
+        ↻
+      </span>
     ) : (
       <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 18 }}>○</span>
     );
@@ -69,7 +87,10 @@ function StageRow({ stage, state }: { stage: StageConfig; state: StageState }) {
             {stage.label}
           </span>
           {state.status === "needs_revision" && (
-            <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "#f59e0b22", color: "#f59e0b", border: "1px solid #f59e0b44" }}>
+            <span
+              className="text-xs px-1.5 py-0.5 rounded"
+              style={{ background: "#f59e0b22", color: "#f59e0b", border: "1px solid #f59e0b44" }}
+            >
               Revising
             </span>
           )}
@@ -89,6 +110,53 @@ function StageRow({ stage, state }: { stage: StageConfig; state: StageState }) {
   );
 }
 
+const QA_CHECKS = [
+  "Title has 6+ words and is keyword-rich",
+  "Subtitle is a compelling benefit statement (8+ words)",
+  "Back description has 80+ words of sales copy",
+  "Puzzle count is 50 or more",
+  "Exactly 7 keywords provided",
+  "No placeholder or generic text detected",
+];
+
+function QAChecklist({ issues, passed }: { issues: QAIssue[]; passed: boolean }) {
+  const failedFields = new Set(issues.map(i => i.field));
+  const checkResults = QA_CHECKS.map((label, idx) => {
+    const fieldMap = ["title", "subtitle", "backDescription", "puzzleCount", "keywords", "placeholder"];
+    const field = fieldMap[idx];
+    const isFailed = failedFields.has(field ?? "");
+    const issue = issues.find(i => i.field === (field ?? ""));
+    return { label, isFailed, issue };
+  });
+
+  return (
+    <div className="space-y-1.5">
+      {checkResults.map(({ label, isFailed, issue }, idx) => (
+        <div key={idx} className="text-xs">
+          <div className="flex items-start gap-2">
+            <span style={{ color: isFailed ? "#ef4444" : "#22c55e", flexShrink: 0, marginTop: 1 }}>
+              {isFailed ? "✕" : "✓"}
+            </span>
+            <span style={{ color: isFailed ? "rgba(255,255,255,0.70)" : "rgba(255,255,255,0.45)" }}>
+              {label}
+            </span>
+          </div>
+          {issue && (
+            <p className="ml-5 mt-0.5" style={{ color: "#f59e0b", fontStyle: "italic" }}>
+              {issue.problem}
+            </p>
+          )}
+        </div>
+      ))}
+      {passed && (
+        <p className="text-xs mt-1 ml-5" style={{ color: "#22c55e" }}>
+          All quality checks passed ✓
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function AgentCreateBook() {
   const [, setLocation] = useLocation();
   const [brief, setBrief] = useState("");
@@ -99,98 +167,107 @@ export function AgentCreateBook() {
   const abortRef = useRef<AbortController | null>(null);
   const briefRef = useRef<string>("");
 
-  const updateStage = useCallback((stageId: string, patch: Partial<Omit<StageState, "data">> & { data?: Record<string, unknown> }) => {
-    setStages(prev => ({
-      ...prev,
-      [stageId]: {
-        ...prev[stageId],
-        ...patch,
-        data: { ...prev[stageId]?.data, ...(patch.data ?? {}) },
-      },
-    }));
-  }, []);
+  const updateStage = useCallback(
+    (stageId: string, patch: Partial<Omit<StageState, "data">> & { data?: Record<string, unknown> }) => {
+      setStages(prev => ({
+        ...prev,
+        [stageId]: {
+          ...prev[stageId],
+          ...patch,
+          data: { ...prev[stageId]?.data, ...(patch.data ?? {}) },
+        },
+      }));
+    },
+    [],
+  );
 
-  const runPipeline = useCallback(async (currentBrief: string) => {
-    setRunning(true);
-    setError(null);
-    setCompletion(null);
-    setStages(initStages());
+  const runPipeline = useCallback(
+    async (currentBrief: string) => {
+      setRunning(true);
+      setError(null);
+      setCompletion(null);
+      setStages(initStages());
 
-    const abort = new AbortController();
-    abortRef.current = abort;
+      const abort = new AbortController();
+      abortRef.current = abort;
 
-    try {
-      const res = await fetch("/api/agents/create-book", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brief: currentBrief.trim() || undefined }),
-        signal: abort.signal,
-      });
+      try {
+        const res = await fetch("/api/agents/create-book", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ brief: currentBrief.trim() || undefined }),
+          signal: abort.signal,
+        });
 
-      if (!res.ok || !res.body) {
-        throw new Error(`Server error ${res.status}`);
-      }
+        if (!res.ok || !res.body) {
+          throw new Error(`Server error ${res.status}`);
+        }
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let done_flag = false;
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let done_flag = false;
 
-      while (!done_flag) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
+        while (!done_flag) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
 
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
 
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          try {
-            const event = JSON.parse(line.slice(6)) as Record<string, unknown>;
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            try {
+              const event = JSON.parse(line.slice(6)) as Record<string, unknown>;
 
-            if (event.stage === "done" && typeof event.bookId === "number") {
-              setCompletion({
-                bookId: event.bookId,
-                title: typeof event.title === "string" ? event.title : "",
-                subtitle: typeof event.subtitle === "string" ? event.subtitle : undefined,
-                puzzleType: typeof event.puzzleType === "string" ? event.puzzleType : undefined,
-                puzzleCount: typeof event.puzzleCount === "number" ? event.puzzleCount : undefined,
-                theme: typeof event.theme === "string" ? event.theme : undefined,
-                hasCoverImage: event.hasCoverImage === true,
-                qaFailed: event.qaFailed === true,
-                descWordCount: typeof event.descWordCount === "number" ? event.descWordCount : undefined,
-              });
-              done_flag = true;
-              break;
+              if (event.stage === "done" && typeof event.bookId === "number") {
+                setCompletion({
+                  bookId: event.bookId,
+                  title: typeof event.title === "string" ? event.title : "",
+                  subtitle: typeof event.subtitle === "string" ? event.subtitle : undefined,
+                  puzzleType: typeof event.puzzleType === "string" ? event.puzzleType : undefined,
+                  puzzleCount: typeof event.puzzleCount === "number" ? event.puzzleCount : undefined,
+                  theme: typeof event.theme === "string" ? event.theme : undefined,
+                  hasCoverImage: event.hasCoverImage === true,
+                  coverDataUrl: typeof event.coverDataUrl === "string" ? event.coverDataUrl : undefined,
+                  qaFailed: event.qaFailed === true,
+                  qaPassed: event.qaPassed === true,
+                  qaIssues: Array.isArray(event.qaIssues) ? (event.qaIssues as QAIssue[]) : [],
+                  descWordCount: typeof event.descWordCount === "number" ? event.descWordCount : undefined,
+                });
+                done_flag = true;
+                break;
+              }
+
+              if (event.stage === "error") {
+                setError(typeof event.message === "string" ? event.message : "Pipeline error. Please retry.");
+                done_flag = true;
+                break;
+              }
+
+              if (typeof event.stage === "string" && typeof event.status === "string") {
+                const { stage, status, message, ...rest } = event;
+                updateStage(stage as string, {
+                  status: status as StageStatus,
+                  message: typeof message === "string" ? message : "",
+                  data: rest as Record<string, unknown>,
+                });
+              }
+            } catch {
             }
-
-            if (event.stage === "error") {
-              setError(typeof event.message === "string" ? event.message : "Pipeline error. Please retry.");
-              done_flag = true;
-              break;
-            }
-
-            if (typeof event.stage === "string" && typeof event.status === "string") {
-              const { stage, status, message, ...rest } = event;
-              updateStage(stage as string, {
-                status: status as StageStatus,
-                message: typeof message === "string" ? message : "",
-                data: rest as Record<string, unknown>,
-              });
-            }
-          } catch {
           }
         }
+      } catch (err: unknown) {
+        if ((err as { name?: string }).name !== "AbortError") {
+          setError((err as Error).message ?? "Connection error. Please retry.");
+        }
+      } finally {
+        setRunning(false);
       }
-    } catch (err: unknown) {
-      if ((err as { name?: string }).name !== "AbortError") {
-        setError((err as Error).message ?? "Connection error. Please retry.");
-      }
-    } finally {
-      setRunning(false);
-    }
-  }, [updateStage]);
+    },
+    [updateStage],
+  );
 
   const handleStart = () => {
     briefRef.current = brief;
@@ -216,7 +293,7 @@ export function AgentCreateBook() {
 
   return (
     <div className="min-h-screen">
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      <style>{`@keyframes kdp-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       <div className="max-w-2xl mx-auto px-4 py-10 space-y-8">
 
         {/* Header */}
@@ -228,16 +305,26 @@ export function AgentCreateBook() {
           </p>
         </div>
 
-        {/* Input card — only show when idle and not yet complete */}
+        {/* Input card — show only when idle, no completion */}
         {!running && !isComplete && (
           <div
             className="rounded-2xl p-6 space-y-4"
             style={{ background: "#0f0f0f", border: "1px solid rgba(255,255,255,0.08)" }}
           >
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,0.40)" }}>
+              <label
+                className="block text-xs font-semibold uppercase tracking-widest mb-2"
+                style={{ color: "rgba(255,255,255,0.40)" }}
+              >
                 Book idea{" "}
-                <span style={{ color: "rgba(255,255,255,0.25)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
+                <span
+                  style={{
+                    color: "rgba(255,255,255,0.25)",
+                    fontWeight: 400,
+                    textTransform: "none",
+                    letterSpacing: 0,
+                  }}
+                >
                   (optional — leave blank for AI-driven market choice)
                 </span>
               </label>
@@ -261,7 +348,10 @@ export function AgentCreateBook() {
             </div>
 
             {hasError && (
-              <div className="rounded-lg px-4 py-3 text-sm" style={{ background: "#ef444415", border: "1px solid #ef444430", color: "#ef4444" }}>
+              <div
+                className="rounded-lg px-4 py-3 text-sm"
+                style={{ background: "#ef444415", border: "1px solid #ef444430", color: "#ef4444" }}
+              >
                 {error}
               </div>
             )}
@@ -275,18 +365,21 @@ export function AgentCreateBook() {
             </button>
 
             <p className="text-center text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>
-              Uses Replit AI credits · Market Scout → Content Architect → QA → Cover Art → Assemble
+              Uses Replit AI credits · Market Scout → Content Architect → Cover Art → QA → Assemble
             </p>
           </div>
         )}
 
-        {/* Pipeline progress — show while running or after any non-fresh state */}
+        {/* Pipeline progress */}
         {(running || isComplete || hasError) && (
           <div
             className="rounded-2xl p-6"
             style={{ background: "#0f0f0f", border: "1px solid rgba(255,255,255,0.08)" }}
           >
-            <h2 className="text-xs font-bold mb-4 uppercase tracking-widest" style={{ color: GOLD + "99" }}>
+            <h2
+              className="text-xs font-bold mb-4 uppercase tracking-widest"
+              style={{ color: GOLD + "99" }}
+            >
               Pipeline Progress
             </h2>
             <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
@@ -296,7 +389,10 @@ export function AgentCreateBook() {
             </div>
 
             {hasError && (
-              <div className="mt-4 rounded-lg px-4 py-3 text-sm" style={{ background: "#ef444415", border: "1px solid #ef444430", color: "#ef4444" }}>
+              <div
+                className="mt-4 rounded-lg px-4 py-3 text-sm"
+                style={{ background: "#ef444415", border: "1px solid #ef444430", color: "#ef4444" }}
+              >
                 {error}
               </div>
             )}
@@ -309,59 +405,114 @@ export function AgentCreateBook() {
             className="rounded-2xl overflow-hidden"
             style={{ border: `1px solid ${GOLD}44`, background: GOLD + "08" }}
           >
-            <div className="px-6 py-4" style={{ background: GOLD + "15", borderBottom: `1px solid ${GOLD}30` }}>
+            {/* Header */}
+            <div
+              className="px-6 py-4"
+              style={{ background: GOLD + "15", borderBottom: `1px solid ${GOLD}30` }}
+            >
               <div className="flex items-center gap-2">
                 <span style={{ color: GOLD, fontSize: 20 }}>◆</span>
-                <h2 className="font-bold" style={{ color: GOLD }}>Book Created!</h2>
+                <h2 className="font-bold" style={{ color: GOLD }}>
+                  Book Created!
+                </h2>
                 {completion.qaFailed && (
-                  <span className="text-xs px-2 py-0.5 rounded ml-auto" style={{ background: "#f59e0b22", color: "#f59e0b", border: "1px solid #f59e0b44" }}>
+                  <span
+                    className="text-xs px-2 py-0.5 rounded ml-auto"
+                    style={{ background: "#f59e0b22", color: "#f59e0b", border: "1px solid #f59e0b44" }}
+                  >
                     QA partial
                   </span>
                 )}
               </div>
-              <p className="text-sm mt-1 font-semibold text-white/90 leading-snug">"{completion.title}"</p>
+              <p className="text-sm mt-1 font-semibold text-white/90 leading-snug">
+                "{completion.title}"
+              </p>
               {completion.subtitle && (
-                <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.50)" }}>{completion.subtitle}</p>
+                <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.50)" }}>
+                  {completion.subtitle}
+                </p>
               )}
             </div>
 
-            <div className="p-6 space-y-5">
+            <div className="p-6 space-y-6">
+              {/* Cover image preview */}
+              {completion.coverDataUrl && (
+                <div className="flex justify-center">
+                  <img
+                    src={completion.coverDataUrl}
+                    alt={`AI-generated cover art for "${completion.title}"`}
+                    className="rounded-xl shadow-lg"
+                    style={{
+                      maxWidth: 220,
+                      maxHeight: 300,
+                      objectFit: "cover",
+                      border: `1px solid ${GOLD}44`,
+                    }}
+                  />
+                </div>
+              )}
+              {!completion.coverDataUrl && (
+                <div
+                  className="flex items-center justify-center rounded-xl py-6 text-sm"
+                  style={{
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px dashed rgba(255,255,255,0.12)",
+                    color: "rgba(255,255,255,0.35)",
+                  }}
+                >
+                  SVG theme art · {completion.theme ?? "default"} theme
+                </div>
+              )}
+
               {/* Spec details */}
               <div className="grid grid-cols-2 gap-2 text-xs">
                 {completion.puzzleType && (
-                  <div className="rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <span style={{ color: "rgba(255,255,255,0.40)" }}>Type</span>
+                  <div
+                    className="rounded-lg px-3 py-2"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                  >
+                    <span style={{ color: "rgba(255,255,255,0.40)" }}>Puzzle Type</span>
                     <p className="font-semibold text-white/80 mt-0.5">{completion.puzzleType}</p>
                   </div>
                 )}
                 {completion.puzzleCount !== undefined && (
-                  <div className="rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <span style={{ color: "rgba(255,255,255,0.40)" }}>Puzzles</span>
+                  <div
+                    className="rounded-lg px-3 py-2"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                  >
+                    <span style={{ color: "rgba(255,255,255,0.40)" }}>Puzzle Count</span>
                     <p className="font-semibold text-white/80 mt-0.5">{completion.puzzleCount}</p>
                   </div>
                 )}
                 {completion.theme && (
-                  <div className="rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <div
+                    className="rounded-lg px-3 py-2"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                  >
                     <span style={{ color: "rgba(255,255,255,0.40)" }}>Theme</span>
                     <p className="font-semibold text-white/80 mt-0.5 capitalize">{completion.theme}</p>
                   </div>
                 )}
                 {completion.descWordCount !== undefined && (
-                  <div className="rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <div
+                    className="rounded-lg px-3 py-2"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                  >
                     <span style={{ color: "rgba(255,255,255,0.40)" }}>Description</span>
                     <p className="font-semibold text-white/80 mt-0.5">{completion.descWordCount} words</p>
                   </div>
                 )}
               </div>
 
-              {/* Cover art indicator */}
-              <div className="flex items-center gap-2 text-xs rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                <span style={{ color: completion.hasCoverImage ? "#22c55e" : "rgba(255,255,255,0.3)" }}>
-                  {completion.hasCoverImage ? "✓" : "○"}
-                </span>
-                <span style={{ color: "rgba(255,255,255,0.55)" }}>
-                  {completion.hasCoverImage ? "AI-generated cover art saved" : "SVG theme art (no AI cover)"}
-                </span>
+              {/* QA Checklist */}
+              <div>
+                <h3
+                  className="text-xs font-bold uppercase tracking-widest mb-3"
+                  style={{ color: completion.qaPassed ? "#22c55e99" : "#f59e0b99" }}
+                >
+                  Quality Checklist
+                </h3>
+                <QAChecklist issues={completion.qaIssues} passed={completion.qaPassed} />
               </div>
 
               {/* Action buttons */}
@@ -384,7 +535,11 @@ export function AgentCreateBook() {
                   onClick={handleRegenerate}
                   disabled={running}
                   className="w-full py-2.5 rounded-xl text-sm transition-all disabled:opacity-40"
-                  style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.50)" }}
+                  style={{
+                    background: "transparent",
+                    border: "1px solid rgba(255,255,255,0.10)",
+                    color: "rgba(255,255,255,0.50)",
+                  }}
                 >
                   ↺ Regenerate (new variation)
                 </button>
@@ -404,7 +559,10 @@ export function AgentCreateBook() {
         {running && (
           <div className="text-center">
             <button
-              onClick={() => { abortRef.current?.abort(); setRunning(false); }}
+              onClick={() => {
+                abortRef.current?.abort();
+                setRunning(false);
+              }}
               className="text-sm transition-colors hover:opacity-80"
               style={{ color: "rgba(255,255,255,0.30)" }}
             >
@@ -415,7 +573,7 @@ export function AgentCreateBook() {
 
         {/* Error retry */}
         {hasError && (
-          <div className="text-center space-y-2">
+          <div className="text-center">
             <button
               onClick={() => runPipeline(briefRef.current)}
               className="px-6 py-2.5 rounded-xl text-sm font-bold transition-all"
