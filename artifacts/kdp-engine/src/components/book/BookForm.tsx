@@ -501,7 +501,17 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
                 {/* Back description */}
                 <FormField control={form.control} name="backDescription" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Back Cover Description</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Back Cover Description</FormLabel>
+                      <button
+                        type="button"
+                        title="Regenerate description from current settings"
+                        className="text-xs text-amber-500 hover:text-amber-400 flex items-center gap-1 leading-none"
+                        onClick={() => { const t = generateDescTemplate(); lastGeneratedRef.current = t; field.onChange(t); }}
+                      >
+                        ↺ Refresh
+                      </button>
+                    </div>
                     <FormControl>
                       <Textarea
                         className="h-28 text-sm"

@@ -889,37 +889,322 @@ function buildThemeCoverArt(theme: string, ac: string, bg: string): string {
   switch (theme) {
 
     case "midnight":
-      return `<div style="${cs}"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><rect width="432" height="384" fill="${bg}"/><circle cx="38" cy="42" r="1.8" fill="${ac}" fill-opacity="0.85"/><circle cx="88" cy="18" r="1.2" fill="${ac}" fill-opacity="0.7"/><circle cx="148" cy="52" r="2.2" fill="${ac}" fill-opacity="0.9"/><circle cx="196" cy="24" r="1.5" fill="${ac}" fill-opacity="0.65"/><circle cx="270" cy="38" r="1.8" fill="${ac}" fill-opacity="0.75"/><circle cx="338" cy="16" r="1.2" fill="${ac}" fill-opacity="0.6"/><circle cx="398" cy="46" r="1.8" fill="${ac}" fill-opacity="0.8"/><circle cx="62" cy="92" r="1.2" fill="${ac}" fill-opacity="0.5"/><circle cx="315" cy="78" r="1.5" fill="${ac}" fill-opacity="0.6"/><circle cx="418" cy="68" r="1" fill="${ac}" fill-opacity="0.5"/><circle cx="175" cy="72" r="1" fill="${ac}" fill-opacity="0.55"/><circle cx="195" cy="188" r="108" fill="${ac}" fill-opacity="0.92"/><circle cx="248" cy="158" r="92" fill="${bg}"/><circle cx="195" cy="188" r="126" fill="none" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.18"/><circle cx="195" cy="188" r="148" fill="none" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.1"/><ellipse cx="216" cy="355" rx="200" ry="22" fill="${ac}" fill-opacity="0.06"/></svg></div>`;
+      // Deep-space atmosphere: radial gradient sky, crescent with penumbra, 45 stars, orbital rings, ground glow
+      return `<div style="${cs}"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;">
+<defs>
+  <radialGradient id="midSky" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="#1a2a4a"/><stop offset="60%" stop-color="${bg}"/><stop offset="100%" stop-color="#05080f"/></radialGradient>
+  <radialGradient id="midGlow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="${ac}" stop-opacity="0.18"/><stop offset="100%" stop-color="${ac}" stop-opacity="0"/></radialGradient>
+  <radialGradient id="midGroundGlow" cx="50%" cy="0%" r="80%"><stop offset="0%" stop-color="${ac}" stop-opacity="0.12"/><stop offset="100%" stop-color="${ac}" stop-opacity="0"/></radialGradient>
+</defs>
+<rect width="432" height="384" fill="url(#midSky)"/>
+<ellipse cx="216" cy="370" rx="280" ry="40" fill="url(#midGroundGlow)"/>
+<circle cx="195" cy="172" r="130" fill="url(#midGlow)"/>
+<circle cx="195" cy="172" r="100" fill="${ac}" fill-opacity="0.88"/>
+<circle cx="248" cy="144" r="86" fill="#0a1628"/>
+<circle cx="195" cy="172" r="118" fill="none" stroke="${ac}" stroke-width="1.2" stroke-opacity="0.22"/>
+<circle cx="195" cy="172" r="140" fill="none" stroke="${ac}" stroke-width="0.6" stroke-opacity="0.12"/>
+<circle cx="195" cy="172" r="162" fill="none" stroke="${ac}" stroke-width="0.4" stroke-opacity="0.07"/>
+<circle cx="38" cy="28" r="2.2" fill="${ac}" fill-opacity="0.90"/><circle cx="72" cy="14" r="1.4" fill="${ac}" fill-opacity="0.75"/><circle cx="118" cy="40" r="1.8" fill="${ac}" fill-opacity="0.85"/><circle cx="160" cy="18" r="1.2" fill="${ac}" fill-opacity="0.65"/><circle cx="198" cy="8" r="2.0" fill="${ac}" fill-opacity="0.80"/><circle cx="240" cy="30" r="1.5" fill="${ac}" fill-opacity="0.70"/><circle cx="292" cy="12" r="1.8" fill="${ac}" fill-opacity="0.78"/><circle cx="338" cy="22" r="1.2" fill="${ac}" fill-opacity="0.60"/><circle cx="376" cy="36" r="2.0" fill="${ac}" fill-opacity="0.82"/><circle cx="412" cy="10" r="1.4" fill="${ac}" fill-opacity="0.68"/><circle cx="55" cy="58" r="1.0" fill="${ac}" fill-opacity="0.55"/><circle cx="98" cy="72" r="1.6" fill="${ac}" fill-opacity="0.62"/><circle cx="142" cy="64" r="1.2" fill="${ac}" fill-opacity="0.58"/><circle cx="318" cy="58" r="1.4" fill="${ac}" fill-opacity="0.64"/><circle cx="362" cy="68" r="1.0" fill="${ac}" fill-opacity="0.52"/><circle cx="396" cy="50" r="1.8" fill="${ac}" fill-opacity="0.72"/><circle cx="22" cy="90" r="1.2" fill="${ac}" fill-opacity="0.48"/><circle cx="416" cy="82" r="1.4" fill="${ac}" fill-opacity="0.56"/><circle cx="14" cy="140" r="1.0" fill="${ac}" fill-opacity="0.44"/><circle cx="420" cy="118" r="1.2" fill="${ac}" fill-opacity="0.50"/><circle cx="28" cy="200" r="0.8" fill="${ac}" fill-opacity="0.40"/><circle cx="418" cy="180" r="1.0" fill="${ac}" fill-opacity="0.42"/><circle cx="66" cy="340" r="1.4" fill="${ac}" fill-opacity="0.38"/><circle cx="355" cy="320" r="1.2" fill="${ac}" fill-opacity="0.36"/><circle cx="20" cy="300" r="1.0" fill="${ac}" fill-opacity="0.34"/><circle cx="410" cy="290" r="1.0" fill="${ac}" fill-opacity="0.32"/><circle cx="108" cy="350" r="0.8" fill="${ac}" fill-opacity="0.30"/><circle cx="296" cy="356" r="1.2" fill="${ac}" fill-opacity="0.34"/><circle cx="176" cy="358" r="0.8" fill="${ac}" fill-opacity="0.28"/><circle cx="252" cy="344" r="1.0" fill="${ac}" fill-opacity="0.32"/><circle cx="388" cy="330" r="1.4" fill="${ac}" fill-opacity="0.36"/><circle cx="44" cy="278" r="0.8" fill="${ac}" fill-opacity="0.30"/><circle cx="152" cy="372" r="0.8" fill="${ac}" fill-opacity="0.26"/><circle cx="320" cy="372" r="1.0" fill="${ac}" fill-opacity="0.28"/><circle cx="215" cy="375" r="0.6" fill="${ac}" fill-opacity="0.24"/>
+<ellipse cx="216" cy="378" rx="210" ry="18" fill="${ac}" fill-opacity="0.07"/>
+</svg></div>`;
 
     case "forest":
-      return `<div style="${cs}"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><rect width="432" height="384" fill="${bg}"/><rect width="432" height="384" fill="${ac}" fill-opacity="0.04"/><polygon points="72,12 0,272 144,272" fill="${ac}" fill-opacity="0.58"/><polygon points="72,62 8,238 136,238" fill="${bg}" fill-opacity="0.22"/><rect x="62" y="272" width="18" height="112" fill="${ac}" fill-opacity="0.65"/><polygon points="216,0 90,295 342,295" fill="${ac}" fill-opacity="0.72"/><polygon points="216,55 118,270 314,270" fill="${bg}" fill-opacity="0.20"/><rect x="206" y="295" width="20" height="89" fill="${ac}" fill-opacity="0.70"/><polygon points="360,18 288,272 432,272" fill="${ac}" fill-opacity="0.58"/><polygon points="360,68 300,244 420,244" fill="${bg}" fill-opacity="0.20"/><rect x="350" y="272" width="18" height="112" fill="${ac}" fill-opacity="0.65"/><rect x="0" y="340" width="432" height="44" fill="${ac}" fill-opacity="0.10"/></svg></div>`;
+      // Layered pine forest: gradient sky, 3 depth layers of trees, ground fog band, moon peeking through
+      return `<div style="${cs}"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;">
+<defs>
+  <linearGradient id="fstSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1a2e12"/><stop offset="55%" stop-color="${bg}"/><stop offset="100%" stop-color="#2a3a1a"/></linearGradient>
+  <linearGradient id="fstGround" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${ac}" stop-opacity="0.28"/><stop offset="100%" stop-color="${ac}" stop-opacity="0.05"/></linearGradient>
+  <radialGradient id="fstMoon" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="${ac}" stop-opacity="0.92"/><stop offset="80%" stop-color="${ac}" stop-opacity="0.60"/><stop offset="100%" stop-color="${ac}" stop-opacity="0"/></radialGradient>
+</defs>
+<rect width="432" height="384" fill="url(#fstSky)"/>
+<circle cx="216" cy="72" r="42" fill="url(#fstMoon)" fill-opacity="0.75"/>
+<circle cx="216" cy="72" r="50" fill="none" stroke="${ac}" stroke-width="1" stroke-opacity="0.18"/>
+<polygon points="52,310 8,384 96,384" fill="${ac}" fill-opacity="0.22"/><polygon points="52,330 20,384 84,384" fill="${bg}" fill-opacity="0.15"/>
+<polygon points="108,295 68,384 148,384" fill="${ac}" fill-opacity="0.24"/><polygon points="108,316 78,384 138,384" fill="${bg}" fill-opacity="0.12"/>
+<polygon points="164,305 126,384 202,384" fill="${ac}" fill-opacity="0.22"/><polygon points="164,322 136,384 192,384" fill="${bg}" fill-opacity="0.12"/>
+<polygon points="268,295 230,384 306,384" fill="${ac}" fill-opacity="0.22"/><polygon points="268,315 242,384 294,384" fill="${bg}" fill-opacity="0.12"/>
+<polygon points="328,300 290,384 366,384" fill="${ac}" fill-opacity="0.24"/><polygon points="328,318 300,384 356,384" fill="${bg}" fill-opacity="0.12"/>
+<polygon points="386,308 350,384 422,384" fill="${ac}" fill-opacity="0.22"/>
+<polygon points="32,220 -20,340 84,340" fill="${ac}" fill-opacity="0.42"/><polygon points="32,246 5,318 59,318" fill="${bg}" fill-opacity="0.20"/><rect x="24" y="340" width="16" height="44" fill="${ac}" fill-opacity="0.50"/>
+<polygon points="136,200 72,340 200,340" fill="${ac}" fill-opacity="0.52"/><polygon points="136,228 90,318 182,318" fill="${bg}" fill-opacity="0.22"/><rect x="128" y="340" width="18" height="44" fill="${ac}" fill-opacity="0.55"/>
+<polygon points="296,200 232,340 360,340" fill="${ac}" fill-opacity="0.52"/><polygon points="296,228 250,318 342,318" fill="${bg}" fill-opacity="0.22"/><rect x="288" y="340" width="18" height="44" fill="${ac}" fill-opacity="0.55"/>
+<polygon points="400,210 350,340 450,340" fill="${ac}" fill-opacity="0.45"/><polygon points="400,236 360,318 440,318" fill="${bg}" fill-opacity="0.20"/>
+<polygon points="80,130 2,312 158,312" fill="${ac}" fill-opacity="0.68"/><polygon points="80,165 20,295 140,295" fill="${bg}" fill-opacity="0.26"/><rect x="72" y="312" width="20" height="72" fill="${ac}" fill-opacity="0.72"/>
+<polygon points="216,100 114,312 318,312" fill="${ac}" fill-opacity="0.75"/><polygon points="216,138 132,295 300,295" fill="${bg}" fill-opacity="0.26"/><rect x="207" y="312" width="22" height="72" fill="${ac}" fill-opacity="0.78"/>
+<polygon points="352,130 274,312 430,312" fill="${ac}" fill-opacity="0.68"/><polygon points="352,165 282,295 422,295" fill="${bg}" fill-opacity="0.24"/><rect x="344" y="312" width="20" height="72" fill="${ac}" fill-opacity="0.72"/>
+<rect x="0" y="340" width="432" height="44" fill="url(#fstGround)"/>
+<rect x="0" y="348" width="432" height="36" fill="${ac}" fill-opacity="0.06"/>
+</svg></div>`;
 
     case "crimson":
-      return `<div style="${cs}"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><rect width="432" height="384" fill="${bg}"/><ellipse cx="216" cy="365" rx="140" ry="28" fill="${ac}" fill-opacity="0.22"/><path d="M216,375 C148,345 85,300 108,240 C122,205 154,218 144,178 C136,148 118,132 130,95 C142,60 178,42 216,58 C254,42 290,60 302,95 C314,132 296,148 288,178 C278,218 310,205 324,240 C347,300 284,345 216,375 Z" fill="${ac}" fill-opacity="0.80"/><path d="M216,355 C172,330 132,295 150,248 C160,222 182,232 175,198 C170,174 158,162 166,132 C174,105 196,94 216,106 C236,94 258,105 266,132 C274,162 262,174 257,198 C250,232 272,222 282,248 C300,295 260,330 216,355 Z" fill="${ac}" fill-opacity="0.45"/><ellipse cx="216" cy="310" rx="38" ry="52" fill="white" fill-opacity="0.10"/></svg></div>`;
+      // Multi-layer flame: outer glow, main body, hot core, bright tip, embers, dark vignette
+      return `<div style="${cs}"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;">
+<defs>
+  <radialGradient id="criVig" cx="50%" cy="50%" r="60%"><stop offset="0%" stop-color="${bg}" stop-opacity="0"/><stop offset="100%" stop-color="#0a0000" stop-opacity="0.65"/></radialGradient>
+  <radialGradient id="criBase" cx="50%" cy="90%" r="55%"><stop offset="0%" stop-color="${ac}" stop-opacity="0.30"/><stop offset="100%" stop-color="${ac}" stop-opacity="0"/></radialGradient>
+  <radialGradient id="criGlow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="white" stop-opacity="0.22"/><stop offset="100%" stop-color="${ac}" stop-opacity="0"/></radialGradient>
+</defs>
+<rect width="432" height="384" fill="${bg}"/>
+<ellipse cx="216" cy="370" rx="160" ry="30" fill="url(#criBase)"/>
+<path d="M216,378 C138,350 62,296 92,222 C108,182 148,198 136,152 C126,116 104,98 118,58 C130,24 168,8 216,24 C264,8 302,24 314,58 C328,98 306,116 296,152 C284,198 324,182 340,222 C370,296 294,350 216,378 Z" fill="${ac}" fill-opacity="0.72"/>
+<path d="M216,360 C156,336 106,292 128,232 C140,200 168,212 160,172 C154,144 138,128 148,95 C158,66 186,52 216,64 C246,52 274,66 284,95 C294,128 278,144 272,172 C264,212 292,200 304,232 C326,292 276,336 216,360 Z" fill="${ac}" fill-opacity="0.55"/>
+<path d="M216,335 C178,316 148,286 162,246 C170,222 188,230 184,204 C180,182 170,170 176,148 C182,128 198,118 216,126 C234,118 250,128 256,148 C262,170 252,182 248,204 C244,230 262,222 270,246 C284,286 254,316 216,335 Z" fill="${ac}" fill-opacity="0.38"/>
+<path d="M216,295 C196,280 178,260 186,232 C190,216 202,222 200,204 C198,190 192,182 196,166 C200,152 208,146 216,150 C224,146 232,152 236,166 C240,182 234,190 232,204 C230,222 242,216 246,232 C254,260 236,280 216,295 Z" fill="white" fill-opacity="0.14"/>
+<ellipse cx="216" cy="150" rx="18" ry="28" fill="white" fill-opacity="0.10"/>
+<circle cx="148" cy="310" r="3" fill="${ac}" fill-opacity="0.72"/><circle cx="138" cy="290" r="2" fill="${ac}" fill-opacity="0.55"/><circle cx="158" cy="275" r="1.5" fill="${ac}" fill-opacity="0.45"/><circle cx="284" cy="310" r="2.5" fill="${ac}" fill-opacity="0.65"/><circle cx="294" cy="288" r="2" fill="${ac}" fill-opacity="0.50"/><circle cx="276" cy="272" r="1.5" fill="${ac}" fill-opacity="0.42"/><circle cx="120" cy="250" r="1.5" fill="${ac}" fill-opacity="0.40"/><circle cx="312" cy="250" r="1.5" fill="${ac}" fill-opacity="0.38"/><circle cx="96" cy="200" r="1.2" fill="${ac}" fill-opacity="0.35"/><circle cx="336" cy="195" r="1.2" fill="${ac}" fill-opacity="0.32"/><circle cx="175" cy="70" r="1.2" fill="${ac}" fill-opacity="0.50"/><circle cx="258" cy="65" r="1.0" fill="${ac}" fill-opacity="0.44"/><circle cx="196" cy="45" r="0.8" fill="${ac}" fill-opacity="0.38"/>
+<ellipse cx="216" cy="192" rx="216" ry="192" fill="url(#criVig)"/>
+<rect width="432" height="384" fill="url(#criGlow)"/>
+</svg></div>`;
 
     case "ocean":
-      return `<div style="${cs};background:#C8E8F8;"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><rect width="432" height="384" fill="#C8E8F8"/><circle cx="345" cy="62" r="55" fill="${ac}" fill-opacity="0.90"/><circle cx="345" cy="62" r="68" fill="none" stroke="${ac}" stroke-width="2" stroke-opacity="0.25"/><circle cx="345" cy="62" r="80" fill="none" stroke="${ac}" stroke-width="1" stroke-opacity="0.14"/><path d="M0,195 Q54,160 108,195 Q162,230 216,195 Q270,160 324,195 Q378,230 432,195 L432,384 L0,384 Z" fill="${ac}" fill-opacity="0.30"/><path d="M0,235 Q54,200 108,235 Q162,270 216,235 Q270,200 324,235 Q378,270 432,235 L432,384 L0,384 Z" fill="${ac}" fill-opacity="0.45"/><path d="M0,275 Q54,240 108,275 Q162,310 216,275 Q270,240 324,275 Q378,310 432,275 L432,384 L0,384 Z" fill="${ac}" fill-opacity="0.65"/><path d="M 60,155 L 70,145 L 80,155" fill="none" stroke="${ac}" stroke-width="1.8" stroke-opacity="0.50"/><path d="M 95,138 L 108,126 L 121,138" fill="none" stroke="${ac}" stroke-width="1.8" stroke-opacity="0.42"/></svg></div>`;
+      // Ocean: gradient sky, 5 wave layers, moon reflection streak, foam crests, birds
+      return `<div style="${cs};background:#B8D8F0;"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;">
+<defs>
+  <linearGradient id="ocnSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1a3a5c"/><stop offset="40%" stop-color="#2e6490"/><stop offset="70%" stop-color="#6aaedd"/><stop offset="100%" stop-color="#a8d0ec"/></linearGradient>
+  <linearGradient id="ocnWave1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${ac}" stop-opacity="0.32"/><stop offset="100%" stop-color="${ac}" stop-opacity="0.55"/></linearGradient>
+  <linearGradient id="ocnWave2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${ac}" stop-opacity="0.50"/><stop offset="100%" stop-color="${ac}" stop-opacity="0.72"/></linearGradient>
+  <radialGradient id="ocnMoon" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="${ac}" stop-opacity="0.95"/><stop offset="100%" stop-color="${ac}" stop-opacity="0.40"/></radialGradient>
+</defs>
+<rect width="432" height="384" fill="url(#ocnSky)"/>
+<circle cx="340" cy="68" r="52" fill="url(#ocnMoon)"/>
+<circle cx="340" cy="68" r="62" fill="none" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.22"/>
+<circle cx="340" cy="68" r="75" fill="none" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.12"/>
+<rect x="318" y="120" width="44" height="160" fill="${ac}" fill-opacity="0.08"/>
+<path d="M0,190 Q54,158 108,190 Q162,222 216,190 Q270,158 324,190 Q378,222 432,190 L432,384 L0,384 Z" fill="url(#ocnWave1)"/>
+<path d="M0,222 Q54,192 108,222 Q162,252 216,222 Q270,192 324,222 Q378,252 432,222 L432,384 L0,384 Z" fill="${ac}" fill-opacity="0.40"/>
+<path d="M0,252 Q54,222 108,252 Q162,282 216,252 Q270,222 324,252 Q378,282 432,252 L432,384 L0,384 Z" fill="${ac}" fill-opacity="0.52"/>
+<path d="M0,282 Q54,252 108,282 Q162,312 216,282 Q270,252 324,282 Q378,312 432,282 L432,384 L0,384 Z" fill="url(#ocnWave2)"/>
+<path d="M0,312 Q54,284 108,312 Q162,340 216,312 Q270,284 324,312 Q378,340 432,312 L432,384 L0,384 Z" fill="${ac}" fill-opacity="0.82"/>
+<path d="M20,252 Q30,245 40,252" fill="none" stroke="white" stroke-width="1.8" stroke-opacity="0.65" stroke-linecap="round"/>
+<path d="M60,244 Q72,237 84,244" fill="none" stroke="white" stroke-width="1.5" stroke-opacity="0.55" stroke-linecap="round"/>
+<path d="M108,248 Q120,241 132,248" fill="none" stroke="white" stroke-width="1.5" stroke-opacity="0.55" stroke-linecap="round"/>
+<path d="M160,250 Q170,244 180,250" fill="none" stroke="white" stroke-width="1.8" stroke-opacity="0.60" stroke-linecap="round"/>
+<path d="M280,250 Q292,243 304,250" fill="none" stroke="white" stroke-width="1.5" stroke-opacity="0.55" stroke-linecap="round"/>
+<path d="M348,244 Q360,237 372,244" fill="none" stroke="white" stroke-width="1.5" stroke-opacity="0.52" stroke-linecap="round"/>
+<path d="M390,248 Q400,242 410,248" fill="none" stroke="white" stroke-width="1.8" stroke-opacity="0.58" stroke-linecap="round"/>
+<path d="M52,148 L65,136 L78,148" fill="none" stroke="${ac}" stroke-width="2" stroke-opacity="0.55" stroke-linejoin="round"/>
+<path d="M88,134 L104,120 L120,134" fill="none" stroke="${ac}" stroke-width="2" stroke-opacity="0.48" stroke-linejoin="round"/>
+<path d="M125,148 L138,138 L151,148" fill="none" stroke="${ac}" stroke-width="1.8" stroke-opacity="0.42" stroke-linejoin="round"/>
+</svg></div>`;
 
     case "violet":
-      return `<div style="${cs}"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><rect width="432" height="384" fill="${bg}"/><polygon points="216,55 360,195 216,368 72,195" fill="${ac}" fill-opacity="0.70"/><polygon points="216,55 360,195 216,195" fill="white" fill-opacity="0.12"/><polygon points="216,55 72,195 216,195" fill="${bg}" fill-opacity="0.18"/><polygon points="216,368 360,195 216,195" fill="${bg}" fill-opacity="0.15"/><polygon points="216,368 72,195 216,195" fill="white" fill-opacity="0.08"/><line x1="216" y1="55" x2="216" y2="368" stroke="white" stroke-width="1.2" stroke-opacity="0.30"/><line x1="72" y1="195" x2="360" y2="195" stroke="white" stroke-width="1.2" stroke-opacity="0.30"/><circle cx="216" cy="195" r="145" fill="none" stroke="${ac}" stroke-width="1" stroke-opacity="0.20"/><circle cx="216" cy="195" r="170" fill="none" stroke="${ac}" stroke-width="0.6" stroke-opacity="0.12"/></svg></div>`;
+      // Gemstone: hexagonal facets with refraction, radial glow, dot-pattern bg, caustic highlights
+      return `<div style="${cs}"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;">
+<defs>
+  <radialGradient id="vlGlow" cx="50%" cy="50%" r="55%"><stop offset="0%" stop-color="${ac}" stop-opacity="0.35"/><stop offset="100%" stop-color="${bg}" stop-opacity="0"/></radialGradient>
+  <radialGradient id="vlCore" cx="40%" cy="35%" r="60%"><stop offset="0%" stop-color="white" stop-opacity="0.28"/><stop offset="60%" stop-color="${ac}" stop-opacity="0.70"/><stop offset="100%" stop-color="${bg}" stop-opacity="0.90"/></radialGradient>
+  <pattern id="vlDots" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse"><circle cx="7" cy="7" r="1.2" fill="${ac}" fill-opacity="0.14"/></pattern>
+</defs>
+<rect width="432" height="384" fill="${bg}"/>
+<rect width="432" height="384" fill="url(#vlDots)"/>
+<circle cx="216" cy="192" r="175" fill="url(#vlGlow)"/>
+<polygon points="216,38 354,120 354,264 216,346 78,264 78,120" fill="url(#vlCore)"/>
+<polygon points="216,38 354,120 216,192" fill="white" fill-opacity="0.16"/>
+<polygon points="216,38 78,120 216,192" fill="${bg}" fill-opacity="0.22"/>
+<polygon points="78,120 78,264 216,192" fill="white" fill-opacity="0.08"/>
+<polygon points="354,120 354,264 216,192" fill="${bg}" fill-opacity="0.18"/>
+<polygon points="78,264 216,346 216,192" fill="${bg}" fill-opacity="0.12"/>
+<polygon points="354,264 216,346 216,192" fill="white" fill-opacity="0.10"/>
+<line x1="216" y1="38" x2="216" y2="346" stroke="white" stroke-width="0.8" stroke-opacity="0.30"/>
+<line x1="78" y1="120" x2="354" y2="264" stroke="white" stroke-width="0.8" stroke-opacity="0.22"/>
+<line x1="354" y1="120" x2="78" y2="264" stroke="white" stroke-width="0.8" stroke-opacity="0.22"/>
+<line x1="78" y1="192" x2="354" y2="192" stroke="white" stroke-width="0.8" stroke-opacity="0.18"/>
+<polygon points="216,38 354,120 354,264 216,346 78,264 78,120" fill="none" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.60"/>
+<polygon points="216,90 318,150 318,246 216,306 114,246 114,150" fill="none" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.30"/>
+<circle cx="170" cy="110" r="8" fill="white" fill-opacity="0.20"/>
+<circle cx="148" cy="140" r="5" fill="white" fill-opacity="0.14"/>
+<circle cx="264" cy="90" r="6" fill="white" fill-opacity="0.16"/>
+<circle cx="216" cy="385" r="0" fill="none"/><circle cx="216" cy="192" r="220" fill="none" stroke="${ac}" stroke-width="0.6" stroke-opacity="0.10"/>
+</svg></div>`;
 
     case "slate":
-      return `<div style="${cs}"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><rect width="432" height="384" fill="${bg}"/><circle cx="216" cy="192" r="155" fill="${ac}" fill-opacity="0.18"/><circle cx="216" cy="192" r="118" fill="${ac}" fill-opacity="0.22"/><circle cx="216" cy="192" r="82" fill="${ac}" fill-opacity="0.30"/><circle cx="216" cy="192" r="48" fill="${ac}" fill-opacity="0.55"/><circle cx="216" cy="192" r="20" fill="${ac}" fill-opacity="0.88"/><line x1="216" y1="5" x2="216" y2="379" stroke="${ac}" stroke-width="2" stroke-opacity="0.28"/><line x1="5" y1="192" x2="427" y2="192" stroke="${ac}" stroke-width="2" stroke-opacity="0.28"/><circle cx="216" cy="192" r="175" fill="none" stroke="${ac}" stroke-width="1" stroke-opacity="0.12"/></svg></div>`;
+      // Precision bullseye: 6 concentric rings with gradient fills, crosshair, tick marks, outer frame
+      return `<div style="${cs}"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;">
+<defs>
+  <radialGradient id="slBg" cx="50%" cy="50%" r="65%"><stop offset="0%" stop-color="${ac}" stop-opacity="0.08"/><stop offset="100%" stop-color="${bg}" stop-opacity="0"/></radialGradient>
+  <radialGradient id="slRing1" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="${ac}" stop-opacity="0.72"/><stop offset="100%" stop-color="${ac}" stop-opacity="0.52"/></radialGradient>
+  <radialGradient id="slRing2" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="${ac}" stop-opacity="0.30"/><stop offset="100%" stop-color="${ac}" stop-opacity="0.18"/></radialGradient>
+</defs>
+<rect width="432" height="384" fill="${bg}"/>
+<rect width="432" height="384" fill="url(#slBg)"/>
+<circle cx="216" cy="192" r="172" fill="none" stroke="${ac}" stroke-width="1.2" stroke-opacity="0.15"/>
+<circle cx="216" cy="192" r="158" fill="${ac}" fill-opacity="0.12"/>
+<circle cx="216" cy="192" r="132" fill="${ac}" fill-opacity="0.05"/>
+<circle cx="216" cy="192" r="132" fill="none" stroke="${ac}" stroke-width="2" stroke-opacity="0.35"/>
+<circle cx="216" cy="192" r="108" fill="${ac}" fill-opacity="0.18"/>
+<circle cx="216" cy="192" r="108" fill="none" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.45"/>
+<circle cx="216" cy="192" r="84" fill="${ac}" fill-opacity="0.08"/>
+<circle cx="216" cy="192" r="84" fill="none" stroke="${ac}" stroke-width="2" stroke-opacity="0.55"/>
+<circle cx="216" cy="192" r="60" fill="${ac}" fill-opacity="0.28"/>
+<circle cx="216" cy="192" r="60" fill="none" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.65"/>
+<circle cx="216" cy="192" r="36" fill="${ac}" fill-opacity="0.55"/>
+<circle cx="216" cy="192" r="36" fill="none" stroke="${ac}" stroke-width="2" stroke-opacity="0.80"/>
+<circle cx="216" cy="192" r="14" fill="${ac}" fill-opacity="0.88"/>
+<line x1="216" y1="4" x2="216" y2="380" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.22"/>
+<line x1="4" y1="192" x2="428" y2="192" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.22"/>
+<line x1="216" y1="26" x2="216" y2="34" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.55"/>
+<line x1="216" y1="350" x2="216" y2="358" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.55"/>
+<line x1="26" y1="192" x2="34" y2="192" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.55"/>
+<line x1="398" y1="192" x2="406" y2="192" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.55"/>
+<line x1="144" y1="26" x2="146" y2="30" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.40"/>
+<line x1="286" y1="26" x2="288" y2="30" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.40"/>
+<line x1="26" y1="120" x2="30" y2="122" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.40"/>
+<line x1="26" y1="264" x2="30" y2="266" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.40"/>
+<line x1="402" y1="120" x2="406" y2="122" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.40"/>
+<line x1="402" y1="264" x2="406" y2="266" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.40"/>
+<rect x="4" y="4" width="424" height="376" fill="none" stroke="${ac}" stroke-width="1" stroke-opacity="0.12" rx="4"/>
+</svg></div>`;
 
     case "sunrise":
-      return `<div style="${cs};background:#FDF0E0;"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><rect width="432" height="384" fill="#FDF0E0"/><line x1="216" y1="384" x2="28" y2="175" stroke="${ac}" stroke-width="2" stroke-opacity="0.20"/><line x1="216" y1="384" x2="75" y2="165" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.16"/><line x1="216" y1="384" x2="132" y2="160" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.16"/><line x1="216" y1="384" x2="174" y2="158" stroke="${ac}" stroke-width="2" stroke-opacity="0.22"/><line x1="216" y1="384" x2="216" y2="155" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.28"/><line x1="216" y1="384" x2="258" y2="158" stroke="${ac}" stroke-width="2" stroke-opacity="0.22"/><line x1="216" y1="384" x2="300" y2="160" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.16"/><line x1="216" y1="384" x2="357" y2="165" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.16"/><line x1="216" y1="384" x2="404" y2="175" stroke="${ac}" stroke-width="2" stroke-opacity="0.20"/><path d="M 86,384 A 130,130 0 0,1 346,384 Z" fill="${ac}" fill-opacity="0.80"/><path d="M 112,384 A 104,104 0 0,1 320,384 Z" fill="${ac}" fill-opacity="0.50"/><line x1="0" y1="336" x2="432" y2="336" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.30"/><ellipse cx="90" cy="120" rx="60" ry="26" fill="white" fill-opacity="0.70"/><ellipse cx="58" cy="126" rx="38" ry="22" fill="white" fill-opacity="0.70"/><ellipse cx="125" cy="128" rx="34" ry="20" fill="white" fill-opacity="0.70"/><ellipse cx="348" cy="150" rx="52" ry="22" fill="white" fill-opacity="0.62"/><ellipse cx="318" cy="156" rx="32" ry="18" fill="white" fill-opacity="0.62"/></svg></div>`;
+      // Atmospheric sunrise: gradient sky, semicircular sun with 12 rays, horizon bands, cloud wisps
+      return `<div style="${cs};background:#FDF0E0;"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;">
+<defs>
+  <linearGradient id="sunSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3a1a08"/><stop offset="30%" stop-color="#8a3010"/><stop offset="55%" stop-color="#d46020"/><stop offset="75%" stop-color="#f0a840"/><stop offset="90%" stop-color="#f8d878"/><stop offset="100%" stop-color="#fef0d0"/></linearGradient>
+  <radialGradient id="sunDisk" cx="50%" cy="100%" r="80%"><stop offset="0%" stop-color="white" stop-opacity="0.95"/><stop offset="30%" stop-color="${ac}" stop-opacity="0.90"/><stop offset="100%" stop-color="${ac}" stop-opacity="0.50"/></radialGradient>
+  <linearGradient id="sunHor1" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="${ac}" stop-opacity="0.10"/><stop offset="50%" stop-color="${ac}" stop-opacity="0.35"/><stop offset="100%" stop-color="${ac}" stop-opacity="0.10"/></linearGradient>
+  <linearGradient id="sunHor2" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="${ac}" stop-opacity="0.08"/><stop offset="50%" stop-color="${ac}" stop-opacity="0.28"/><stop offset="100%" stop-color="${ac}" stop-opacity="0.08"/></linearGradient>
+</defs>
+<rect width="432" height="384" fill="url(#sunSky)"/>
+<line x1="216" y1="288" x2="28" y2="158" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.18"/>
+<line x1="216" y1="288" x2="68" y2="142" stroke="${ac}" stroke-width="2" stroke-opacity="0.15"/>
+<line x1="216" y1="288" x2="118" y2="136" stroke="${ac}" stroke-width="2" stroke-opacity="0.15"/>
+<line x1="216" y1="288" x2="165" y2="132" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.18"/>
+<line x1="216" y1="288" x2="216" y2="128" stroke="${ac}" stroke-width="3" stroke-opacity="0.22"/>
+<line x1="216" y1="288" x2="267" y2="132" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.18"/>
+<line x1="216" y1="288" x2="314" y2="136" stroke="${ac}" stroke-width="2" stroke-opacity="0.15"/>
+<line x1="216" y1="288" x2="364" y2="142" stroke="${ac}" stroke-width="2" stroke-opacity="0.15"/>
+<line x1="216" y1="288" x2="404" y2="158" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.18"/>
+<line x1="216" y1="288" x2="428" y2="198" stroke="${ac}" stroke-width="2" stroke-opacity="0.14"/>
+<line x1="216" y1="288" x2="4" y2="198" stroke="${ac}" stroke-width="2" stroke-opacity="0.14"/>
+<line x1="216" y1="288" x2="432" y2="250" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.12"/>
+<path d="M 76,288 A 140,140 0 0,1 356,288 Z" fill="url(#sunDisk)"/>
+<rect x="0" y="290" width="432" height="16" fill="url(#sunHor1)"/>
+<rect x="0" y="308" width="432" height="12" fill="url(#sunHor2)"/>
+<rect x="0" y="322" width="432" height="8" fill="${ac}" fill-opacity="0.16"/>
+<rect x="0" y="332" width="432" height="52" fill="${ac}" fill-opacity="0.22"/>
+<ellipse cx="90" cy="110" rx="66" ry="24" fill="white" fill-opacity="0.52"/>
+<ellipse cx="54" cy="118" rx="42" ry="20" fill="white" fill-opacity="0.55"/>
+<ellipse cx="128" cy="120" rx="38" ry="18" fill="white" fill-opacity="0.50"/>
+<ellipse cx="92" cy="125" rx="28" ry="14" fill="white" fill-opacity="0.45"/>
+<ellipse cx="350" cy="130" rx="58" ry="22" fill="white" fill-opacity="0.44"/>
+<ellipse cx="316" cy="138" rx="36" ry="18" fill="white" fill-opacity="0.46"/>
+<ellipse cx="385" cy="140" rx="30" ry="16" fill="white" fill-opacity="0.42"/>
+</svg></div>`;
 
     case "teal":
-      return `<div style="${cs}"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><rect width="432" height="384" fill="${bg}"/><polygon points="216,60 304,110 304,210 216,260 128,210 128,110" fill="none" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.45"/><polygon points="216,20 336,88 336,224 216,292 96,224 96,88" fill="none" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.28"/><polygon points="216,0 380,94 380,286 216,380 52,286 52,94" fill="none" stroke="${ac}" stroke-width="1" stroke-opacity="0.16"/><polygon points="216,88 280,124 280,196 216,232 152,196 152,124" fill="${ac}" fill-opacity="0.55"/><polygon points="216,112 260,136 260,184 216,208 172,184 172,136" fill="${bg}" fill-opacity="0.60"/><circle cx="216" cy="160" r="24" fill="${ac}" fill-opacity="0.80"/><path d="M0,340 Q108,310 216,340 Q324,370 432,340 L432,384 L0,384 Z" fill="${ac}" fill-opacity="0.18"/></svg></div>`;
+      // Hexagonal geometry: triple nested rings, honeycomb micro-pattern, radial teal glow from centre
+      return `<div style="${cs}"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;">
+<defs>
+  <radialGradient id="tlGlow" cx="50%" cy="50%" r="55%"><stop offset="0%" stop-color="${ac}" stop-opacity="0.40"/><stop offset="100%" stop-color="${bg}" stop-opacity="0"/></radialGradient>
+  <radialGradient id="tlCentre" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="white" stop-opacity="0.30"/><stop offset="60%" stop-color="${ac}" stop-opacity="0.80"/><stop offset="100%" stop-color="${ac}" stop-opacity="0.55"/></radialGradient>
+  <pattern id="tlHex" x="0" y="0" width="20" height="23" patternUnits="userSpaceOnUse"><polygon points="10,1 18,5.5 18,14.5 10,19 2,14.5 2,5.5" fill="none" stroke="${ac}" stroke-width="0.6" stroke-opacity="0.22"/></pattern>
+</defs>
+<rect width="432" height="384" fill="${bg}"/>
+<rect width="432" height="384" fill="url(#tlHex)"/>
+<circle cx="216" cy="192" r="190" fill="url(#tlGlow)"/>
+<polygon points="216,4 400,106 400,278 216,380 32,278 32,106" fill="none" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.18"/>
+<polygon points="216,28 376,122 376,262 216,356 56,262 56,122" fill="none" stroke="${ac}" stroke-width="1.2" stroke-opacity="0.28"/>
+<polygon points="216,54 350,138 350,246 216,330 82,246 82,138" fill="none" stroke="${ac}" stroke-width="1.8" stroke-opacity="0.40"/>
+<polygon points="216,80 326,154 326,230 216,306 106,230 106,154" fill="none" stroke="${ac}" stroke-width="2.2" stroke-opacity="0.55"/>
+<polygon points="216,108 300,170 300,214 216,276 132,214 132,170" fill="${ac}" fill-opacity="0.38"/>
+<polygon points="216,108 300,170 300,214 216,276 132,214 132,170" fill="none" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.70"/>
+<polygon points="216,130 278,166 278,218 216,254 154,218 154,166" fill="url(#tlCentre)"/>
+<polygon points="216,130 278,166 278,218 216,254 154,218 154,166" fill="none" stroke="${ac}" stroke-width="1.5" stroke-opacity="0.80"/>
+<circle cx="216" cy="192" r="28" fill="${bg}" fill-opacity="0.45"/>
+<circle cx="216" cy="192" r="16" fill="${ac}" fill-opacity="0.90"/>
+<circle cx="216" cy="192" r="6" fill="white" fill-opacity="0.60"/>
+<line x1="216" y1="4" x2="216" y2="380" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.15"/>
+<line x1="32" y1="106" x2="400" y2="278" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.12"/>
+<line x1="400" y1="106" x2="32" y2="278" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.12"/>
+</svg></div>`;
 
     case "parchment":
-      return `<div style="${cs};background:#F5E4C0;"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><rect width="432" height="384" fill="#F5E4C0"/><line x1="60" y1="100" x2="372" y2="100" stroke="${ac}" stroke-width="0.7" stroke-opacity="0.22"/><line x1="60" y1="136" x2="372" y2="136" stroke="${ac}" stroke-width="0.7" stroke-opacity="0.22"/><line x1="60" y1="172" x2="372" y2="172" stroke="${ac}" stroke-width="0.7" stroke-opacity="0.22"/><line x1="60" y1="208" x2="372" y2="208" stroke="${ac}" stroke-width="0.7" stroke-opacity="0.22"/><line x1="60" y1="244" x2="372" y2="244" stroke="${ac}" stroke-width="0.7" stroke-opacity="0.22"/><line x1="60" y1="280" x2="372" y2="280" stroke="${ac}" stroke-width="0.7" stroke-opacity="0.22"/><path d="M 310,20 C 330,8 380,15 400,38 C 380,35 358,42 340,62 L 290,130 C 270,158 255,175 235,185 C 245,165 248,140 240,120 Z" fill="${ac}" fill-opacity="0.55"/><path d="M 310,20 C 280,28 260,50 240,80 L 200,145 C 185,170 175,185 160,195 C 170,172 175,145 166,122 C 200,140 215,118 235,85 C 250,60 275,35 310,20 Z" fill="${ac}" fill-opacity="0.38"/><path d="M 160,195 L 100,310 C 95,320 88,330 80,340" stroke="${ac}" stroke-width="3" stroke-linecap="round" fill="none" stroke-opacity="0.65"/><circle cx="83" cy="345" r="6" fill="${ac}" fill-opacity="0.55"/><circle cx="74" cy="352" r="3.5" fill="${ac}" fill-opacity="0.35"/><circle cx="90" cy="354" r="2.5" fill="${ac}" fill-opacity="0.30"/><line x1="88" y1="0" x2="88" y2="384" stroke="${ac}" stroke-width="1.2" stroke-opacity="0.30"/></svg></div>`;
+      // Aged parchment: texture crosshatch, detailed quill with feather barbs and rachis, ink splatter, ruled lines, margin line
+      return `<div style="${cs};background:#F2DFB0;"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;">
+<defs>
+  <linearGradient id="prchBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f8ebca"/><stop offset="50%" stop-color="#F2DFB0"/><stop offset="100%" stop-color="#e8d098"/></linearGradient>
+  <pattern id="prchXhatch" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse"><line x1="0" y1="10" x2="10" y2="0" stroke="${ac}" stroke-width="0.4" stroke-opacity="0.08"/></pattern>
+</defs>
+<rect width="432" height="384" fill="url(#prchBg)"/>
+<rect width="432" height="384" fill="url(#prchXhatch)"/>
+<line x1="88" y1="0" x2="88" y2="384" stroke="${ac}" stroke-width="1.4" stroke-opacity="0.28"/>
+<line x1="76" y1="86" x2="380" y2="86" stroke="${ac}" stroke-width="0.7" stroke-opacity="0.30"/>
+<line x1="76" y1="116" x2="380" y2="116" stroke="${ac}" stroke-width="0.7" stroke-opacity="0.28"/>
+<line x1="76" y1="146" x2="380" y2="146" stroke="${ac}" stroke-width="0.7" stroke-opacity="0.28"/>
+<line x1="76" y1="176" x2="380" y2="176" stroke="${ac}" stroke-width="0.7" stroke-opacity="0.28"/>
+<line x1="76" y1="206" x2="380" y2="206" stroke="${ac}" stroke-width="0.7" stroke-opacity="0.28"/>
+<line x1="76" y1="236" x2="380" y2="236" stroke="${ac}" stroke-width="0.7" stroke-opacity="0.28"/>
+<line x1="76" y1="266" x2="380" y2="266" stroke="${ac}" stroke-width="0.7" stroke-opacity="0.28"/>
+<line x1="76" y1="296" x2="380" y2="296" stroke="${ac}" stroke-width="0.7" stroke-opacity="0.28"/>
+<path d="M 295,14 C 318,4 372,10 392,34 C 370,30 346,38 326,60 L 268,138 C 246,168 228,186 208,196" stroke="${ac}" stroke-width="1" stroke-opacity="0.20" fill="none"/>
+<path d="M 295,14 C 358,16 390,42 392,34" fill="${ac}" fill-opacity="0.38"/>
+<path d="M 280,26 C 306,18 356,22 380,40 L 355,38 C 335,46 312,56 292,80 L 268,112 C 252,136 240,155 225,168" fill="${ac}" fill-opacity="0.48"/>
+<path d="M 268,26 C 290,20 336,26 360,46 L 340,44 C 320,52 300,62 280,86 L 256,118 C 242,140 228,158 215,170" fill="${ac}" fill-opacity="0.32"/>
+<path d="M 380,40 C 356,37 332,46 312,68 L 272,130 C 254,158 238,178 220,190 C 212,198 208,210 200,220" stroke="${ac}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none" stroke-opacity="0.62"/>
+<path d="M 200,220 L 148,330 C 142,342 134,354 124,364" stroke="${ac}" stroke-width="3.2" stroke-linecap="round" fill="none" stroke-opacity="0.70"/>
+<line x1="156" y1="290" x2="196" y2="250" stroke="${ac}" stroke-width="1" stroke-opacity="0.40" stroke-dasharray="3,4"/>
+<line x1="142" y1="310" x2="182" y2="270" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.32" stroke-dasharray="2,4"/>
+<line x1="136" y1="330" x2="168" y2="300" stroke="${ac}" stroke-width="0.8" stroke-opacity="0.28" stroke-dasharray="2,4"/>
+<circle cx="126" cy="366" r="7" fill="${ac}" fill-opacity="0.60"/>
+<circle cx="116" cy="374" r="4.5" fill="${ac}" fill-opacity="0.40"/>
+<circle cx="135" cy="376" r="3" fill="${ac}" fill-opacity="0.35"/>
+<circle cx="105" cy="368" r="2.5" fill="${ac}" fill-opacity="0.30"/>
+<circle cx="144" cy="370" r="2" fill="${ac}" fill-opacity="0.28"/>
+<circle cx="110" cy="356" r="1.5" fill="${ac}" fill-opacity="0.25"/>
+</svg></div>`;
 
     case "sky":
-      return `<div style="${cs};background:#E0EFFF;"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><rect width="432" height="384" fill="#E0EFFF"/><circle cx="355" cy="52" r="42" fill="${ac}" fill-opacity="0.88"/><line x1="355" y1="0" x2="355" y2="12" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.55"/><line x1="355" y1="92" x2="355" y2="104" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.55"/><line x1="303" y1="52" x2="291" y2="52" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.55"/><line x1="407" y1="52" x2="419" y2="52" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.55"/><line x1="318" y1="16" x2="310" y2="8" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.55"/><line x1="392" y1="88" x2="400" y2="96" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.55"/><line x1="318" y1="88" x2="310" y2="96" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.55"/><line x1="392" y1="16" x2="400" y2="8" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.55"/><ellipse cx="130" cy="142" rx="72" ry="34" fill="white" fill-opacity="0.88"/><ellipse cx="92" cy="150" rx="48" ry="30" fill="white" fill-opacity="0.88"/><ellipse cx="170" cy="152" rx="46" ry="28" fill="white" fill-opacity="0.88"/><ellipse cx="268" cy="218" rx="80" ry="36" fill="white" fill-opacity="0.78"/><ellipse cx="226" cy="226" rx="52" ry="30" fill="white" fill-opacity="0.78"/><ellipse cx="312" cy="227" rx="48" ry="28" fill="white" fill-opacity="0.78"/><ellipse cx="100" cy="290" rx="64" ry="28" fill="white" fill-opacity="0.68"/><ellipse cx="64" cy="297" rx="40" ry="24" fill="white" fill-opacity="0.68"/><ellipse cx="138" cy="298" rx="38" ry="22" fill="white" fill-opacity="0.68"/><path d="M 200,170 L 215,160 L 230,170" fill="none" stroke="${ac}" stroke-width="2" stroke-opacity="0.45"/><path d="M 245,152 L 262,140 L 279,152" fill="none" stroke="${ac}" stroke-width="2" stroke-opacity="0.40"/></svg></div>`;
+      // Blue sky: gradient sky, 3 layered cloud formations, sun with ray burst, birds-in-flight silhouettes
+      return `<div style="${cs};background:#C8E0FA;"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;">
+<defs>
+  <linearGradient id="skyBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1a5fa0"/><stop offset="35%" stop-color="#3a8acc"/><stop offset="65%" stop-color="#78b8e8"/><stop offset="100%" stop-color="#c8e0fa"/></linearGradient>
+  <radialGradient id="skySun" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="white" stop-opacity="1"/><stop offset="40%" stop-color="${ac}" stop-opacity="0.92"/><stop offset="100%" stop-color="${ac}" stop-opacity="0.50"/></radialGradient>
+</defs>
+<rect width="432" height="384" fill="url(#skyBg)"/>
+<circle cx="360" cy="52" r="42" fill="url(#skySun)"/>
+<line x1="360" y1="0" x2="360" y2="14" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.55"/>
+<line x1="360" y1="90" x2="360" y2="104" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.55"/>
+<line x1="304" y1="52" x2="290" y2="52" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.55"/>
+<line x1="416" y1="52" x2="430" y2="52" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.55"/>
+<line x1="320" y1="12" x2="312" y2="4" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.55"/>
+<line x1="400" y1="92" x2="408" y2="100" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.55"/>
+<line x1="320" y1="92" x2="312" y2="100" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.55"/>
+<line x1="400" y1="12" x2="408" y2="4" stroke="${ac}" stroke-width="2.5" stroke-opacity="0.55"/>
+<line x1="338" y1="4" x2="335" y2="13" stroke="${ac}" stroke-width="1.8" stroke-opacity="0.40"/>
+<line x1="382" y1="4" x2="385" y2="13" stroke="${ac}" stroke-width="1.8" stroke-opacity="0.40"/>
+<line x1="290" y1="30" x2="297" y2="37" stroke="${ac}" stroke-width="1.8" stroke-opacity="0.40"/>
+<line x1="430" y1="30" x2="423" y2="37" stroke="${ac}" stroke-width="1.8" stroke-opacity="0.40"/>
+<ellipse cx="130" cy="132" rx="78" ry="32" fill="white" fill-opacity="0.88"/>
+<ellipse cx="88" cy="142" rx="52" ry="28" fill="white" fill-opacity="0.90"/>
+<ellipse cx="174" cy="143" rx="50" ry="26" fill="white" fill-opacity="0.88"/>
+<ellipse cx="130" cy="150" rx="36" ry="20" fill="white" fill-opacity="0.80"/>
+<ellipse cx="275" cy="212" rx="84" ry="34" fill="white" fill-opacity="0.80"/>
+<ellipse cx="230" cy="222" rx="56" ry="28" fill="white" fill-opacity="0.82"/>
+<ellipse cx="322" cy="223" rx="50" ry="26" fill="white" fill-opacity="0.80"/>
+<ellipse cx="275" cy="232" rx="40" ry="22" fill="white" fill-opacity="0.74"/>
+<ellipse cx="88" cy="295" rx="66" ry="28" fill="white" fill-opacity="0.72"/>
+<ellipse cx="50" cy="304" rx="44" ry="24" fill="white" fill-opacity="0.75"/>
+<ellipse cx="128" cy="305" rx="42" ry="22" fill="white" fill-opacity="0.72"/>
+<ellipse cx="88" cy="314" rx="30" ry="18" fill="white" fill-opacity="0.66"/>
+<path d="M 168,178 Q 178,169 188,178" fill="none" stroke="${ac}" stroke-width="2.2" stroke-opacity="0.50" stroke-linejoin="round"/>
+<path d="M 196,168 Q 209,157 222,168" fill="none" stroke="${ac}" stroke-width="2.2" stroke-opacity="0.46" stroke-linejoin="round"/>
+<path d="M 230,174 Q 240,167 250,174" fill="none" stroke="${ac}" stroke-width="2" stroke-opacity="0.42" stroke-linejoin="round"/>
+<path d="M 56,242 Q 66,233 76,242" fill="none" stroke="${ac}" stroke-width="2" stroke-opacity="0.44" stroke-linejoin="round"/>
+<path d="M 84,234 Q 96,225 108,234" fill="none" stroke="${ac}" stroke-width="2" stroke-opacity="0.40" stroke-linejoin="round"/>
+<path d="M 358,158 Q 368,150 378,158" fill="none" stroke="${ac}" stroke-width="2" stroke-opacity="0.42" stroke-linejoin="round"/>
+<path d="M 384,148 Q 395,140 406,148" fill="none" stroke="${ac}" stroke-width="2" stroke-opacity="0.38" stroke-linejoin="round"/>
+</svg></div>`;
 
     default:
-      return `<div style="${cs}"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;"><rect width="432" height="384" fill="${bg}"/><circle cx="216" cy="192" r="85" fill="${ac}" fill-opacity="0.55"/><circle cx="216" cy="192" r="115" fill="none" stroke="${ac}" stroke-width="2" stroke-opacity="0.25"/><circle cx="216" cy="192" r="148" fill="none" stroke="${ac}" stroke-width="1" stroke-opacity="0.15"/></svg></div>`;
+      return `<div style="${cs}"><svg viewBox="0 0 432 384" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;">
+<defs><radialGradient id="dfGlow" cx="50%" cy="50%" r="60%"><stop offset="0%" stop-color="${ac}" stop-opacity="0.55"/><stop offset="100%" stop-color="${bg}" stop-opacity="0"/></radialGradient></defs>
+<rect width="432" height="384" fill="${bg}"/>
+<circle cx="216" cy="192" r="140" fill="url(#dfGlow)"/>
+<circle cx="216" cy="192" r="85" fill="${ac}" fill-opacity="0.55"/>
+<circle cx="216" cy="192" r="115" fill="none" stroke="${ac}" stroke-width="2" stroke-opacity="0.28"/>
+<circle cx="216" cy="192" r="148" fill="none" stroke="${ac}" stroke-width="1" stroke-opacity="0.16"/>
+<circle cx="216" cy="192" r="175" fill="none" stroke="${ac}" stroke-width="0.5" stroke-opacity="0.10"/>
+</svg></div>`;
   }
 }
 
@@ -1031,7 +1316,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   }
 
   // Back cover: exactly 5-line centered checkmark list (spec-required wording/order, always 5 lines)
-  const formatLabel = isLargePrint ? "Large Print Format (8.5\u22c5 × 11\")" : "Standard Format (6\" × 9\")";
+  const formatLabel = isLargePrint ? "Extra-Large Print Edition (8.5\" × 11\")" : "Standard 6\u00d79 Format";
   const cleanFeatures = [
     `&#10003; ${PC} Unique Puzzles`,
     `&#10003; ${opts.difficulty || "Medium"} Difficulty Level`,
