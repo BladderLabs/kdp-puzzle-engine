@@ -136,9 +136,11 @@ router.post("/agents/create-book", async (req, res) => {
       finalQAIssues = qaResult.issues;
       finalQAPassed = qaResult.passed;
       emit(res, "qa_review", "done", {
-        message: "All 6 checks passed",
-        passed: true,
-        issues: [],
+        message: qaResult.passed
+          ? "All 6 checks passed"
+          : `${qaResult.issues.length} minor issue(s) noted — no revision required`,
+        passed: qaResult.passed,
+        issues: qaResult.issues,
         checksCount: 6,
       });
     } else {
