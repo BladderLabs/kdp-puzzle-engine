@@ -216,7 +216,7 @@ async function runMarketDirector(
     : "";
 
   const combosClause = usedCombos && usedCombos.length > 0
-    ? `\nCOVER COMBOS ALREADY IN USE — pick a DIFFERENT theme+coverStyle+niche combination:\n${usedCombos.map(c => `  - ${c}`).join("\n")}\n`
+    ? `\nTHEME+NICHE COMBOS ALREADY IN USE — pick a DIFFERENT theme for the same niche:\n${usedCombos.map(c => `  - ${c}`).join("\n")}\n`
     : "";
 
   const prompt = `You are the Market Intelligence Director for a KDP puzzle book publishing house.

@@ -56,16 +56,16 @@ export async function runQAReviewer(spec: QASpec): Promise<QAResult> {
     spec.subtitle.toLowerCase().includes(p),
   );
 
-  // ── Deterministic cover diversity check (check 7) ──────────────────────────
+  // ── Deterministic cover diversity check (check 7, 2-field: theme+niche) ──────
   const coverDiversityIssue: QAIssue | null = (() => {
     if (!spec.coverCombo || !spec.usedCombos || spec.usedCombos.length === 0) return null;
-    // Strip the current book's own combo so a re-check after a save doesn't self-fail
+    // Strip this book's own combo so a re-check after a save doesn't self-fail
     const otherCombos = spec.usedCombos.filter(c => c !== spec.coverCombo);
     if (!otherCombos.includes(spec.coverCombo)) return null;
     return {
       field: "cover_combination",
-      problem: `Cover combination "${spec.coverCombo}" is already used by another book in your library`,
-      fix: `Select a different theme+coverStyle+niche combination — currently used: ${otherCombos.join(", ")}`,
+      problem: `Cover combination "${spec.coverCombo}" (theme+niche) is already used by another book in your library`,
+      fix: `Select a different theme — currently used theme+niche combos: ${otherCombos.join(", ")}`,
     };
   })();
 

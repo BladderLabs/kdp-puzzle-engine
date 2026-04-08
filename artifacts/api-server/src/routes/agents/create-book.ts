@@ -80,7 +80,7 @@ router.post("/agents/create-book", async (req, res) => {
   if (usedCombos.length === 0) {
     try {
       const existingBooks = await db.select().from(booksTable).orderBy(desc(booksTable.id));
-      usedCombos = [...new Set(existingBooks.map(b => `${b.theme}+${b.coverStyle}+${b.niche ?? "general"}`))];
+      usedCombos = [...new Set(existingBooks.map(b => `${b.theme}+${b.niche ?? "general"}`))];
     } catch (_) { /* non-critical — proceed without constraint */ }
   }
 
@@ -373,7 +373,8 @@ router.post("/agents/create-book", async (req, res) => {
   }
 
   // Resolve final values (bookSpec wins over council defaults, council wins over market defaults)
-  const finalTheme = bookSpec?.coverTheme ?? coverDesignSpec.theme ?? market.recommendedTheme ?? market.theme;
+  // let — finalTheme may be swapped in QA cover_diversity revision loop
+  let finalTheme = bookSpec?.coverTheme ?? coverDesignSpec.theme ?? market.recommendedTheme ?? market.theme;
   const finalStyle = bookSpec?.coverStyle ?? coverDesignSpec.style ?? market.coverStyle;
   const finalTitle = bookSpec?.title ?? contentSpec.title;
   const finalSubtitle = bookSpec?.subtitle ?? contentSpec.subtitle;
@@ -417,7 +418,10 @@ router.post("/agents/create-book", async (req, res) => {
   }
 
   // ─── Stage 10: QA Review ────────────────────────────────────────────────────
-  const coverCombo = `${market.theme}+${market.coverStyle}+${market.niche}`;
+  // 2-field combo (theme+niche): coverStyle excluded — unreliable when AI cover stores "photo"
+  // Uses finalTheme (post-council resolution) not market.theme for accuracy
+  const ALL_THEMES_ORDERED = ["midnight", "forest", "crimson", "ocean", "violet", "slate", "sunrise", "teal", "parchment", "sky"];
+  let coverCombo = `${finalTheme}+${market.niche}`;
   const buildQASpec = () => ({
     title: finalTitle,
     subtitle: finalSubtitle,
@@ -453,52 +457,94 @@ router.post("/agents/create-book", async (req, res) => {
       });
     } else {
       emit(res, "qa_review", "needs_revision", {
-        message: `${qaResult.issues.length} issue${qaResult.issues.length !== 1 ? "s" : ""} found — revising content…`,
+        message: `${qaResult.issues.length} issue${qaResult.issues.length !== 1 ? "s" : ""} found — revising…`,
         issues: qaResult.issues,
       });
 
-      emit(res, "content_architect", "running", {
-        message: "Re-drafting content with QA feedback…",
-        revision: true,
-      });
-      try {
-        const issueDescriptions = qaResult.issues.map(i => `${i.field}: ${i.problem} — Fix: ${i.fix}`);
-        const revised = await runContentArchitect(market, brief, issueDescriptions);
-        req.log.info({ title: revised.title }, "Content revision done");
-        emit(res, "content_architect", "done", {
-          message: `Revised: "${revised.title}"`,
-          title: revised.title,
-          subtitle: revised.subtitle,
-          revision: true,
-          wordCount: revised.backDescription.trim().split(/\s+/).filter(Boolean).length,
-        });
+      // ── Separate cover_diversity issues from content issues ───────────────────
+      const hasCoverDiversityIssue = qaResult.issues.some(i => i.field === "cover_combination");
+      const contentIssues = qaResult.issues.filter(i => i.field !== "cover_combination");
 
-        // Re-run QA
-        emit(res, "qa_review", "running", { message: "Re-checking revised content…" });
-        const reQA = await runQAReviewer({
-          ...buildQASpec(),
-          title: revised.title,
-          subtitle: revised.subtitle,
-          backDescription: revised.backDescription,
-          words: revised.words,
+      // ── Step A: Fix cover_diversity deterministically (no LLM needed) ─────────
+      if (hasCoverDiversityIssue) {
+        const altTheme = ALL_THEMES_ORDERED.find(t => !usedCombos.includes(`${t}+${market.niche}`));
+        if (altTheme && altTheme !== finalTheme) {
+          finalTheme = altTheme;
+          coverCombo = `${finalTheme}+${market.niche}`;
+          req.log.info({ altTheme, niche: market.niche }, "Cover diversity fix: swapped theme");
+          emit(res, "qa_review", "running", { message: `Cover uniqueness fix: switching to "${altTheme}" theme…` });
+        } else {
+          req.log.warn({ niche: market.niche }, "Cover diversity: no alternative theme available — proceeding");
+        }
+      }
+
+      // ── Step B: Fix content issues via Content Architect ─────────────────────
+      if (contentIssues.length > 0) {
+        emit(res, "content_architect", "running", {
+          message: "Re-drafting content with QA feedback…",
+          revision: true,
         });
-        req.log.info({ passed: reQA.passed, issues: reQA.issues.length }, "QA re-check done");
-        finalQAIssues = reQA.issues;
-        finalQAPassed = reQA.passed;
-        emit(res, "qa_review", "done", {
-          message: reQA.passed
-            ? "All checks passed after revision"
-            : `${reQA.issues.length} issue(s) remain — proceeding with best effort`,
-          passed: reQA.passed,
-          issues: reQA.issues,
-          checksCount: usedCombos.length > 0 ? 7 : 6,
-        });
-      } catch (revErr) {
-        req.log.error({ revErr }, "Revision or re-QA failed");
-        emit(res, "content_architect", "failed", { message: "Revision failed. Using council content.", revision: true });
-        emit(res, "qa_review", "failed", { message: "Re-check failed. Proceeding with council content.", issues: qaResult.issues });
-        finalQAIssues = qaResult.issues;
-        qaFailed = true;
+        try {
+          const issueDescriptions = contentIssues.map(i => `${i.field}: ${i.problem} — Fix: ${i.fix}`);
+          const revised = await runContentArchitect(market, brief, issueDescriptions);
+          req.log.info({ title: revised.title }, "Content revision done");
+          emit(res, "content_architect", "done", {
+            message: `Revised: "${revised.title}"`,
+            title: revised.title,
+            subtitle: revised.subtitle,
+            revision: true,
+            wordCount: revised.backDescription.trim().split(/\s+/).filter(Boolean).length,
+          });
+
+          // Re-run QA with revised content + (possibly new) theme
+          emit(res, "qa_review", "running", { message: "Re-checking revised content…" });
+          const reQA = await runQAReviewer({
+            ...buildQASpec(),
+            coverCombo,
+            title: revised.title,
+            subtitle: revised.subtitle,
+            backDescription: revised.backDescription,
+            words: revised.words,
+          });
+          req.log.info({ passed: reQA.passed, issues: reQA.issues.length }, "QA re-check done");
+          finalQAIssues = reQA.issues;
+          finalQAPassed = reQA.passed;
+          emit(res, "qa_review", "done", {
+            message: reQA.passed
+              ? "All checks passed after revision"
+              : `${reQA.issues.length} issue(s) remain — proceeding with best effort`,
+            passed: reQA.passed,
+            issues: reQA.issues,
+            checksCount: usedCombos.length > 0 ? 7 : 6,
+          });
+        } catch (revErr) {
+          req.log.error({ revErr }, "Revision or re-QA failed");
+          emit(res, "content_architect", "failed", { message: "Revision failed. Using council content.", revision: true });
+          emit(res, "qa_review", "failed", { message: "Re-check failed. Proceeding with council content.", issues: qaResult.issues });
+          finalQAIssues = qaResult.issues;
+          qaFailed = true;
+        }
+      } else {
+        // Only cover_diversity issue — no content revision needed, just re-run QA with new theme
+        try {
+          emit(res, "qa_review", "running", { message: "Re-checking with updated cover theme…" });
+          const reQA = await runQAReviewer(buildQASpec());
+          req.log.info({ passed: reQA.passed, issues: reQA.issues.length }, "QA cover re-check done");
+          finalQAIssues = reQA.issues;
+          finalQAPassed = reQA.passed;
+          emit(res, "qa_review", "done", {
+            message: reQA.passed
+              ? `All checks passed — cover theme changed to "${finalTheme}"`
+              : `${reQA.issues.length} issue(s) remain — proceeding with best effort`,
+            passed: reQA.passed,
+            issues: reQA.issues,
+            checksCount: usedCombos.length > 0 ? 7 : 6,
+          });
+        } catch (revErr) {
+          req.log.error({ revErr }, "QA cover re-check failed");
+          finalQAIssues = qaResult.issues;
+          qaFailed = true;
+        }
       }
     }
   } catch (err) {
@@ -514,6 +560,23 @@ router.post("/agents/create-book", async (req, res) => {
   const fullBackDescription = finalHookSentence
     ? `${finalHookSentence}\n\n${finalBackDescription}`
     : finalBackDescription;
+
+  // ── Series continuation: resolve seriesName + auto-increment volumeNumber ────
+  let resolvedSeriesName: string | null = null;
+  let resolvedVolumeNumber: number = draft.volumeNumber ?? 1;
+  if (requestedSeriesName) {
+    resolvedSeriesName = requestedSeriesName;
+    try {
+      const seriesBooks = await db.select({ vol: booksTable.volumeNumber })
+        .from(booksTable)
+        .where(eq(booksTable.seriesName, requestedSeriesName));
+      const maxVol = seriesBooks.length > 0
+        ? Math.max(...seriesBooks.map(b => b.vol))
+        : 0;
+      resolvedVolumeNumber = maxVol + 1;
+      req.log.info({ series: requestedSeriesName, nextVol: resolvedVolumeNumber }, "Series continuation resolved");
+    } catch (_) { /* non-critical */ }
+  }
 
   emit(res, "assemble", "running", { message: "Saving Book Spec · Planning series arc…" });
   try {
@@ -535,7 +598,8 @@ router.post("/agents/create-book", async (req, res) => {
         wordCategory: draft.wordCategory,
         coverImageUrl: coverImageDataUrl,
         niche: market.niche,
-        volumeNumber: draft.volumeNumber,
+        volumeNumber: resolvedVolumeNumber,
+        seriesName: resolvedSeriesName,
         dedication: null,
         difficultyMode: "uniform",
         challengeDays: null,

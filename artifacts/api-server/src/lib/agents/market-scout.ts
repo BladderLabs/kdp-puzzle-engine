@@ -84,7 +84,7 @@ export async function runMarketScout(
       "\nUse this data to calibrate your niche/type selection — target niches with demand ≥ 6 and avoid oversaturated categories."
     : "";
   const combosClause = usedCombos && usedCombos.length > 0
-    ? `\nCOVER COMBOS ALREADY IN USE — you MUST pick a DIFFERENT theme+coverStyle+niche combination:\n${usedCombos.map(c => `  - ${c}`).join("\n")}\nSelect a combination not in this list to ensure visual differentiation in the library.`
+    ? `\nTHEME+NICHE COMBOS ALREADY IN USE — you MUST pick a DIFFERENT theme for the same niche:\n${usedCombos.map(c => `  - ${c}`).join("\n")}\nSelect a theme+niche combination not in this list to ensure visual differentiation across the library.`
     : "";
 
   const prompt = `${KDP_EXPERT_CONTEXT}${briefClause}${evidenceClause}${combosClause}
