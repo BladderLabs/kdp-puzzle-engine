@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { zipSync } from "fflate";
 import { GenerateBookBody, PreviewPuzzlesBody, CoverPreviewBody } from "@workspace/api-zod";
 import { buildInteriorHTML, buildCoverHTML, computeTotalPages, type BuildOpts, type CoverBuildOpts } from "../lib/html-builders";
-import { makeWordSearch, makeSudoku, makeMaze, makeNumberSearch, makeCryptogram, makeCrossword, makeCrosswordAsync, generateCrosswordClues, applyCluesToCrossword, shuf, DEFWORDS } from "../lib/puzzles";
+import { makeWordSearch, makeSudoku, makeMaze, makeNumberSearch, makeCryptogram, makeCrosswordAsync, shuf, DEFWORDS } from "../lib/puzzles";
 import { htmlToPdf } from "../lib/pdf";
 
 const router: IRouter = Router();

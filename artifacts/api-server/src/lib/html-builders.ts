@@ -1,6 +1,6 @@
 import {
   shuf, makeWordSearch, makeSudoku, makeMaze, makeNumberSearch,
-  makeCryptogram, makeCrossword, makeCrosswordAsync, generateCrosswordClues, applyCluesToCrossword, WORD_BANKS,
+  makeCryptogram, makeCrossword, generateCrosswordClues, applyCluesToCrossword, WORD_BANKS,
 } from "./puzzles";
 import type { CrosswordResult, CrosswordClue } from "./puzzles";
 
