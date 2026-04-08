@@ -1223,6 +1223,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const titleFont = (() => {
     const d = (opts.fontStyleDirective || "").toLowerCase();
     if (d.includes("elegant serif") || d.includes("condensed bold serif")) return "Lora,serif";
+    if (d.includes("geometric")) return "'Inter','Oswald',sans-serif";
     return "'Oswald',sans-serif";
   })();
   const titleTransform = opts.casingOverride === "ALL CAPS" ? "uppercase" : "none";
@@ -1562,7 +1563,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `</div></div>`;
   }
 
-  const coverHtml = `<!DOCTYPE html><html style="background-color:${bg};"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Oswald:wght@700&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet"><style>*{margin:0;padding:0;box-sizing:border-box;}@page{size:${fullW.toFixed(4)}in ${fullH.toFixed(4)}in;margin:0;}body{width:${fullW.toFixed(4)}in;height:${fullH.toFixed(4)}in;overflow:hidden;position:relative;background:${bg};print-color-adjust:exact;-webkit-print-color-adjust:exact;}</style></head><body>${back}${spine}${front}</body></html>`;
+  const coverHtml = `<!DOCTYPE html><html style="background-color:${bg};"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;800&family=Lora:ital,wght@0,400;0,700;1,400&family=Oswald:wght@700&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet"><style>*{margin:0;padding:0;box-sizing:border-box;}@page{size:${fullW.toFixed(4)}in ${fullH.toFixed(4)}in;margin:0;}body{width:${fullW.toFixed(4)}in;height:${fullH.toFixed(4)}in;overflow:hidden;position:relative;background:${bg};print-color-adjust:exact;-webkit-print-color-adjust:exact;}</style></head><body>${back}${spine}${front}</body></html>`;
 
   return { html: coverHtml, fullW, fullH, spineW };
 }

@@ -166,6 +166,9 @@ router.post("/cover-preview", (req, res) => {
       series: b.series ?? undefined,
       volumeNumber: b.volumeNumber ?? 0,
       coverImageUrl: b.coverImageUrl ?? undefined,
+      accentHexOverride: b.accentHexOverride ?? undefined,
+      casingOverride: b.casingOverride ?? undefined,
+      fontStyleDirective: b.fontStyleDirective ?? undefined,
     };
     const totalPages = computeTotalPages(opts);
     const cover = buildCoverHTML(opts, totalPages);
@@ -253,9 +256,9 @@ router.post("/bundle", async (req, res) => {
     );
 
     const kwTxt = enc.encode(
-      ((opts as Record<string, unknown>).keywords as string[] | undefined ?? [])
+      ((opts as unknown as Record<string, unknown>).keywords as string[] | undefined ?? [])
         .slice(0, 7)
-        .join("\n") || `${opts.puzzleType.toLowerCase()} puzzle book\nlarge print puzzles\nbrain games for adults\npuzzle book gift\nword puzzle book\nactivity book for adults\npuzzle book for seniors`
+        .join("\n") || `${(opts.puzzleType ?? "puzzle").toLowerCase()} puzzle book\nlarge print puzzles\nbrain games for adults\npuzzle book gift\nword puzzle book\nactivity book for adults\npuzzle book for seniors`
     );
 
     const zipData = zipSync({

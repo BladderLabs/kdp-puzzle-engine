@@ -81,33 +81,38 @@ export async function runQAReviewer(spec: QASpec): Promise<QAResult> {
     });
   }
 
-  // Check 9: Hook sentence quality — must be 8+ words and end with punctuation
-  if (spec.hookSentence) {
+  // Check 9: Hook sentence quality — must be present, 8+ words, and end with punctuation
+  if (!spec.hookSentence || spec.hookSentence.trim().length === 0) {
+    deterministicIssues.push({
+      field: "hook_sentence",
+      problem: "Back-cover hook sentence is missing — a compelling opening line is essential for conversion",
+      fix: "Add a 10-15 word hook sentence that speaks directly to the buyer's primary emotion and desire",
+    });
+  } else {
     const hookWords = spec.hookSentence.trim().split(/\s+/).filter(Boolean).length;
     const endsWithPunctuation = /[.!?]$/.test(spec.hookSentence.trim());
     if (hookWords < 8 || !endsWithPunctuation) {
       deterministicIssues.push({
         field: "hook_sentence",
         problem: hookWords < 8
-          ? `Hook sentence is only ${hookWords} words — should be 8+ words to be compelling`
-          : "Hook sentence does not end with proper punctuation (. ! ?) — required for professional presentation",
+          ? `Hook sentence is only ${hookWords} words — must be 8+ words to be compelling`
+          : "Hook sentence does not end with proper punctuation (. ! ?) — required for professional back cover",
         fix: "Rewrite the hook sentence to be 10-15 words, emotionally engaging, and properly punctuated",
       });
     }
   }
 
-  // Check 10: Title keyword position — first keyword should appear in the title for SEO
+  // Check 10: Title keyword position — puzzle-type keyword must appear in the first 4 words
   if (spec.keywords.length > 0) {
-    const titleLower = spec.title.toLowerCase();
-    const firstKeyword = spec.keywords[0].toLowerCase();
-    // Check if any word from the first keyword phrase appears in the title
-    const keywordWords = firstKeyword.split(/\s+/);
-    const keywordInTitle = keywordWords.some(kw => kw.length > 3 && titleLower.includes(kw));
-    if (!keywordInTitle) {
+    const titleWords = spec.title.trim().split(/\s+/);
+    const first4 = titleWords.slice(0, 4).join(" ").toLowerCase();
+    const puzzleTypeWords = (spec.keywords[0] || "").toLowerCase().split(/\s+/).filter(w => w.length > 2);
+    const keywordInFirst4 = puzzleTypeWords.some(kw => first4.includes(kw));
+    if (!keywordInFirst4) {
       deterministicIssues.push({
         field: "title_keyword",
-        problem: `Primary keyword "${spec.keywords[0]}" has no overlap with the title — hurts Amazon search ranking`,
-        fix: `Include the primary keyword or its core terms in the title for better discoverability`,
+        problem: `Primary keyword "${spec.keywords[0]}" does not appear in the first 4 words of the title — Amazon weights early keyword position heavily for search ranking`,
+        fix: `Move the primary keyword to the beginning of the title (first 3-4 words) for maximum SEO impact`,
       });
     }
   }

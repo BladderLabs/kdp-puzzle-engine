@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import type { BuyerProfile } from "./buyer-psychology-profiler";
+import type { CoverDesignAnalysis } from "./cover-design-analyst";
+import type { CoverTypographySpec } from "./cover-typography-director";
 
 export const CoverColorStrategySchema = z.object({
   recommendedTheme: z.enum(["midnight", "forest", "crimson", "ocean", "violet", "slate", "sunrise", "teal", "parchment", "sky"]),
@@ -14,6 +16,28 @@ export const CoverColorStrategySchema = z.object({
 });
 
 export type CoverColorStrategy = z.infer<typeof CoverColorStrategySchema>;
+
+export function roundTwoColorCompatibility(
+  colorStrategy: CoverColorStrategy,
+  designAnalysis: CoverDesignAnalysis,
+  typography: CoverTypographySpec,
+): string {
+  const flags: string[] = [];
+  const darkThemes = ["midnight", "forest", "crimson", "violet", "teal"];
+  if (darkThemes.includes(colorStrategy.recommendedTheme) && typography.thumbnailReadabilityScore < 7) {
+    flags.push(`Color: dark theme '${colorStrategy.recommendedTheme}' demands high-contrast type — typography readability ${typography.thumbnailReadabilityScore}/10 is below safe threshold`);
+  }
+  if (designAnalysis.recommendedStyle === "geometric" && colorStrategy.recommendedTheme === "parchment") {
+    flags.push("Color: parchment vintage palette conflicts with geometric style's modern/clean aesthetic — consider teal or slate");
+  }
+  if (designAnalysis.recommendedStyle === "warmth" && ["slate", "teal"].includes(colorStrategy.recommendedTheme)) {
+    flags.push(`Color: warmth layout requires warm tones — '${colorStrategy.recommendedTheme}' is too cool/modern, suggest sunrise or parchment`);
+  }
+  if (colorStrategy.thumbnailLegibilityScore < 7) {
+    flags.push(`Color: legibility score ${colorStrategy.thumbnailLegibilityScore}/10 is below recommended threshold of 7 — consider higher-contrast theme`);
+  }
+  return flags.length > 0 ? flags.join("; ") : "Color strategy fully compatible with design style and typography.";
+}
 
 const EXPERT_KNOWLEDGE = `
 You are a professional color strategist and brand psychologist specialising in publishing and Amazon KDP.
@@ -74,12 +98,12 @@ export async function runCoverColorStrategist(
   buyerProfile?: BuyerProfile,
 ): Promise<CoverColorStrategy> {
   const psychologyBlock = buyerProfile
-    ? `\nBUYER PSYCHOLOGY (from Buyer Psychology Profiler — integrate into your color decision):
-- Buyer persona: ${buyerProfile.buyerPersona}
-- Emotional hook: ${buyerProfile.emotionalHook}
-- Visual preferences: ${buyerProfile.visualPreferences}
-- Psychology note: ${buyerProfile.psychologyNote}
-Your color choice MUST trigger the stated emotional hook. Match the palette to what this specific buyer's nervous system responds to positively.\n`
+    ? `\nBUYER PSYCHOLOGY (integrate into your color decision):
+- Primary emotion to evoke: ${buyerProfile.primaryEmotion}
+- Buyer moment: ${buyerProfile.buyerMoment}
+- Visual metaphor: ${buyerProfile.visualMetaphor}
+- Mood adjectives: ${buyerProfile.moodAdjectives.join(", ")}
+Your palette MUST viscerally trigger "${buyerProfile.primaryEmotion}". Every hue, saturation, and contrast decision should reinforce the visual metaphor "${buyerProfile.visualMetaphor}" and feel ${buyerProfile.moodAdjectives.slice(0, 3).join(", ")}.\n`
     : "";
 
   const prompt = `${EXPERT_KNOWLEDGE}${psychologyBlock}

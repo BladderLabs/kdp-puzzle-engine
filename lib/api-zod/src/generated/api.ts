@@ -501,6 +501,9 @@ export const CoverPreviewBody = zod.object({
   difficulty: zod.string().optional(),
   paperType: zod.string().optional(),
   coverImageUrl: zod.string().optional(),
+  accentHexOverride: zod.string().optional(),
+  casingOverride: zod.string().optional(),
+  fontStyleDirective: zod.string().optional(),
 });
 
 export const CoverPreviewResponse = zod.object({

@@ -135,9 +135,9 @@ export async function runCoverArtDirector(
 
     if (enrichedImagePrompt && enrichedImagePrompt.trim().length > 20) {
       // Use research-backed enriched prompt from Cover Design Council
-      // Optionally append buyer psychology emotional hook for extra resonance
-      const psychHook = buyerProfile?.emotionalHook
-        ? ` The scene must evoke: ${buyerProfile.emotionalHook}.`
+      // Append buyer psychology visual metaphor + primaryEmotion + moodAdjectives for maximum resonance
+      const psychHook = buyerProfile
+        ? ` Emotional preface: the image must embody the visual metaphor "${buyerProfile.visualMetaphor}", feel ${buyerProfile.moodAdjectives.join(", ")}, and trigger "${buyerProfile.primaryEmotion}" on first glance.`
         : "";
       prompt = [
         `Create a stunning professional book cover background illustration for a "${puzzleType}" puzzle book titled "${title}".`,
@@ -153,8 +153,8 @@ export async function runCoverArtDirector(
       const themeDesc = THEME_DESCRIPTIONS[theme] || THEME_DESCRIPTIONS.midnight;
       const styleDesc = STYLE_MODIFIERS[coverStyle] || STYLE_MODIFIERS.classic;
       const nicheHint = niche ? buildNicheHint(niche) : "";
-      const psychHook = buyerProfile?.emotionalHook
-        ? ` The image must evoke: ${buyerProfile.emotionalHook}.`
+      const psychHook = buyerProfile
+        ? ` The image must embody the visual metaphor "${buyerProfile.visualMetaphor}" and trigger "${buyerProfile.primaryEmotion}". Mood: ${buyerProfile.moodAdjectives.join(", ")}.`
         : "";
       const subjectLine = nicheHint
         ? `Subject matter: ${nicheHint}.${psychHook}`

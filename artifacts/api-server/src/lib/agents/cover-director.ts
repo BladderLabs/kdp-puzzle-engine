@@ -58,24 +58,32 @@ export async function runCoverDirector(
   colorStrategy: CoverColorStrategy,
   typographySpec: CoverTypographySpec,
   buyerProfile?: BuyerProfile,
+  crossTalkFlags?: { design: string; color: string; typography: string },
 ): Promise<CoverDesignSpec> {
 
   const psychologyBlock = buyerProfile
-    ? `\nBUYER PSYCHOLOGY PROFILE (from Buyer Psychology Profiler — use to maximise cover conversion):
-- Buyer persona: ${buyerProfile.buyerPersona}
-- Primary motivation: ${buyerProfile.primaryMotivation}
-- Emotional hook: ${buyerProfile.emotionalHook}
-- Purchase triggers: ${buyerProfile.purchaseTriggers.join(", ")}
-- Visual preferences: ${buyerProfile.visualPreferences}
-- Psychology note: ${buyerProfile.psychologyNote}
-DIRECTIVE: Your enrichedImagePrompt MUST embed the emotional hook. The image must trigger "${buyerProfile.emotionalHook}" in the first 0.5 seconds of viewing. Every creative decision you make — colors, composition, subject — must serve this hook.\n`
+    ? `\nBUYER PSYCHOLOGY PROFILE (use to maximise conversion):
+- Primary emotion: ${buyerProfile.primaryEmotion}
+- Buyer moment: ${buyerProfile.buyerMoment}
+- Visual metaphor: ${buyerProfile.visualMetaphor}
+- Mood adjectives: ${buyerProfile.moodAdjectives.join(", ")}
+- Copy angle: ${buyerProfile.copyAngle}
+DIRECTIVE: Your enrichedImagePrompt MUST embed the visual metaphor "${buyerProfile.visualMetaphor}" and trigger "${buyerProfile.primaryEmotion}" in 0.5 seconds. All creative decisions — scene, lighting, subject, palette — must serve this emotion and feel ${buyerProfile.moodAdjectives.slice(0, 3).join(", ")}.\n`
+    : "";
+
+  const crossTalkBlock = crossTalkFlags
+    ? `\nCOVER COUNCIL ROUND-2 CROSS-TALK FLAGS (compatibility issues flagged by the specialist agents — resolve these before finalising):
+- Design Analyst says: ${crossTalkFlags.design}
+- Color Strategist says: ${crossTalkFlags.color}
+- Typography Director says: ${crossTalkFlags.typography}
+Address any real conflicts listed above. If a flag says "fully compatible", no action needed for that agent.\n`
     : "";
 
   const prompt = `You are the Cover Design Director for an Amazon KDP puzzle book publishing house.
 Three specialist agents have submitted their recommendations. You must synthesise them into a final cover specification, resolve any conflicts, and produce an enriched image prompt for the AI image generator.
 
 ${PRIORITY_RULES}
-${psychologyBlock}
+${psychologyBlock}${crossTalkBlock}
 BOOK DETAILS:
 - Title: "${content.title}"
 - Subtitle: "${content.subtitle}"

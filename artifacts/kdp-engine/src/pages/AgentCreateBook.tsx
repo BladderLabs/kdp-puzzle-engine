@@ -75,12 +75,11 @@ interface BookIntelligence {
 }
 
 interface BuyerProfile {
-  buyerPersona: string;
-  emotionalHook: string;
-  purchaseTriggers: string[];
-  visualPreferences: string;
-  hookSentenceTemplate: string;
-  psychologyNote: string;
+  primaryEmotion: string;
+  buyerMoment: string;
+  visualMetaphor: string;
+  moodAdjectives: string[];
+  copyAngle: string;
 }
 
 interface CoverDirectives {
@@ -291,40 +290,35 @@ function PsychologyProfileCard({ profile }: { profile: BuyerProfile }) {
       {expanded && (
         <div className="px-4 pb-4 pt-3 space-y-3">
           <div>
-            <p className="text-xs font-semibold mb-1" style={{ color: PSYCH_COLOR }}>Buyer Persona</p>
-            <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.65)" }}>{profile.buyerPersona}</p>
+            <p className="text-xs font-semibold mb-1" style={{ color: PSYCH_COLOR }}>Primary Emotion</p>
+            <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.65)" }}>{profile.primaryEmotion}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold mb-1" style={{ color: PSYCH_COLOR }}>Emotional Hook</p>
-            <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.65)" }}>{profile.emotionalHook}</p>
+            <p className="text-xs font-semibold mb-1" style={{ color: PSYCH_COLOR }}>Buyer Moment</p>
+            <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.65)" }}>{profile.buyerMoment}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold mb-1" style={{ color: PSYCH_COLOR }}>Purchase Triggers</p>
-            <ul className="space-y-1">
-              {profile.purchaseTriggers.map((t, i) => (
-                <li key={i} className="text-xs flex gap-2" style={{ color: "rgba(255,255,255,0.55)" }}>
-                  <span style={{ color: PSYCH_COLOR, flexShrink: 0 }}>→</span>
-                  {t}
-                </li>
+            <p className="text-xs font-semibold mb-1" style={{ color: PSYCH_COLOR }}>Visual Metaphor</p>
+            <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.55)" }}>{profile.visualMetaphor}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold mb-1" style={{ color: PSYCH_COLOR }}>Mood</p>
+            <div className="flex flex-wrap gap-1.5">
+              {profile.moodAdjectives.map((adj, i) => (
+                <span
+                  key={i}
+                  className="text-xs px-2 py-0.5 rounded-full"
+                  style={{ background: `${PSYCH_COLOR}20`, color: PSYCH_COLOR, border: `1px solid ${PSYCH_COLOR}40` }}
+                >
+                  {adj}
+                </span>
               ))}
-            </ul>
+            </div>
           </div>
           <div>
-            <p className="text-xs font-semibold mb-1" style={{ color: PSYCH_COLOR }}>Visual Preferences</p>
-            <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.55)" }}>{profile.visualPreferences}</p>
+            <p className="text-xs font-semibold mb-1" style={{ color: PSYCH_COLOR }}>Copy Angle</p>
+            <p className="text-xs italic leading-relaxed" style={{ color: "rgba(255,255,255,0.70)" }}>{profile.copyAngle}</p>
           </div>
-          {profile.hookSentenceTemplate && (
-            <div>
-              <p className="text-xs font-semibold mb-1" style={{ color: PSYCH_COLOR }}>Hook Sentence</p>
-              <p className="text-xs italic leading-relaxed" style={{ color: "rgba(255,255,255,0.70)" }}>"{profile.hookSentenceTemplate}"</p>
-            </div>
-          )}
-          {profile.psychologyNote && (
-            <div>
-              <p className="text-xs font-semibold mb-1" style={{ color: PSYCH_COLOR }}>Psychology Note</p>
-              <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>{profile.psychologyNote}</p>
-            </div>
-          )}
         </div>
       )}
     </div>

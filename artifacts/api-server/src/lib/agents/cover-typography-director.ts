@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import type { BuyerProfile } from "./buyer-psychology-profiler";
+import type { CoverDesignAnalysis } from "./cover-design-analyst";
+import type { CoverColorStrategy } from "./cover-color-strategist";
 
 export const CoverTypographySpecSchema = z.object({
   fontStyleDirective: z.string(),
@@ -13,6 +15,27 @@ export const CoverTypographySpecSchema = z.object({
 });
 
 export type CoverTypographySpec = z.infer<typeof CoverTypographySpecSchema>;
+
+export function roundTwoTypographyCompatibility(
+  typography: CoverTypographySpec,
+  designAnalysis: CoverDesignAnalysis,
+  colorStrategy: CoverColorStrategy,
+): string {
+  const flags: string[] = [];
+  if (typography.thumbnailReadabilityScore < colorStrategy.thumbnailLegibilityScore - 2) {
+    flags.push(`Typography: readability score ${typography.thumbnailReadabilityScore}/10 lags color legibility ${colorStrategy.thumbnailLegibilityScore}/10 — consider bolder weight or higher contrast`);
+  }
+  if (typography.fontStyleDirective.includes("geometric") && designAnalysis.recommendedStyle === "luxury") {
+    flags.push("Typography: geometric-sans may undercut luxury aesthetic — elegant serif would better complement the luxury layout");
+  }
+  if (typography.fontStyleDirective.includes("playful") && designAnalysis.recommendedStyle === "geometric") {
+    flags.push("Typography: playful rounded-sans conflicts with geometric style's technical precision aesthetic");
+  }
+  if (typography.casingDirective === "ALL CAPS" && designAnalysis.recommendedStyle === "warmth") {
+    flags.push("Typography: ALL CAPS casing feels aggressive for warmth/cozy style — Title Case would feel more inviting");
+  }
+  return flags.length > 0 ? flags.join("; ") : "Typography directive fully compatible with design style and color theme.";
+}
 
 const EXPERT_KNOWLEDGE = `
 You are a professional typographer with 20 years in book cover design and commercial print publishing.
@@ -78,12 +101,12 @@ export async function runCoverTypographyDirector(
   buyerProfile?: BuyerProfile,
 ): Promise<CoverTypographySpec> {
   const psychologyBlock = buyerProfile
-    ? `\nBUYER PSYCHOLOGY (from Buyer Psychology Profiler — integrate into your typography decision):
-- Buyer persona: ${buyerProfile.buyerPersona}
-- Visual preferences: ${buyerProfile.visualPreferences}
-- Purchase triggers: ${buyerProfile.purchaseTriggers.join(", ")}
-- Psychology note: ${buyerProfile.psychologyNote}
-Typography must DIRECTLY signal these triggers. A buyer expecting "premium quality" needs elegant serif; a buyer expecting "easy and fun" needs playful rounded sans.\n`
+    ? `\nBUYER PSYCHOLOGY (integrate into your typography decision):
+- Primary emotion to evoke: ${buyerProfile.primaryEmotion}
+- Mood adjectives: ${buyerProfile.moodAdjectives.join(", ")}
+- Visual metaphor: ${buyerProfile.visualMetaphor}
+- Copy angle: ${buyerProfile.copyAngle}
+Typography must DIRECTLY signal the primary emotion "${buyerProfile.primaryEmotion}". Font weight, casing, and spacing choices should feel ${buyerProfile.moodAdjectives.slice(0, 2).join(" and ")} — not generic.\n`
     : "";
 
   const prompt = `${EXPERT_KNOWLEDGE}${psychologyBlock}

@@ -2,13 +2,11 @@ import { z } from "zod";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 
 export const BuyerProfileSchema = z.object({
-  buyerPersona: z.string(),
-  primaryMotivation: z.string(),
-  emotionalHook: z.string(),
-  purchaseTriggers: z.array(z.string()),
-  visualPreferences: z.string(),
-  hookSentenceTemplate: z.string(),
-  psychologyNote: z.string(),
+  primaryEmotion: z.string(),
+  buyerMoment: z.string(),
+  visualMetaphor: z.string(),
+  moodAdjectives: z.array(z.string()),
+  copyAngle: z.string(),
 });
 
 export type BuyerProfile = z.infer<typeof BuyerProfileSchema>;
@@ -26,31 +24,37 @@ export async function runBuyerPsychologyProfiler(
   nicheLabel: string,
   puzzleType: string,
   audienceProfile: string,
+  largePrint?: boolean,
+  title?: string,
+  backDescription?: string,
 ): Promise<BuyerProfile> {
-  const prompt = `You are a buyer psychology expert specialising in Amazon KDP puzzle book buyers.
-Analyse the exact buyer who will purchase this puzzle book and extract the core psychological profile that should drive every creative decision — cover design, color palette, typography, and image prompt.
+  const titleLine = title ? `- Draft title: "${title}"` : "";
+  const descLine = backDescription ? `- Draft back description excerpt: "${backDescription.slice(0, 120)}…"` : "";
+  const printLine = largePrint !== undefined ? `- Large print: ${largePrint}` : "";
+
+  const prompt = `You are a buyer psychology expert specialising in Amazon KDP puzzle books.
+Identify the exact psychological profile that drives purchase for this book.
 
 Book details:
 - Niche: ${nicheLabel} (${niche})
 - Puzzle type: ${puzzleType}
 - Target audience: ${audienceProfile}
-
-Your job: Identify the SPECIFIC emotional and psychological drivers that make this buyer click "Buy Now" on Amazon.
+${printLine}
+${titleLine}
+${descLine}
 
 Return ONLY JSON (no markdown):
 {
-  "buyerPersona": "One concise sentence describing the exact buyer archetype (age, life stage, why they're buying)",
-  "primaryMotivation": "The single strongest reason this person buys puzzle books (mental stimulation, gift, relaxation, etc.)",
-  "emotionalHook": "The core feeling the buyer wants to experience — what the cover must trigger instantly",
-  "purchaseTriggers": ["up to 4 specific visual or textual cues that convert this buyer (e.g. 'LARGE PRINT badge', 'gift bow icon', 'warm cozy imagery')"],
-  "visualPreferences": "1 sentence on what visual style resonates most with this buyer — warm/clean/bold/elegant etc.",
-  "hookSentenceTemplate": "A 10-15 word back-cover hook sentence template specifically for this buyer's emotional trigger",
-  "psychologyNote": "1 sentence on the single most important psychological principle driving this buyer's purchase decision"
+  "primaryEmotion": "The single dominant emotion this buyer must feel when they see the cover (e.g. 'nostalgic warmth', 'calm focus', 'joyful pride')",
+  "buyerMoment": "The specific life moment when this person buys — describe the exact scene (e.g. 'grandmother browsing Amazon for her Sunday afternoon activity', 'adult child buying a birthday gift')",
+  "visualMetaphor": "One concrete visual object or scene that captures the emotional world of this buyer (e.g. 'a sunlit porch with a steaming mug', 'colourful autumn leaves on a garden path')",
+  "moodAdjectives": ["3 to 5 mood adjectives that should guide every design choice, e.g. cosy, nostalgic, serene"],
+  "copyAngle": "The single most powerful copy angle for this buyer — what promise or feeling must the back-cover text deliver in the first sentence"
 }`;
 
   const message = await anthropic.messages.create({
     model: "claude-haiku-4-5",
-    max_tokens: 1024,
+    max_tokens: 512,
     messages: [{ role: "user", content: prompt }],
   });
 

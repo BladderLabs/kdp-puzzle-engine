@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import type { BuyerProfile } from "./buyer-psychology-profiler";
+import type { CoverColorStrategy } from "./cover-color-strategist";
+import type { CoverTypographySpec } from "./cover-typography-director";
 
 export const CoverDesignAnalysisSchema = z.object({
   recommendedStyle: z.enum(["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth", "photo"]),
@@ -12,6 +14,27 @@ export const CoverDesignAnalysisSchema = z.object({
 });
 
 export type CoverDesignAnalysis = z.infer<typeof CoverDesignAnalysisSchema>;
+
+export function roundTwoDesignCompatibility(
+  analysis: CoverDesignAnalysis,
+  colorStrategy: CoverColorStrategy,
+  typography: CoverTypographySpec,
+): string {
+  const flags: string[] = [];
+  if (analysis.recommendedStyle === "luxury" && !typography.fontStyleDirective.includes("serif")) {
+    flags.push(`Design: 'luxury' style needs serif typography — font directive "${typography.fontStyleDirective}" may undercut premium positioning`);
+  }
+  if (analysis.recommendedStyle === "minimal" && typography.fontStyleDirective.includes("bold condensed")) {
+    flags.push("Design: 'minimal' style pairs better with geometric-sans or elegant-serif than bold condensed");
+  }
+  if (analysis.recommendedStyle === "retro" && !["parchment", "sunrise"].includes(colorStrategy.recommendedTheme)) {
+    flags.push(`Design: 'retro' style pairs best with parchment/sunrise — theme '${colorStrategy.recommendedTheme}' may clash`);
+  }
+  if (analysis.recommendedStyle === "warmth" && ["slate", "teal", "midnight"].includes(colorStrategy.recommendedTheme)) {
+    flags.push(`Design: 'warmth' layout needs warm palette — cool/dark theme '${colorStrategy.recommendedTheme}' conflicts, suggest sunrise or parchment`);
+  }
+  return flags.length > 0 ? flags.join("; ") : "Design style fully compatible with proposed color and typography.";
+}
 
 const EXPERT_KNOWLEDGE = `
 You are a professional book cover designer with 15 years of experience on Amazon KDP.
@@ -59,13 +82,13 @@ export async function runCoverDesignAnalyst(
   buyerProfile?: BuyerProfile,
 ): Promise<CoverDesignAnalysis> {
   const psychologyBlock = buyerProfile
-    ? `\nBUYER PSYCHOLOGY (from Buyer Psychology Profiler — integrate into your layout decision):
-- Buyer persona: ${buyerProfile.buyerPersona}
-- Primary motivation: ${buyerProfile.primaryMotivation}
-- Emotional hook: ${buyerProfile.emotionalHook}
-- Visual preferences: ${buyerProfile.visualPreferences}
-- Purchase triggers: ${buyerProfile.purchaseTriggers.join(", ")}
-Your layout MUST reinforce these triggers. A buyer motivated by "relaxation" needs warmth/softness; a buyer motivated by "gift quality" needs luxury signals.\n`
+    ? `\nBUYER PSYCHOLOGY (integrate into your layout decision):
+- Primary emotion to evoke: ${buyerProfile.primaryEmotion}
+- Buyer moment: ${buyerProfile.buyerMoment}
+- Visual metaphor: ${buyerProfile.visualMetaphor}
+- Mood adjectives: ${buyerProfile.moodAdjectives.join(", ")}
+- Copy angle: ${buyerProfile.copyAngle}
+Your layout composition and visual hierarchy MUST evoke "${buyerProfile.primaryEmotion}". The overall cover feel should echo the visual metaphor "${buyerProfile.visualMetaphor}" and embody the mood: ${buyerProfile.moodAdjectives.join(", ")}.\n`
     : "";
 
   const prompt = `${EXPERT_KNOWLEDGE}${psychologyBlock}

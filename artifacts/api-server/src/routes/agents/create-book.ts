@@ -20,6 +20,9 @@ import { runSeriesArcPlanner, type SeriesArc } from "../../lib/agents/series-arc
 import { runCoverArtDirector } from "../../lib/agents/cover-art-director";
 import { runQAReviewer, type QAIssue } from "../../lib/agents/qa-reviewer";
 import { runBuyerPsychologyProfiler, type BuyerProfile } from "../../lib/agents/buyer-psychology-profiler";
+import { roundTwoDesignCompatibility } from "../../lib/agents/cover-design-analyst";
+import { roundTwoColorCompatibility } from "../../lib/agents/cover-color-strategist";
+import { roundTwoTypographyCompatibility } from "../../lib/agents/cover-typography-director";
 
 const router: IRouter = Router();
 
@@ -148,30 +151,12 @@ router.post("/agents/create-book", async (req, res) => {
     }
   }
 
-  // ─── Buyer Psychology Profiler (runs in parallel with Content Architect) ─────
-  // Needs market data (niche, puzzleType, audienceProfile) — starts immediately after market resolves
-  let buyerProfile: BuyerProfile | undefined;
-  const buyerProfilePromise = runBuyerPsychologyProfiler(
-    market.niche,
-    market.nicheLabel,
-    market.puzzleType,
-    market.audienceProfile,
-  ).then(profile => {
-    req.log.info({ persona: profile.buyerPersona }, "Buyer Psychology Profiler done");
-    buyerProfile = profile;
-    return profile;
-  }).catch(err => {
-    req.log.warn({ err }, "Buyer Psychology Profiler failed — proceeding without profile");
-    return undefined;
-  });
-
   // ─── Stage 2: Content Architect (draft) ─────────────────────────────────────
   let draft: ContentArchitectResult;
+  let buyerProfile: BuyerProfile | undefined;
   emit(res, "content_architect", "running", { message: "Drafting title, description, and puzzle words…" });
   try {
-    // Run content architect and buyer profiler concurrently
-    const [architectResult] = await Promise.all([runContentArchitect(market, brief), buyerProfilePromise]);
-    draft = architectResult;
+    draft = await runContentArchitect(market, brief);
     req.log.info({ title: draft.title }, "Content Architect done");
     emit(res, "content_architect", "done", {
       message: `Draft: "${draft.title}"`,
@@ -245,8 +230,26 @@ router.post("/agents/create-book", async (req, res) => {
           return null;
         }),
 
-      // Cover Design Council — 3 specialists in parallel, then director
+      // Cover Design Council — buyer profiler first, then 3 specialists in parallel, then round-2 cross-talk + director
       (async () => {
+        // Buyer Profiler runs first so specialists have the full psychology profile
+        // Draft data (title, backDescription) and largePrint are now included
+        buyerProfile = await runBuyerPsychologyProfiler(
+          market.niche,
+          market.nicheLabel,
+          market.puzzleType,
+          market.audienceProfile,
+          market.largePrint === true,
+          draft.title,
+          draft.backDescription,
+        ).then(profile => {
+          req.log.info({ primaryEmotion: profile.primaryEmotion, buyerMoment: profile.buyerMoment }, "Buyer Psychology Profiler done");
+          return profile;
+        }).catch(err => {
+          req.log.warn({ err }, "Buyer Psychology Profiler failed — proceeding without profile");
+          return undefined;
+        });
+
         const hasAiImage = true;
         const [designAnalysis, colorStrategy, typographySpec] = await Promise.all([
           runCoverDesignAnalyst(market.niche, market.nicheLabel, market.puzzleType, market.audienceProfile, hasAiImage, buyerProfile)
@@ -269,8 +272,16 @@ router.post("/agents/create-book", async (req, res) => {
             }),
         ]);
 
+        // Round-2 cross-talk: deterministic compatibility checks between specialist outputs
+        const crossTalkFlags = {
+          design: roundTwoDesignCompatibility(designAnalysis, colorStrategy, typographySpec),
+          color: roundTwoColorCompatibility(colorStrategy, designAnalysis, typographySpec),
+          typography: roundTwoTypographyCompatibility(typographySpec, designAnalysis, colorStrategy),
+        };
+        req.log.info({ crossTalkFlags }, "Round-2 cross-talk complete");
+
         emit(res, "cover_research", "running", { message: "Cover Director synthesising council findings…" });
-        const spec = await runCoverDirector(market, draft, designAnalysis, colorStrategy, typographySpec, buyerProfile);
+        const spec = await runCoverDirector(market, draft, designAnalysis, colorStrategy, typographySpec, buyerProfile, crossTalkFlags);
         req.log.info({ theme: spec.theme, style: spec.style }, "Cover Research done");
         emit(res, "cover_research", "done", {
           message: `${spec.theme} theme · ${spec.style} style · ${colorStrategy.thumbnailLegibilityScore}/10 thumbnail score`,
