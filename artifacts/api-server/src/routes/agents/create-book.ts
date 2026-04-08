@@ -173,7 +173,33 @@ router.post("/agents/create-book", async (req, res) => {
     return;
   }
 
-  // ─── Stages 3 & 4: Content Council + Cover Research (parallel) ───────────────
+  // ─── Stage 3: Buyer Psychology Profiler ─────────────────────────────────────
+  // Runs before the Content Council so the buyer profile can guide both the
+  // sales copy (emotion / copy angle) and the cover design (visual metaphor / mood).
+  emit(res, "buyer_profiler", "running", { message: "Profiling buyer psychology…" });
+  try {
+    buyerProfile = await runBuyerPsychologyProfiler(
+      market.niche,
+      market.nicheLabel,
+      market.puzzleType,
+      market.audienceProfile,
+      market.largePrint === true,
+      draft.title,
+      draft.backDescription,
+    );
+    req.log.info({ primaryEmotion: buyerProfile.primaryEmotion, buyerMoment: buyerProfile.buyerMoment }, "Buyer Psychology Profiler done");
+    emit(res, "buyer_profiler", "done", {
+      message: `Emotion: ${buyerProfile.primaryEmotion} · Angle: ${buyerProfile.copyAngle.slice(0, 60)}…`,
+      primaryEmotion: buyerProfile.primaryEmotion,
+      copyAngle: buyerProfile.copyAngle,
+    });
+  } catch (err) {
+    req.log.warn({ err }, "Buyer Psychology Profiler failed — content council will use generic copy framework");
+    emit(res, "buyer_profiler", "done", { message: "Buyer profiler skipped — using generic copy framework" });
+    buyerProfile = undefined;
+  }
+
+  // ─── Stages 4 & 5: Content Council + Cover Research (parallel) ───────────────
   let contentSpec: ContentSpec = {
     title: draft.title,
     subtitle: draft.subtitle,
@@ -214,8 +240,8 @@ router.post("/agents/create-book", async (req, res) => {
 
   try {
     const [contentResult, coverResult] = await Promise.all([
-      // Content Excellence Council
-      runContentExcellenceCouncil(market, draft)
+      // Content Excellence Council — buyer profile wired in for psychology-led copy
+      runContentExcellenceCouncil(market, draft, buyerProfile)
         .then(r => {
           req.log.info({ title: r.title }, "Content Council done");
           emit(res, "content_council", "done", {
@@ -231,26 +257,8 @@ router.post("/agents/create-book", async (req, res) => {
           return null;
         }),
 
-      // Cover Design Council — buyer profiler first, then 3 specialists in parallel, then round-2 cross-talk + director
+      // Cover Design Council — buyer profile already available from Stage 3
       (async () => {
-        // Buyer Profiler runs first so specialists have the full psychology profile
-        // Draft data (title, backDescription) and largePrint are now included
-        buyerProfile = await runBuyerPsychologyProfiler(
-          market.niche,
-          market.nicheLabel,
-          market.puzzleType,
-          market.audienceProfile,
-          market.largePrint === true,
-          draft.title,
-          draft.backDescription,
-        ).then(profile => {
-          req.log.info({ primaryEmotion: profile.primaryEmotion, buyerMoment: profile.buyerMoment }, "Buyer Psychology Profiler done");
-          return profile;
-        }).catch(err => {
-          req.log.warn({ err }, "Buyer Psychology Profiler failed — proceeding without profile");
-          return undefined;
-        });
-
         const hasAiImage = true;
         const [designAnalysis, colorStrategy, typographySpec] = await Promise.all([
           runCoverDesignAnalyst(market.niche, market.nicheLabel, market.puzzleType, market.audienceProfile, hasAiImage, buyerProfile)
@@ -312,7 +320,7 @@ router.post("/agents/create-book", async (req, res) => {
     req.log.error({ err }, "Council group A failed");
   }
 
-  // ─── Stages 5, 6, 7: Puzzle + Interior + Production + Word Bank Expansion (parallel) ─
+  // ─── Stages 6, 7, 8: Puzzle + Interior + Production + Word Bank Expansion (parallel) ─
   let puzzleSpec: PuzzleSpec | null = null;
   let layoutSpec: LayoutSpec | null = null;
   let productionSpec: ProductionSpec | null = null;

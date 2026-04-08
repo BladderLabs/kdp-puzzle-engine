@@ -2,6 +2,7 @@ import { z } from "zod";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import type { MarketScoutResult } from "./market-scout";
 import type { ContentArchitectResult } from "./content-architect";
+import type { BuyerProfile } from "./buyer-psychology-profiler";
 
 export const ContentSpecSchema = z.object({
   title: z.string(),
@@ -116,8 +117,22 @@ HOOK SENTENCE (back cover opener — separate from description):
 async function runSalesCopyExpert(
   market: MarketScoutResult,
   draft: ContentArchitectResult,
+  buyerProfile?: BuyerProfile,
 ): Promise<{ optimizedDescription: string; optimizedHookSentence: string; copyRationale: string }> {
+  const buyerPsychBlock = buyerProfile
+    ? `
+BUYER PSYCHOLOGY PROFILE (use this to guide every copy decision):
+- Primary emotion the buyer must feel: "${buyerProfile.primaryEmotion}"
+- Exact buyer moment: "${buyerProfile.buyerMoment}"
+- Copy angle (lead sentence must deliver this): "${buyerProfile.copyAngle}"
+- Mood adjectives: ${buyerProfile.moodAdjectives.join(", ")}
+- Visual metaphor (inform tone, not literal): "${buyerProfile.visualMetaphor}"
+
+Your copy MUST open with the copy angle above and sustain the primary emotion throughout.`
+    : "";
+
   const prompt = `${COPY_EXPERT_KNOWLEDGE}
+${buyerPsychBlock}
 
 Evaluate and improve this KDP puzzle book back cover copy:
 
@@ -133,11 +148,21 @@ BOOK DETAILS:
 
 Apply the direct-response framework. Preserve the author's voice and core message. Improve structure, benefit language, and CTA. Keep the hook sentence warm and personal (no period at end).
 
+IMPORTANT — KDP HTML FORMATTING:
+The optimizedDescription must use Amazon KDP-supported HTML tags for better readability on the product page:
+- Wrap the opening hook/lead paragraph in <p>...</p>
+- Use <b>...</b> for key benefit phrases (1-2 per bullet maximum)
+- Use <ul><li>...</li></ul> for the benefit stack (3-5 items)
+- End with a closing <p> containing the CTA
+- Do NOT use heading tags (h1/h2/h3), tables, images, or any other HTML
+- Plain text fallback should still read naturally if HTML is stripped
+- Total word count (HTML tags excluded): 100-150 words
+
 Return ONLY JSON:
 {
-  "optimizedDescription": "100-150 word improved back cover description",
+  "optimizedDescription": "<p>Opening lead aligned with buyer emotion and copy angle.</p><ul><li><b>Benefit one</b> — specific proof element.</li><li><b>Benefit two</b> — ...</li><li><b>Benefit three</b> — ...</li></ul><p>Closing CTA sentence.</p>",
   "optimizedHookSentence": "warm, personal 10-18 word hook (no period)",
-  "copyRationale": "2 sentences on which framework principles you applied and what changed"
+  "copyRationale": "2 sentences on which framework principles and buyer psychology signals you applied"
 }`;
 
   const message = await anthropic.messages.create({
@@ -213,10 +238,11 @@ Return ONLY JSON:
 export async function runContentExcellenceCouncil(
   market: MarketScoutResult,
   draft: ContentArchitectResult,
+  buyerProfile?: BuyerProfile,
 ): Promise<ContentSpec> {
   const [titleResult, copyResult] = await Promise.all([
     runTitleKeywordSpecialist(market, draft),
-    runSalesCopyExpert(market, draft),
+    runSalesCopyExpert(market, draft, buyerProfile),
   ]);
   return runContentDirector(market, draft, titleResult, copyResult);
 }
