@@ -1350,36 +1350,51 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const lpLabel2 = opts.largePrint !== false ? ` Large print formatting for comfortable solving.` : "";
   const PC = opts.puzzleCount ?? 100;
 
-  // Parse hook sentence: backDescription may be "Hook sentence\n\nBody copy"
-  // Detection: text before the FIRST double-newline, kept as hook when:
-  //   - between 3 and 30 words (generous range to handle all valid hooks)
-  //   - the remainder after the separator is non-empty (not the entire description)
-  // All other formats fall through unchanged (legacy single-paragraph descriptions, etc.)
+  // Parse hook + body from backDescription. Two supported formats:
+  //
+  // Format A (canonical KDP HTML — new books): "<p><b>hook sentence</b></p>\n<body html>"
+  //   Hook is extracted from the <p><b>…</b></p> wrapper.
+  //   Body is the remainder, stripped of HTML for print.
+  //
+  // Format B (legacy): "Hook sentence\n\nPlain body copy"
+  //   Hook is the text before the first \n\n (3-30 words).
+  //   Body may also contain KDP HTML (stripped for print).
+  //
+  // In both cases the PDF back cover renders plain text; the HTML is preserved in
+  // the DB so the seller can paste it directly into the KDP description field.
+  function stripForPrint(html: string): string {
+    return html
+      .replace(/<li>/gi, "• ")
+      .replace(/<\/li>/gi, " ")
+      .replace(/<br\s*\/?>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&[a-z]+;/gi, " ")
+      .replace(/\s+/g, " ").trim();
+  }
+
   const rawBack = opts.backDescription ||
     `${PC} carefully crafted ${diffLabel} ${ptLabel} puzzles designed for stress-free brain training. Each puzzle is presented on its own page with generous space for working through solutions.${lpLabel2} A full answer key is included at the back.`;
-  const doubleLfIdx = rawBack.indexOf("\n\n");
   let hookText = "";
   let bodyText = rawBack;
-  if (doubleLfIdx !== -1) {
-    const candidate = rawBack.slice(0, doubleLfIdx).trim();
-    const remainder = rawBack.slice(doubleLfIdx + 2).trim();
-    const wordCount = candidate.split(/\s+/).length;
-    if (wordCount >= 3 && wordCount <= 30 && remainder.length > 0) {
-      hookText = candidate;
-      bodyText = remainder;
+
+  const htmlHookMatch = rawBack.match(/^<p><b>([\s\S]+?)<\/b><\/p>\n?([\s\S]*)/i);
+  if (htmlHookMatch) {
+    hookText = htmlHookMatch[1].trim();
+    bodyText = htmlHookMatch[2].trim();
+  } else {
+    const doubleLfIdx = rawBack.indexOf("\n\n");
+    if (doubleLfIdx !== -1) {
+      const candidate = rawBack.slice(0, doubleLfIdx).trim();
+      const remainder = rawBack.slice(doubleLfIdx + 2).trim();
+      const wordCount = stripForPrint(candidate).split(/\s+/).filter(Boolean).length;
+      if (wordCount >= 3 && wordCount <= 30 && remainder.length > 0) {
+        hookText = candidate;
+        bodyText = remainder;
+      }
     }
   }
-  // bodyText may contain KDP HTML tags (<p>, <b>, <ul>, <li>) intended for the Amazon product page.
-  // For the print PDF back cover we strip all HTML and render plain text — the HTML version is stored
-  // in the DB and used directly when the seller pastes into KDP's description field.
-  const plainBodyText = bodyText
-    .replace(/<li>/gi, "• ")
-    .replace(/<\/li>/gi, " ")
-    .replace(/<br\s*\/?>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&[a-z]+;/gi, " ")
-    .replace(/\s+/g, " ").trim();
-  const backDesc = escapeHtml(plainBodyText);
+
+  const backDesc = escapeHtml(stripForPrint(bodyText));
 
   const lpMeta = opts.largePrint !== false ? " | Large Print" : "";
   const meta = `${PC} ${opts.puzzleType || "Word Search"} Puzzles | ${opts.difficulty || "Medium"}${lpMeta}`;

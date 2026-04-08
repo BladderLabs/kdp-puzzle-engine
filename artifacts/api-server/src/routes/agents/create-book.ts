@@ -685,9 +685,22 @@ router.post("/agents/create-book", async (req, res) => {
   // Always persist actual finalStyle (not "photo") so theme+style+niche uniqueness is stable across runs.
   // AI cover presence is indicated by coverImageUrl being non-null.
   const finalCoverStyle = finalStyle;
-  const fullBackDescription = finalHookSentence
-    ? `${finalHookSentence}\n\n${finalBackDescription}`
-    : finalBackDescription;
+  // ── Canonical KDP HTML formatter ─────────────────────────────────────────────
+  // Deterministically structures the description into KDP-safe HTML so the stored
+  // field is always canonical regardless of model variance:
+  //   <p><b>hook sentence</b></p>
+  //   <body HTML (wrapped if plain text)>
+  // The PDF back cover strips HTML; Amazon KDP receives the raw HTML field.
+  const fullBackDescription = (() => {
+    let html = finalBackDescription.trim();
+    if (!/<[a-z]/i.test(html)) {
+      html = `<p>${html}</p>`;
+    }
+    if (finalHookSentence?.trim()) {
+      return `<p><b>${finalHookSentence.trim()}</b></p>\n${html}`;
+    }
+    return html;
+  })();
 
   // ── Series continuation: resolve seriesName + auto-increment volumeNumber ────
   let resolvedSeriesName: string | null = null;

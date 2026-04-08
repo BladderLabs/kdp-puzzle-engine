@@ -94,7 +94,7 @@ export async function runQAReviewer(spec: QASpec): Promise<QAResult> {
       fix: "Add a 10-15 word hook sentence that speaks directly to the buyer's primary emotion and desire",
     });
   } else {
-    const hookWords = spec.hookSentence.trim().split(/\s+/).filter(Boolean).length;
+    const hookWords = stripHtml(spec.hookSentence).trim().split(/\s+/).filter(Boolean).length;
     if (hookWords < 8) {
       deterministicIssues.push({
         field: "hook_sentence",
