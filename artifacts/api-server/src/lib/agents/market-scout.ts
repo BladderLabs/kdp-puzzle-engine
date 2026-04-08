@@ -65,7 +65,11 @@ export interface MarketEvidenceItem {
   competition_level?: string;
 }
 
-export async function runMarketScout(brief?: string, evidence?: MarketEvidenceItem[]): Promise<MarketScoutResult> {
+export async function runMarketScout(
+  brief?: string,
+  evidence?: MarketEvidenceItem[],
+  usedCombos?: string[],
+): Promise<MarketScoutResult> {
   const briefClause = brief ? `\nUser's book idea: "${brief}"` : "\nChoose the single best market opportunity based on current KDP trends.";
   const evidenceClause = evidence && evidence.length > 0
     ? `\nLive Amazon market evidence (top ${evidence.length} competing titles):\n` +
@@ -79,8 +83,11 @@ export async function runMarketScout(brief?: string, evidence?: MarketEvidenceIt
       ).join("\n") +
       "\nUse this data to calibrate your niche/type selection — target niches with demand ≥ 6 and avoid oversaturated categories."
     : "";
+  const combosClause = usedCombos && usedCombos.length > 0
+    ? `\nCOVER COMBOS ALREADY IN USE — you MUST pick a DIFFERENT theme+coverStyle+niche combination:\n${usedCombos.map(c => `  - ${c}`).join("\n")}\nSelect a combination not in this list to ensure visual differentiation in the library.`
+    : "";
 
-  const prompt = `${KDP_EXPERT_CONTEXT}${briefClause}${evidenceClause}
+  const prompt = `${KDP_EXPERT_CONTEXT}${briefClause}${evidenceClause}${combosClause}
 
 Analyze the Amazon KDP puzzle book market and identify the single best book opportunity to publish right now.
 

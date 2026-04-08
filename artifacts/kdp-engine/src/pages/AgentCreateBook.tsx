@@ -814,6 +814,201 @@ function SeriesArcSection({ arc, onCreateVolume }: { arc: SeriesArc; onCreateVol
   );
 }
 
+// ── Volume Builder types ───────────────────────────────────────────────────────
+
+interface LibrarySuggestion {
+  type: "series_gap" | "niche_gap" | "cover_diversity";
+  brief: string;
+  niche: string;
+  nicheLabel: string;
+  puzzleType: string;
+  theme: string;
+  coverStyle: string;
+  rationale: string;
+  seriesName?: string;
+  volumeNumber?: number;
+}
+
+interface LibraryAnalysis {
+  totalBooks: number;
+  usedCombos: string[];
+  suggestions: LibrarySuggestion[];
+}
+
+const TYPE_LABEL: Record<string, string> = {
+  series_gap: "Series Continuation",
+  niche_gap: "Untapped Niche",
+  cover_diversity: "Visual Diversification",
+};
+
+const TYPE_BADGE: Record<string, string> = {
+  series_gap: "#3b82f6",
+  niche_gap: "#22c55e",
+  cover_diversity: "#a855f7",
+};
+
+function VolumeBuilderPanel({
+  onCreateThis,
+}: {
+  onCreateThis: (brief: string, usedCombos: string[], seriesName?: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [analysis, setAnalysis] = useState<LibraryAnalysis | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const load = async () => {
+    if (analysis) return;
+    setLoading(true);
+    setFetchError(null);
+    try {
+      const res = await fetch("/api/library/analysis");
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      const data = (await res.json()) as LibraryAnalysis;
+      setAnalysis(data);
+    } catch (e) {
+      setFetchError("Could not load library data — try again");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    if (next) load();
+  };
+
+  return (
+    <div
+      className="rounded-2xl overflow-hidden"
+      style={{ background: "#0f0f0f", border: "1px solid rgba(255,255,255,0.08)" }}
+    >
+      {/* Header / toggle */}
+      <button
+        onClick={toggle}
+        className="w-full flex items-center justify-between px-5 py-4 text-left"
+        style={{ background: "transparent" }}
+      >
+        <div className="flex items-center gap-3">
+          <span style={{ fontSize: 18 }}>📚</span>
+          <div>
+            <p className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.85)" }}>
+              Volume Builder
+            </p>
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+              AI-analysed gaps in your library — click a suggestion to pre-fill the brief
+            </p>
+          </div>
+        </div>
+        <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 18, lineHeight: 1 }}>
+          {open ? "▲" : "▼"}
+        </span>
+      </button>
+
+      {/* Collapsible body */}
+      {open && (
+        <div className="px-5 pb-5 space-y-4 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+          {loading && (
+            <div className="pt-4 flex items-center gap-2" style={{ color: "rgba(255,255,255,0.40)" }}>
+              <span
+                style={{
+                  display: "inline-block",
+                  width: 14,
+                  height: 14,
+                  border: "2px solid rgba(255,255,255,0.15)",
+                  borderTopColor: GOLD,
+                  borderRadius: "50%",
+                  animation: "kdp-spin 0.7s linear infinite",
+                }}
+              />
+              <span className="text-xs">Analysing your library…</span>
+            </div>
+          )}
+
+          {fetchError && (
+            <p className="pt-3 text-xs" style={{ color: "#ef4444" }}>{fetchError}</p>
+          )}
+
+          {analysis && !loading && (
+            <>
+              <p className="pt-3 text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+                Library: <strong style={{ color: "rgba(255,255,255,0.60)" }}>{analysis.totalBooks} book{analysis.totalBooks !== 1 ? "s" : ""}</strong>
+                {analysis.usedCombos.length > 0 && ` · ${analysis.usedCombos.length} cover combo${analysis.usedCombos.length !== 1 ? "s" : ""} in use`}
+              </p>
+
+              <div className="space-y-3">
+                {analysis.suggestions.length === 0 && (
+                  <p className="text-xs" style={{ color: "rgba(255,255,255,0.30)" }}>
+                    No suggestions generated — your library may be empty.
+                  </p>
+                )}
+                {analysis.suggestions.map((s, i) => (
+                  <div
+                    key={i}
+                    className="rounded-xl p-4 space-y-2"
+                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1 flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span
+                            className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                            style={{
+                              background: `${TYPE_BADGE[s.type] ?? "#888"}18`,
+                              color: TYPE_BADGE[s.type] ?? "#888",
+                              border: `1px solid ${TYPE_BADGE[s.type] ?? "#888"}30`,
+                            }}
+                          >
+                            {TYPE_LABEL[s.type] ?? s.type}
+                          </span>
+                          <span className="text-xs" style={{ color: "rgba(255,255,255,0.40)" }}>
+                            {s.nicheLabel} · {s.puzzleType}
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.80)" }}>
+                          {s.brief}
+                        </p>
+                        <p className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+                          {s.rationale}
+                        </p>
+                        <p className="text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>
+                          Cover: {s.theme} / {s.coverStyle}
+                          {s.seriesName ? ` · Series: "${s.seriesName}" Vol ${s.volumeNumber}` : ""}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => onCreateThis(s.brief, analysis.usedCombos, s.seriesName)}
+                        className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-150 hover:opacity-80"
+                        style={{
+                          background: `${GOLD}15`,
+                          border: `1px solid ${GOLD}35`,
+                          color: GOLD,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Create this →
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={() => { setAnalysis(null); load(); }}
+                className="text-xs opacity-40 hover:opacity-70 transition-opacity"
+                style={{ color: "rgba(255,255,255,0.60)" }}
+              >
+                ↻ Refresh suggestions
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AgentCreateBook() {
   const [, setLocation] = useLocation();
   const [brief, setBrief] = useState("");
@@ -823,9 +1018,13 @@ export function AgentCreateBook() {
   const [completion, setCompletion] = useState<CompletionInfo | null>(null);
   const [marketEvidence, setMarketEvidence] = useState<ApifyProduct[]>([]);
   const [evidenceLabel, setEvidenceLabel] = useState<string>("");
+  const [pipelineUsedCombos, setPipelineUsedCombos] = useState<string[]>([]);
+  const [pipelineSeriesName, setPipelineSeriesName] = useState<string | undefined>(undefined);
   const abortRef = useRef<AbortController | null>(null);
   const briefRef = useRef<string>("");
   const evidenceRef = useRef<ApifyProduct[]>([]);
+  const usedCombosRef = useRef<string[]>([]);
+  const seriesNameRef = useRef<string | undefined>(undefined);
 
   const updateStage = useCallback(
     (stageId: string, patch: Partial<Omit<StageState, "data">> & { data?: Record<string, unknown> }) => {
@@ -853,12 +1052,16 @@ export function AgentCreateBook() {
 
       try {
         const evidence = evidenceRef.current;
+        const combos = usedCombosRef.current;
+        const sName = seriesNameRef.current;
         const res = await fetch("/api/agents/create-book", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             brief: currentBrief.trim() || undefined,
             marketEvidence: evidence.length > 0 ? evidence : undefined,
+            usedCombos: combos.length > 0 ? combos : undefined,
+            seriesName: sName || undefined,
           }),
           signal: abort.signal,
         });
@@ -948,6 +1151,8 @@ export function AgentCreateBook() {
   const handleStart = () => {
     briefRef.current = brief;
     evidenceRef.current = marketEvidence;
+    usedCombosRef.current = pipelineUsedCombos;
+    seriesNameRef.current = pipelineSeriesName;
     runPipeline(brief);
   };
 
@@ -966,6 +1171,10 @@ export function AgentCreateBook() {
     setMarketEvidence([]);
     setEvidenceLabel("");
     evidenceRef.current = [];
+    setPipelineUsedCombos([]);
+    setPipelineSeriesName(undefined);
+    usedCombosRef.current = [];
+    seriesNameRef.current = undefined;
   };
 
   const handleCreateVolume = (volumeBrief: string) => {
@@ -979,6 +1188,28 @@ export function AgentCreateBook() {
     setMarketEvidence([]);
     setEvidenceLabel("");
     evidenceRef.current = [];
+    setPipelineUsedCombos([]);
+    setPipelineSeriesName(undefined);
+    usedCombosRef.current = [];
+    seriesNameRef.current = undefined;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleVolumeBuilderCreate = (suggBrief: string, combos: string[], sName?: string) => {
+    abortRef.current?.abort();
+    setRunning(false);
+    setStages(initStages());
+    setError(null);
+    setCompletion(null);
+    setBrief(suggBrief);
+    briefRef.current = suggBrief;
+    setMarketEvidence([]);
+    setEvidenceLabel("");
+    evidenceRef.current = [];
+    setPipelineUsedCombos(combos);
+    setPipelineSeriesName(sName);
+    usedCombosRef.current = combos;
+    seriesNameRef.current = sName;
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -999,6 +1230,11 @@ export function AgentCreateBook() {
           </p>
         </div>
 
+        {/* Volume Builder Panel */}
+        {!running && !isComplete && (
+          <VolumeBuilderPanel onCreateThis={handleVolumeBuilderCreate} />
+        )}
+
         {/* Market Intelligence Panel */}
         {!running && !isComplete && (
           <MarketIntelligencePanel onEvidenceSelected={handleEvidenceSelected} />
@@ -1010,6 +1246,37 @@ export function AgentCreateBook() {
             className="rounded-2xl p-6 space-y-4"
             style={{ background: "#0f0f0f", border: "1px solid rgba(255,255,255,0.08)" }}
           >
+            {/* Volume Builder suggestion indicator */}
+            {(pipelineSeriesName || pipelineUsedCombos.length > 0) && (
+              <div
+                className="rounded-lg px-4 py-2.5 flex items-center justify-between"
+                style={{ background: "#3b82f615", border: "1px solid #3b82f630" }}
+              >
+                <div className="flex items-center gap-2">
+                  <span style={{ color: "#3b82f6", fontSize: 12 }}>◉</span>
+                  <p className="text-xs font-semibold" style={{ color: "#3b82f6" }}>
+                    Volume Builder suggestion loaded
+                  </p>
+                  {pipelineSeriesName && (
+                    <p className="text-xs truncate max-w-xs" style={{ color: "rgba(255,255,255,0.40)" }}>
+                      — Series: "{pipelineSeriesName}"
+                    </p>
+                  )}
+                  {!pipelineSeriesName && pipelineUsedCombos.length > 0 && (
+                    <p className="text-xs" style={{ color: "rgba(255,255,255,0.40)" }}>
+                      — {pipelineUsedCombos.length} cover combo{pipelineUsedCombos.length !== 1 ? "s" : ""} excluded
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => { setPipelineUsedCombos([]); setPipelineSeriesName(undefined); usedCombosRef.current = []; seriesNameRef.current = undefined; }}
+                  className="text-xs ml-2 opacity-40 hover:opacity-70 transition-opacity"
+                  style={{ color: "rgba(255,255,255,0.60)" }}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
             {/* Evidence selected indicator */}
             {marketEvidence.length > 0 && (
               <div

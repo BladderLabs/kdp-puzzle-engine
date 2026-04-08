@@ -200,6 +200,7 @@ async function runMarketDirector(
   competition: CompetitionAssessment[],
   brief?: string,
   marketEvidence?: ApifyProduct[],
+  usedCombos?: string[],
 ): Promise<MarketScoutResult> {
   const ranked = candidates.map((c, i) => {
     const comp = competition[i];
@@ -212,6 +213,10 @@ async function runMarketDirector(
 
   const evidenceSection = marketEvidence && marketEvidence.length > 0
     ? formatMarketEvidence(marketEvidence)
+    : "";
+
+  const combosClause = usedCombos && usedCombos.length > 0
+    ? `\nCOVER COMBOS ALREADY IN USE — pick a DIFFERENT theme+coverStyle+niche combination:\n${usedCombos.map(c => `  - ${c}`).join("\n")}\n`
     : "";
 
   const prompt = `You are the Market Intelligence Director for a KDP puzzle book publishing house.
@@ -231,8 +236,7 @@ WINNING CANDIDATE:
 RUNNER-UP: ${runnerUp?.nicheLabel} (score: ${runnerUp?.combinedScore})
 
 ${brief ? `USER'S IDEA: "${brief}" — respect this if compatible with market data` : ""}
-${evidenceSection}
-
+${evidenceSection}${combosClause}
 Based on this research, produce the final market configuration. The winning candidate should be your primary choice unless the user's idea is clearly better or the runner-up is significantly superior.
 
 Rules:
@@ -297,6 +301,7 @@ export async function runMarketIntelligenceCouncil(
   brief?: string,
   onProgress?: (msg: string) => void,
   marketEvidence?: ApifyProduct[],
+  usedCombos?: string[],
 ): Promise<MarketIntelligenceResult> {
   onProgress?.("Opportunity Finder scanning KDP market data…");
 
@@ -308,7 +313,7 @@ export async function runMarketIntelligenceCouncil(
   ]);
   onProgress?.("Competition assessed · Market Director selecting optimal niche…");
 
-  const market = await runMarketDirector(candidates, competition, brief, marketEvidence);
+  const market = await runMarketDirector(candidates, competition, brief, marketEvidence, usedCombos);
 
   const winner = candidates.find(c => c.niche === market.niche) ?? candidates[0];
   const winnerRationale = winner

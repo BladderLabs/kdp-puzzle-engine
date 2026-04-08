@@ -10,6 +10,9 @@ export interface QASpec {
   hasImage: boolean;
   words: string[];
   author: string;
+  // Cover uniqueness inputs (optional — added by Task #29)
+  coverCombo?: string;       // "theme+coverStyle+niche" of this book
+  usedCombos?: string[];     // all combos already in the library
 }
 
 export interface QAIssue {
@@ -52,6 +55,19 @@ export async function runQAReviewer(spec: QASpec): Promise<QAResult> {
     spec.backDescription.toLowerCase().includes(p) ||
     spec.subtitle.toLowerCase().includes(p),
   );
+
+  // ── Deterministic cover diversity check (check 7) ──────────────────────────
+  const coverDiversityIssue: QAIssue | null = (() => {
+    if (!spec.coverCombo || !spec.usedCombos || spec.usedCombos.length === 0) return null;
+    // Strip the current book's own combo so a re-check after a save doesn't self-fail
+    const otherCombos = spec.usedCombos.filter(c => c !== spec.coverCombo);
+    if (!otherCombos.includes(spec.coverCombo)) return null;
+    return {
+      field: "cover_combination",
+      problem: `Cover combination "${spec.coverCombo}" is already used by another book in your library`,
+      fix: `Select a different theme+coverStyle+niche combination — currently used: ${otherCombos.join(", ")}`,
+    };
+  })();
 
   const prompt = `You are a KDP quality assurance expert reviewing a puzzle book for publication readiness.
 
@@ -101,5 +117,14 @@ Be strict but fair. Only flag genuine issues that would hurt sales or violate KD
   const text = message.content[0].type === "text" ? message.content[0].text : "";
   if (!text) throw new Error("QA Reviewer returned empty response");
   const raw = parseModelJson(text);
-  return QAResultSchema.parse(raw);
+  const llmResult = QAResultSchema.parse(raw);
+
+  // Merge deterministic cover diversity issue with LLM results
+  if (coverDiversityIssue) {
+    llmResult.issues = [coverDiversityIssue, ...llmResult.issues];
+    llmResult.passed = false;
+    llmResult.needs_revision = true;
+  }
+
+  return llmResult;
 }

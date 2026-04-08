@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import type { Response } from "express";
 import { z } from "zod";
 import { db, booksTable } from "@workspace/db";
+import { desc } from "drizzle-orm";
 import { runMarketScout, type MarketScoutResult } from "../../lib/agents/market-scout";
 import { runMarketIntelligenceCouncil } from "../../lib/agents/market-intelligence-council";
 import type { ApifyProduct } from "../apify/market-research";
@@ -36,6 +37,8 @@ const ApifyProductBodySchema = z.object({
 const CreateBookAgentBody = z.object({
   brief: z.string().optional(),
   marketEvidence: z.array(ApifyProductBodySchema).optional(),
+  usedCombos: z.array(z.string()).optional(),
+  seriesName: z.string().optional(),
 });
 
 function emit(res: Response, stage: string, status: string, data: Record<string, unknown> = {}): void {
@@ -64,12 +67,29 @@ router.post("/agents/create-book", async (req, res) => {
   res.setHeader("X-Accel-Buffering", "no");
 
   const parsed = CreateBookAgentBody.safeParse(req.body);
-  const brief = parsed.success ? parsed.data.brief : undefined;
+  const rawBrief = parsed.success ? parsed.data.brief : undefined;
+  const requestedSeriesName = parsed.success ? parsed.data.seriesName : undefined;
   // Normalize evidence: top 3 by demand_score (contract for Market Scout grounding)
   const rawEvidence = parsed.success ? (parsed.data.marketEvidence as ApifyProduct[] | undefined) : undefined;
   const marketEvidence = rawEvidence && rawEvidence.length > 0
     ? [...rawEvidence].sort((a, b) => b.demand_score - a.demand_score).slice(0, 3)
     : undefined;
+
+  // ── Fetch library usedCombos (supplement or replace caller-provided list) ────
+  let usedCombos: string[] = parsed.success && parsed.data.usedCombos ? parsed.data.usedCombos : [];
+  if (usedCombos.length === 0) {
+    try {
+      const existingBooks = await db.select().from(booksTable).orderBy(desc(booksTable.id));
+      usedCombos = [...new Set(existingBooks.map(b => `${b.theme}+${b.coverStyle}+${b.niche ?? "general"}`))];
+    } catch (_) { /* non-critical — proceed without constraint */ }
+  }
+
+  // Augment brief with series name constraint if provided
+  const brief = requestedSeriesName && rawBrief
+    ? `${rawBrief} — continuation of "${requestedSeriesName}" series`
+    : requestedSeriesName
+      ? `Next volume in "${requestedSeriesName}" series`
+      : rawBrief;
 
   // ─── Stage 1: Market Intelligence Council ────────────────────────────────────
   let market: MarketScoutResult;
@@ -80,7 +100,7 @@ router.post("/agents/create-book", async (req, res) => {
   try {
     const intel = await runMarketIntelligenceCouncil(brief, (msg) => {
       emit(res, "market_scout", "running", { message: msg });
-    }, marketEvidence);
+    }, marketEvidence, usedCombos);
     market = intel;
     req.log.info({ niche: market.niche, puzzleType: market.puzzleType, candidates: intel.candidates.length }, "Market Intelligence Council done");
     emit(res, "market_scout", "done", {
@@ -96,7 +116,7 @@ router.post("/agents/create-book", async (req, res) => {
     req.log.error({ err }, "Market Intelligence Council failed — falling back to Market Scout");
     emit(res, "market_scout", "running", { message: "Council degraded — running Market Scout fallback…" });
     try {
-      market = await runMarketScout(brief, marketEvidence);
+      market = await runMarketScout(brief, marketEvidence, usedCombos);
       req.log.info({ niche: market.niche }, "Market Scout fallback done");
       emit(res, "market_scout", "done", {
         message: `Market Scout (fallback): ${market.nicheLabel} ${market.puzzleType}`,
@@ -397,6 +417,7 @@ router.post("/agents/create-book", async (req, res) => {
   }
 
   // ─── Stage 10: QA Review ────────────────────────────────────────────────────
+  const coverCombo = `${market.theme}+${market.coverStyle}+${market.niche}`;
   const buildQASpec = () => ({
     title: finalTitle,
     subtitle: finalSubtitle,
@@ -406,6 +427,8 @@ router.post("/agents/create-book", async (req, res) => {
     hasImage: hasCoverImage,
     words: draft.words,
     author: draft.author,
+    coverCombo,
+    usedCombos,
   });
 
   let qaFailed = false;
@@ -426,7 +449,7 @@ router.post("/agents/create-book", async (req, res) => {
           : `${qaResult.issues.length} minor issue(s) noted — no revision required`,
         passed: qaResult.passed,
         issues: qaResult.issues,
-        checksCount: 6,
+        checksCount: usedCombos.length > 0 ? 7 : 6,
       });
     } else {
       emit(res, "qa_review", "needs_revision", {
@@ -468,7 +491,7 @@ router.post("/agents/create-book", async (req, res) => {
             : `${reQA.issues.length} issue(s) remain — proceeding with best effort`,
           passed: reQA.passed,
           issues: reQA.issues,
-          checksCount: 6,
+          checksCount: usedCombos.length > 0 ? 7 : 6,
         });
       } catch (revErr) {
         req.log.error({ revErr }, "Revision or re-QA failed");
