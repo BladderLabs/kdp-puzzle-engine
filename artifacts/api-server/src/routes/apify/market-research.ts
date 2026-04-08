@@ -89,80 +89,151 @@ function buildAmazonSearchUrl(keyword: string): string {
   return `https://www.amazon.com/s?k=${encodeURIComponent(keyword)}&i=stripbooks&s=review-rank`;
 }
 
-// Page function for the cheerio-scraper actor — uses Cheerio's $ API (jQuery-like, static HTML)
-// Note: Amazon renders review counts via JS; we extract title/ASIN/price from static HTML
+// Two-phase page function for cheerio-scraper:
+//   Phase 1 (search results page): collect title, ASIN, price, reviews, stars + enqueue product pages
+//   Phase 2 (product detail pages): extract BSR from #detailBullets or salesRank elements
+// Results are merged server-side by ASIN.
 const AMAZON_PAGE_FUNCTION = `
 async function pageFunction(context) {
-  const { $, request } = context;
+  const { $, request, enqueueRequest } = context;
+  const BASE = 'https://www.amazon.com';
+
+  // ── Phase 2: product detail page — extract BSR ────────────────────────────
+  if (request.userData && request.userData.type === 'product') {
+    const asin = request.userData.asin;
+    let bsr = null;
+
+    // Location 1: detail bullets wrapper (newer Amazon layout)
+    $('[id^="detailBullets"] .a-list-item, #productDetails_detailBullets_sections1 tr').each(function() {
+      const text = $(this).text();
+      if (text.includes('Best Sellers Rank')) {
+        const m = text.match(/#([\\d,]+)/);
+        if (m && !bsr) bsr = parseInt(m[1].replace(/,/g, ''));
+      }
+    });
+
+    // Location 2: legacy #SalesRank (older Amazon layout)
+    if (!bsr) {
+      const salesText = $('#SalesRank').text();
+      const m2 = salesText.match(/#([\\d,]+)/);
+      if (m2) bsr = parseInt(m2[1].replace(/,/g, ''));
+    }
+
+    // Location 3: product details table (another Amazon variant)
+    if (!bsr) {
+      $('table#productDetails_techSpec_section_1 tr, .a-keyvalue.prodDetTable tr').each(function() {
+        const label = $(this).find('th').text();
+        if (label.includes('Best Sellers Rank')) {
+          const val = $(this).find('td').text();
+          const m3 = val.match(/#([\\d,]+)/);
+          if (m3) bsr = parseInt(m3[1].replace(/,/g, ''));
+        }
+      });
+    }
+
+    return [{ _type: 'bsr', asin, bsr }];
+  }
+
+  // ── Phase 1: search results page ──────────────────────────────────────────
   const items = [];
-  const baseUrl = 'https://www.amazon.com';
+  let enqueued = 0;
 
   $('[data-component-type="s-search-result"]').each(function() {
     const el = $(this);
-    const asin = el.attr('data-asin') || '';
+    const asin = (el.attr('data-asin') || '').trim();
+    if (!asin) return;
 
-    // Title — try multiple selectors Amazon uses
     const title = (
       el.find('h2 .a-text-normal').first().text() ||
-      el.find('h2 span').first().text() ||
-      el.find('[data-cy="title-recipe"] span').first().text()
+      el.find('h2 span').first().text()
     ).trim();
     if (!title || title.length < 5) return;
 
-    // Price — .a-offscreen has the full "$X.XX" string in static HTML
     const priceText = el.find('.a-price .a-offscreen').first().text().replace(/[$,]/g, '').trim();
     const price = priceText ? parseFloat(priceText) : null;
 
-    // Stars from aria-label on the rating icon (static HTML)
     const starsLabel = el.find('[aria-label*="out of 5"]').first().attr('aria-label') || '';
     const starsMatch = starsLabel.match(/([\\d.]+)\\s+out\\s+of\\s+5/i);
     const stars = starsMatch ? parseFloat(starsMatch[1]) : null;
 
-    // Review count — try aria-label pattern "X ratings" on the count link
     const reviewLabel = el.find('[aria-label$="ratings"], [aria-label$="reviews"]').first().attr('aria-label') || '';
     const reviewMatch = reviewLabel.match(/([\\d,]+)/);
     const reviews = reviewMatch ? parseInt(reviewMatch[1].replace(/,/g, '')) : 0;
 
-    // Product URL
-    const href = el.find('h2 a').attr('href') || '';
-    const url = href ? (href.startsWith('http') ? href.split('?')[0] : baseUrl + href.split('?')[0]) : undefined;
+    // Build product URL from ASIN (most reliable — avoids href parsing issues)
+    const productUrl = 'https://www.amazon.com/dp/' + asin;
 
-    items.push({ title, asin: asin || undefined, price, reviews, stars, bsr: null, url });
+    // Also try to get a canonical URL from the link for display purposes
+    const href = el.find('h2 a').attr('href') || '';
+    const displayUrl = href ? (href.startsWith('http') ? href.split('?')[0] : BASE + href.split('?')[0]) : productUrl;
+
+    // Enqueue product page for BSR extraction (first 8 results only to stay within limits)
+    if (enqueued < 8) {
+      enqueueRequest({ url: productUrl, userData: { type: 'product', asin } });
+      enqueued++;
+    }
+
+    items.push({ _type: 'search', title, asin, price: price, reviews, stars, url: displayUrl });
   });
 
   return items;
 }
 `;
 
-function extractNumberFromString(val: unknown): number | null {
+function toNum(val: unknown): number | null {
   if (typeof val === "number") return isFinite(val) ? val : null;
   if (typeof val === "string") {
-    const cleaned = val.replace(/[$,\s]/g, "");
-    const n = parseFloat(cleaned);
+    const n = parseFloat(val.replace(/[$,\s]/g, ""));
     return isNaN(n) ? null : n;
   }
   return null;
 }
 
-function normaliseApifyItem(item: Record<string, unknown>): ApifyProduct | null {
-  const title = ((item.title as string) ?? "").trim();
-  if (!title || title.length < 5) return null;
+/**
+ * Merge search-phase items with BSR-phase items by ASIN and return
+ * normalised ApifyProduct records.
+ */
+function mergeAndNormalise(rawItems: Record<string, unknown>[]): ApifyProduct[] {
+  // Separate search items from BSR items
+  const searchItems = rawItems.filter(it => it._type === "search" || !it._type);
+  const bsrMap = new Map<string, number | null>();
 
-  const price = extractNumberFromString(item.price ?? item.currentPrice) ?? null;
-  const reviews = extractNumberFromString(item.reviews ?? item.reviewsCount ?? item.numberOfReviews) as number ?? 0;
-  const stars = extractNumberFromString(item.stars ?? item.rating) ?? null;
-  const bsr = extractNumberFromString(item.bsr ?? item.salesRank) ?? null;
-  const asin = ((item.asin ?? "") as string) || undefined;
-  const url = ((item.url ?? "") as string) || undefined;
-
-  const demand_score = computeDemandScore(bsr, reviews, stars);
-  const competition_level = computeCompetitionLevel(reviews, bsr);
-
-  try {
-    return ApifyProductSchema.parse({ title, asin, bsr, reviews, price, stars, demand_score, competition_level, url });
-  } catch {
-    return null;
+  for (const it of rawItems) {
+    if (it._type === "bsr" && typeof it.asin === "string" && it.asin) {
+      bsrMap.set(it.asin, toNum(it.bsr));
+    }
   }
+
+  const products: ApifyProduct[] = [];
+  for (const item of searchItems) {
+    const title = ((item.title as string) ?? "").trim();
+    if (!title || title.length < 5) continue;
+
+    const asin = ((item.asin ?? "") as string) || undefined;
+    const price = toNum(item.price ?? item.currentPrice) ?? null;
+    const reviews = toNum(item.reviews ?? item.reviewsCount) ?? 0;
+    const stars = toNum(item.stars ?? item.rating) ?? null;
+    // Prefer BSR from product page; fall back to what search page may have provided
+    const bsr = (asin && bsrMap.has(asin)) ? bsrMap.get(asin)! : (toNum(item.bsr) ?? null);
+    const url = ((item.url ?? "") as string) || undefined;
+
+    const demand_score = computeDemandScore(bsr, reviews, stars);
+    const competition_level = computeCompetitionLevel(reviews, bsr);
+
+    try {
+      const product = ApifyProductSchema.parse({
+        title, asin, bsr, reviews, price, stars, demand_score, competition_level, url,
+      });
+      products.push(product);
+    } catch {
+      // skip malformed item
+    }
+
+    if (products.length >= 10) break;
+  }
+
+  products.sort((a, b) => b.demand_score - a.demand_score);
+  return products;
 }
 
 async function callApify(keyword: string, apiKey: string): Promise<ApifyProduct[]> {
@@ -171,19 +242,20 @@ async function callApify(keyword: string, apiKey: string): Promise<ApifyProduct[
   const input = {
     startUrls: [{ url: searchUrl }],
     pageFunction: AMAZON_PAGE_FUNCTION,
-    maxPagesPerCrawl: 1,
-    maxCrawledPagesPerCrawl: 1,
-    maxRequestsPerCrawl: 3,
+    // Allow: 1 search page + up to 8 product pages for BSR extraction
+    maxCrawledPagesPerCrawl: 10,
+    maxRequestsPerCrawl: 12,
     proxyConfiguration: { useApifyProxy: true },
   };
 
-  const runUrl = `${APIFY_BASE_URL}/acts/${APIFY_ACTOR_ID}/run-sync-get-dataset-items?token=${apiKey}&timeout=120&maxItems=15`;
+  // Run sync and collect all dataset items (search items + BSR items mixed)
+  const runUrl = `${APIFY_BASE_URL}/acts/${APIFY_ACTOR_ID}/run-sync-get-dataset-items?token=${apiKey}&timeout=180&maxItems=100`;
 
   const response = await fetch(runUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
-    signal: AbortSignal.timeout(130_000),
+    signal: AbortSignal.timeout(190_000),
   });
 
   if (!response.ok) {
@@ -191,16 +263,8 @@ async function callApify(keyword: string, apiKey: string): Promise<ApifyProduct[
     throw new Error(`Apify API error: ${response.status} ${response.statusText}${errBody ? ` — ${errBody.slice(0, 300)}` : ""}`);
   }
 
-  const items = await response.json() as Record<string, unknown>[];
-  const products: ApifyProduct[] = [];
-  for (const item of items) {
-    const normalised = normaliseApifyItem(item);
-    if (normalised) products.push(normalised);
-    if (products.length >= 10) break;
-  }
-
-  products.sort((a, b) => b.demand_score - a.demand_score);
-  return products;
+  const rawItems = await response.json() as Record<string, unknown>[];
+  return mergeAndNormalise(rawItems);
 }
 
 // ─── Route handler ─────────────────────────────────────────────────────────────
