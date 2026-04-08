@@ -56,10 +56,31 @@ function parseModelJson(text: string): unknown {
   return JSON.parse(cleaned);
 }
 
-export async function runMarketScout(brief?: string): Promise<MarketScoutResult> {
-  const briefClause = brief ? `\nUser's book idea: "${brief}"` : "\nChoose the single best market opportunity based on current KDP trends.";
+export interface MarketEvidenceItem {
+  title: string;
+  bsr?: number | null;
+  reviews?: number;
+  price?: number | null;
+  demand_score?: number;
+  competition_level?: string;
+}
 
-  const prompt = `${KDP_EXPERT_CONTEXT}${briefClause}
+export async function runMarketScout(brief?: string, evidence?: MarketEvidenceItem[]): Promise<MarketScoutResult> {
+  const briefClause = brief ? `\nUser's book idea: "${brief}"` : "\nChoose the single best market opportunity based on current KDP trends.";
+  const evidenceClause = evidence && evidence.length > 0
+    ? `\nLive Amazon market evidence (top ${evidence.length} competing titles):\n` +
+      evidence.map((e, i) =>
+        `${i + 1}. "${e.title.slice(0, 80)}"` +
+        (e.bsr ? ` | BSR #${e.bsr.toLocaleString()}` : "") +
+        (e.reviews != null ? ` | ${e.reviews} reviews` : "") +
+        (e.price != null ? ` | $${e.price}` : "") +
+        (e.demand_score != null ? ` | demand ${e.demand_score}/10` : "") +
+        (e.competition_level ? ` | ${e.competition_level} competition` : "")
+      ).join("\n") +
+      "\nUse this data to calibrate your niche/type selection — target niches with demand ≥ 6 and avoid oversaturated categories."
+    : "";
+
+  const prompt = `${KDP_EXPERT_CONTEXT}${briefClause}${evidenceClause}
 
 Analyze the Amazon KDP puzzle book market and identify the single best book opportunity to publish right now.
 

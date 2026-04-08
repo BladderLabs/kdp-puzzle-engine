@@ -96,7 +96,7 @@ router.post("/agents/create-book", async (req, res) => {
     req.log.error({ err }, "Market Intelligence Council failed — falling back to Market Scout");
     emit(res, "market_scout", "running", { message: "Council degraded — running Market Scout fallback…" });
     try {
-      market = await runMarketScout(brief);
+      market = await runMarketScout(brief, marketEvidence);
       req.log.info({ niche: market.niche }, "Market Scout fallback done");
       emit(res, "market_scout", "done", {
         message: `Market Scout (fallback): ${market.nicheLabel} ${market.puzzleType}`,

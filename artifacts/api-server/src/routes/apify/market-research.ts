@@ -70,7 +70,7 @@ function computeDemandScore(bsr: number | null, reviews: number, stars: number |
   if (reviews < 50) score += 1;
   else if (reviews > 500) score -= 1;
   if (stars !== null && stars >= 4.5) score += 1;
-  return Math.min(10, Math.max(1, score));
+  return Math.min(10, Math.max(0, score));
 }
 
 function computeCompetitionLevel(reviews: number, bsr: number | null): "Low" | "Medium" | "High" {
