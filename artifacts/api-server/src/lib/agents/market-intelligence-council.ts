@@ -216,7 +216,7 @@ async function runMarketDirector(
     : "";
 
   const combosClause = usedCombos && usedCombos.length > 0
-    ? `\nTHEME+NICHE COMBOS ALREADY IN USE — pick a DIFFERENT theme for the same niche:\n${usedCombos.map(c => `  - ${c}`).join("\n")}\n`
+    ? `\nCOVER COMBOS ALREADY IN USE (theme+coverStyle+niche) — pick a DIFFERENT combination:\n${usedCombos.map(c => `  - ${c}`).join("\n")}\n`
     : "";
 
   const prompt = `You are the Market Intelligence Director for a KDP puzzle book publishing house.
@@ -287,13 +287,26 @@ Return ONLY JSON (no markdown):
     }
   }
 
-  // ── Post-parse uniqueness enforcement (2-field key: theme+niche) ──────────────
+  // ── Explicit post-parse uniqueness validator (3-field: theme+coverStyle+niche) ─
   if (usedCombos && usedCombos.length > 0) {
     const ALL_THEMES = ["midnight", "forest", "crimson", "ocean", "violet", "slate", "sunrise", "teal", "parchment", "sky"];
-    const currentCombo = `${result.theme}+${result.niche}`;
+    const ALL_STYLES = ["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth"];
+    const currentCombo = `${result.theme}+${result.coverStyle}+${result.niche}`;
     if (usedCombos.includes(currentCombo)) {
-      const altTheme = ALL_THEMES.find(t => !usedCombos.includes(`${t}+${result.niche}`));
-      if (altTheme) result.theme = altTheme;
+      let resolved = false;
+      for (const theme of ALL_THEMES) {
+        for (const style of ALL_STYLES) {
+          const candidate = `${theme}+${style}+${result.niche}`;
+          if (!usedCombos.includes(candidate)) {
+            console.warn(`[MarketDirector] Combo uniqueness violation: "${currentCombo}" already used. Correcting to "${candidate}".`);
+            result.theme = theme;
+            result.coverStyle = style;
+            resolved = true;
+            break;
+          }
+        }
+        if (resolved) break;
+      }
     }
   }
 

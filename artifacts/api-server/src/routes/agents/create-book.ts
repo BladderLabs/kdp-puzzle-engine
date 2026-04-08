@@ -80,7 +80,7 @@ router.post("/agents/create-book", async (req, res) => {
   if (usedCombos.length === 0) {
     try {
       const existingBooks = await db.select().from(booksTable).orderBy(desc(booksTable.id));
-      usedCombos = [...new Set(existingBooks.map(b => `${b.theme}+${b.niche ?? "general"}`))];
+      usedCombos = [...new Set(existingBooks.map(b => `${b.theme}+${b.coverStyle}+${b.niche ?? "general"}`))];
     } catch (_) { /* non-critical — proceed without constraint */ }
   }
 
@@ -373,9 +373,9 @@ router.post("/agents/create-book", async (req, res) => {
   }
 
   // Resolve final values (bookSpec wins over council defaults, council wins over market defaults)
-  // let — finalTheme may be swapped in QA cover_diversity revision loop
+  // let — finalTheme and finalStyle may be swapped in QA cover_diversity revision loop
   let finalTheme = bookSpec?.coverTheme ?? coverDesignSpec.theme ?? market.recommendedTheme ?? market.theme;
-  const finalStyle = bookSpec?.coverStyle ?? coverDesignSpec.style ?? market.coverStyle;
+  let finalStyle = bookSpec?.coverStyle ?? coverDesignSpec.style ?? market.coverStyle;
   const finalTitle = bookSpec?.title ?? contentSpec.title;
   const finalSubtitle = bookSpec?.subtitle ?? contentSpec.subtitle;
   const finalBackDescription = bookSpec?.backDescription ?? contentSpec.backDescription;
@@ -418,10 +418,10 @@ router.post("/agents/create-book", async (req, res) => {
   }
 
   // ─── Stage 10: QA Review ────────────────────────────────────────────────────
-  // 2-field combo (theme+niche): coverStyle excluded — unreliable when AI cover stores "photo"
-  // Uses finalTheme (post-council resolution) not market.theme for accuracy
+  // 3-field combo (theme+coverStyle+niche); uses final resolved values (not raw market values)
   const ALL_THEMES_ORDERED = ["midnight", "forest", "crimson", "ocean", "violet", "slate", "sunrise", "teal", "parchment", "sky"];
-  let coverCombo = `${finalTheme}+${market.niche}`;
+  const ALL_STYLES_ORDERED = ["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth"];
+  let coverCombo = `${finalTheme}+${finalStyle}+${market.niche}`;
   const buildQASpec = () => ({
     title: finalTitle,
     subtitle: finalSubtitle,
@@ -465,16 +465,56 @@ router.post("/agents/create-book", async (req, res) => {
       const hasCoverDiversityIssue = qaResult.issues.some(i => i.field === "cover_combination");
       const contentIssues = qaResult.issues.filter(i => i.field !== "cover_combination");
 
-      // ── Step A: Fix cover_diversity deterministically (no LLM needed) ─────────
+      // ── Step A: Fix cover_diversity — swap both theme+style, regenerate cover ────
       if (hasCoverDiversityIssue) {
-        const altTheme = ALL_THEMES_ORDERED.find(t => !usedCombos.includes(`${t}+${market.niche}`));
-        if (altTheme && altTheme !== finalTheme) {
-          finalTheme = altTheme;
-          coverCombo = `${finalTheme}+${market.niche}`;
-          req.log.info({ altTheme, niche: market.niche }, "Cover diversity fix: swapped theme");
-          emit(res, "qa_review", "running", { message: `Cover uniqueness fix: switching to "${altTheme}" theme…` });
+        let newTheme: string | null = null;
+        let newStyle: string | null = null;
+        // Find the first unused theme+style combination for this niche
+        outer: for (const theme of ALL_THEMES_ORDERED) {
+          for (const style of ALL_STYLES_ORDERED) {
+            const candidate = `${theme}+${style}+${market.niche}`;
+            if (!usedCombos.includes(candidate)) {
+              newTheme = theme;
+              newStyle = style;
+              break outer;
+            }
+          }
+        }
+
+        if (newTheme && newStyle) {
+          finalTheme = newTheme;
+          finalStyle = newStyle;
+          coverCombo = `${finalTheme}+${finalStyle}+${market.niche}`;
+          req.log.info({ newTheme, newStyle, niche: market.niche }, "Cover diversity fix: swapped theme+style");
+          emit(res, "qa_review", "running", {
+            message: `Cover uniqueness fix: switching to "${finalTheme}/${finalStyle}" theme+style — regenerating cover art…`,
+          });
+
+          // Regenerate cover art with the new theme+style to keep image consistent with metadata
+          try {
+            const newCoverResult = await runCoverArtDirector(
+              finalTheme,
+              market.puzzleType,
+              finalStyle,
+              finalTitle,
+              market.niche,
+              enrichedImagePrompt || undefined,
+            );
+            if (newCoverResult) {
+              coverImageDataUrl = `data:${newCoverResult.mimeType};base64,${newCoverResult.b64_json}`;
+              hasCoverImage = true;
+              req.log.info({ theme: finalTheme, style: finalStyle }, "Cover art regenerated after diversity fix");
+            } else {
+              coverImageDataUrl = null;
+              hasCoverImage = false;
+            }
+          } catch (coverErr) {
+            req.log.error({ coverErr }, "Cover art regeneration failed after diversity fix — using SVG theme art");
+            coverImageDataUrl = null;
+            hasCoverImage = false;
+          }
         } else {
-          req.log.warn({ niche: market.niche }, "Cover diversity: no alternative theme available — proceeding");
+          req.log.warn({ niche: market.niche }, "Cover diversity: no alternative theme+style available — proceeding");
         }
       }
 

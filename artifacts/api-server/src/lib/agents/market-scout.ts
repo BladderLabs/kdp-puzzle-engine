@@ -84,7 +84,7 @@ export async function runMarketScout(
       "\nUse this data to calibrate your niche/type selection — target niches with demand ≥ 6 and avoid oversaturated categories."
     : "";
   const combosClause = usedCombos && usedCombos.length > 0
-    ? `\nTHEME+NICHE COMBOS ALREADY IN USE — you MUST pick a DIFFERENT theme for the same niche:\n${usedCombos.map(c => `  - ${c}`).join("\n")}\nSelect a theme+niche combination not in this list to ensure visual differentiation across the library.`
+    ? `\nCOVER COMBOS ALREADY IN USE (theme+coverStyle+niche) — you MUST pick a DIFFERENT combination:\n${usedCombos.map(c => `  - ${c}`).join("\n")}\nSelect a theme+coverStyle+niche combination not in this list to ensure visual differentiation across the library.`
     : "";
 
   const prompt = `${KDP_EXPERT_CONTEXT}${briefClause}${evidenceClause}${combosClause}
@@ -138,17 +138,27 @@ keywords array must have exactly 7 strings, ordered from highest to lowest searc
     }
   }
 
-  // ── Post-parse uniqueness enforcement (2-field key: theme+niche) ──────────────
+  // ── Explicit post-parse uniqueness validator (3-field: theme+coverStyle+niche) ─
   if (usedCombos && usedCombos.length > 0) {
     const ALL_THEMES = ["midnight", "forest", "crimson", "ocean", "violet", "slate", "sunrise", "teal", "parchment", "sky"];
-    const currentCombo = `${result.theme}+${result.niche}`;
+    const ALL_STYLES = ["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth"];
+    const currentCombo = `${result.theme}+${result.coverStyle}+${result.niche}`;
     if (usedCombos.includes(currentCombo)) {
-      const altTheme = ALL_THEMES.find(t => !usedCombos.includes(`${t}+${result.niche}`));
-      if (altTheme) {
-        result.theme = altTheme;
-        if (result.recommendedTheme && usedCombos.includes(`${result.recommendedTheme}+${result.niche}`)) {
-          result.recommendedTheme = altTheme;
+      // Validation failure detected — find first unused theme+style pair for this niche
+      let resolved = false;
+      for (const theme of ALL_THEMES) {
+        for (const style of ALL_STYLES) {
+          const candidate = `${theme}+${style}+${result.niche}`;
+          if (!usedCombos.includes(candidate)) {
+            console.warn(`[MarketScout] Combo uniqueness violation: "${currentCombo}" already used. Correcting to "${candidate}".`);
+            result.theme = theme;
+            result.coverStyle = style;
+            if (result.recommendedTheme) result.recommendedTheme = theme;
+            resolved = true;
+            break;
+          }
         }
+        if (resolved) break;
       }
     }
   }

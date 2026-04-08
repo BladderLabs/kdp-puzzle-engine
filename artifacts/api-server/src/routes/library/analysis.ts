@@ -39,8 +39,8 @@ export interface LibraryAnalysis {
   suggestions: LibrarySuggestion[];
 }
 
-function comboKey(theme: string, niche: string | null): string {
-  return `${theme}+${niche ?? "general"}`;
+function comboKey(theme: string, coverStyle: string, niche: string | null): string {
+  return `${theme}+${coverStyle}+${niche ?? "general"}`;
 }
 
 function parseModelJson(text: string): unknown {
@@ -58,8 +58,8 @@ router.get("/library/analysis", async (req, res) => {
   try {
     const books = await db.select().from(booksTable);
 
-    // ── 1. Compute used combos (theme+niche; coverStyle excluded — unreliable when AI cover = "photo") ──
-    const usedCombos = [...new Set(books.map(b => comboKey(b.theme, b.niche)))];
+    // ── 1. Compute used combos (theme+coverStyle+niche) ───────────────────────
+    const usedCombos = [...new Set(books.map(b => comboKey(b.theme, b.coverStyle, b.niche)))];
 
     // ── 2. Series analysis ────────────────────────────────────────────────────
     const seriesMap = new Map<string, typeof books>();
@@ -115,8 +115,8 @@ router.get("/library/analysis", async (req, res) => {
         (books.length > 10 ? `\n... and ${books.length - 10} more` : "");
 
     const usedComboContext = usedCombos.length > 0
-      ? `\nTheme+niche combos already in use (MUST pick different theme for same niche): ${usedCombos.join(", ")}`
-      : "\nNo theme+niche combos in use yet.";
+      ? `\nCover combos already in use (theme+coverStyle+niche — you MUST pick a different combination): ${usedCombos.join(", ")}`
+      : "\nNo cover combos in use yet.";
 
     const seriesContext = seriesGaps.length > 0
       ? `\nSeries that can grow: ${seriesGaps.map(s => `"${s.seriesName}" (vol ${s.existingVolumes.join(",")}, next: ${s.nextVolume})`).join("; ")}`
@@ -154,7 +154,7 @@ For each card return:
   "volumeNumber": 2
 }
 
-CRITICAL: the theme+niche combination must NOT already be in the used combos list above.
+CRITICAL: the theme+coverStyle+niche combination must NOT already be in the used combos list above.
 Return ONLY a JSON array of 4 objects. No markdown, no explanation.`;
 
     let suggestions: LibrarySuggestion[] = [];
