@@ -26,7 +26,25 @@ export const MarketScoutResultSchema = z.object({
   keywords: z.array(z.string()).length(7),
   audienceProfile: z.string(),
   whySells: z.string(),
+  recommendedTheme: z.string().optional(),
 });
+
+/**
+ * Deterministic niche → theme mapping.
+ * Maps audience profile keywords to the conversion-optimized color story.
+ * Checked in priority order; falls back to "midnight" (proven bestseller default).
+ */
+const NICHE_THEME_MAP: [RegExp, string][] = [
+  [/christmas|holiday|winter|festive|xmas/i, "crimson"],
+  [/cat|pet|animal|cozy|dog|bird/i, "parchment"],
+  [/ocean|beach|coastal|nautical|sea|marine/i, "ocean"],
+  [/nature|garden|flower|plant|forest|outdoor/i, "forest"],
+  [/kid|child|youth|beginner|fun|junior/i, "sunrise"],
+  [/mystery|detective|crime|thriller|spy/i, "violet"],
+  [/teal|aqua/i, "teal"],
+  [/sky|cloud|aerial/i, "sky"],
+  [/senior|elder|retire|grandpar|classic|gift|adult/i, "midnight"],
+];
 
 export type MarketScoutResult = z.infer<typeof MarketScoutResultSchema>;
 
@@ -80,6 +98,16 @@ keywords array must have exactly 7 strings, ordered from highest to lowest searc
     const fallback = listNiches()[0];
     result.niche = fallback.key;
     result.nicheLabel = fallback.label;
+  }
+
+  // Compute conversion-optimized theme from niche + audience — deterministic, overrides LLM choice
+  const nicheAudienceText = `${result.niche} ${result.nicheLabel} ${result.audienceProfile}`;
+  result.recommendedTheme = "midnight"; // proven bestseller default
+  for (const [pattern, theme] of NICHE_THEME_MAP) {
+    if (pattern.test(nicheAudienceText)) {
+      result.recommendedTheme = theme;
+      break;
+    }
   }
 
   return result;

@@ -199,6 +199,13 @@ router.post("/agents/create-book", async (req, res) => {
   // ─── Stage 5: Assemble & Save ───
   // Auto-select "photo" cover style when AI image was generated — highest quality output
   const finalCoverStyle = hasCoverImage ? "photo" : market.coverStyle;
+  // Use conversion-optimized niche-matched theme (overrides LLM's generic theme choice)
+  const finalTheme = market.recommendedTheme ?? market.theme;
+  // Prepend hook sentence to back description with separator so the cover builder
+  // can detect and render it in larger bold text separately from the body copy.
+  const finalBackDescription = content.hookSentence
+    ? `${content.hookSentence}\n\n${content.backDescription}`
+    : content.backDescription;
 
   emit(res, "assemble", "running", { message: "Saving book project to your library…" });
   try {
@@ -211,9 +218,9 @@ router.post("/agents/create-book", async (req, res) => {
       difficulty: market.difficulty,
       largePrint: market.largePrint,
       paperType: "white",
-      theme: market.theme,
+      theme: finalTheme,
       coverStyle: finalCoverStyle,
-      backDescription: content.backDescription,
+      backDescription: finalBackDescription,
       words: content.words,
       wordCategory: content.wordCategory,
       coverImageUrl: coverImageDataUrl,
@@ -238,7 +245,7 @@ router.post("/agents/create-book", async (req, res) => {
       subtitle: content.subtitle,
       puzzleType: market.puzzleType,
       puzzleCount: market.puzzleCount,
-      theme: market.theme,
+      theme: finalTheme,
       hasCoverImage,
       qaFailed,
       qaPassed: finalQAPassed,

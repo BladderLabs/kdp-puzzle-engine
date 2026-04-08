@@ -6,6 +6,7 @@ export const ContentArchitectResultSchema = z.object({
   title: z.string(),
   subtitle: z.string(),
   author: z.string(),
+  hookSentence: z.string().optional(),
   backDescription: z.string(),
   wordCategory: z.string(),
   words: z.array(z.string()),
@@ -55,7 +56,8 @@ Rules:
 - Title: must be 6+ words, keyword-rich, appealing to the niche
 - Subtitle: punchy benefit statement, 8–15 words
 - Author: use a realistic pen name suitable for the niche
-- Back description: 100–150 words, compelling sales copy using emotional triggers and benefits
+- Hook sentence: 10–15 words, audience-specific, benefit-led opening line for the back cover. Example: "The perfect brain-training gift for the cat lover in your life!" Do NOT end with a period. Must feel personal and warm to the exact audience.
+- Back description: 100–150 words, compelling sales copy using emotional triggers and benefits. Do NOT repeat the hook sentence here.
 - Word category: must be one of: ${WORD_CATEGORIES.join(", ")}
 - Words: 30–50 thematically relevant words for the puzzle type and niche (only for Word Search/Cryptogram)
 - Volume: 1
@@ -65,6 +67,7 @@ Return ONLY a JSON object (no markdown, no explanation):
   "title": "Large Print Word Search for Seniors: 100 Stimulating Puzzles for Sharp Minds",
   "subtitle": "Big Letters, Easy to Read — Perfect for Brain Training and Daily Relaxation",
   "author": "Eleanor Bennett",
+  "hookSentence": "The perfect brain-training gift for every puzzle-loving senior in your life",
   "backDescription": "A full 100-150 word compelling back cover description here...",
   "wordCategory": "General",
   "words": ["PUZZLE","BRAIN","SOLVE","SEARCH","LETTER","ANSWER","WORDS","FIND","GRID","CLUE","HIDDEN","LEVEL","GAME","MATCH","PLAY"],
