@@ -1,6 +1,6 @@
 import {
   shuf, makeWordSearch, makeSudoku, makeMaze, makeNumberSearch,
-  makeCryptogram, makeCrossword, WORD_BANKS,
+  makeCryptogram, makeCrossword, generateCrosswordClues, applyCluesToCrossword, WORD_BANKS,
 } from "./puzzles";
 import type { CrosswordResult, CrosswordClue } from "./puzzles";
 
@@ -68,7 +68,7 @@ export interface BuildResult {
   trimH: number;
 }
 
-export function buildInteriorHTML(opts: BuildOpts): BuildResult {
+export async function buildInteriorHTML(opts: BuildOpts): Promise<BuildResult> {
   const T = escapeHtml(opts.title);
   const ST = escapeHtml(opts.subtitle || "");
   const AU = escapeHtml(opts.author || "Eleanor Bennett");
@@ -141,6 +141,29 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         break;
       default:
         puzzles.push(makeWordSearch(shuf(wordBank).slice(0, Math.min(wordBank.length, wpp)), gsz));
+    }
+  }
+
+  // ── AI Crossword Clue Enrichment ────────────────────────────────────────
+  // Batch-generate real clues for all crossword puzzles in one Haiku call.
+  // Collects every unique answer word, sends unknowns to Claude Haiku,
+  // then applies the returned clues back to each CrosswordResult.
+  if (PT === "Crossword") {
+    const allAnswers: string[] = [];
+    for (const pz of puzzles) {
+      const cx = pz as CrosswordResult | null;
+      if (cx) {
+        cx.across.forEach(c => allAnswers.push(c.answer));
+        cx.down.forEach(c => allAnswers.push(c.answer));
+      }
+    }
+    if (allAnswers.length > 0) {
+      const nicheLabel = opts.wordCategory || "General";
+      const clueMap = await generateCrosswordClues(allAnswers, DF, nicheLabel);
+      for (let i = 0; i < puzzles.length; i++) {
+        const cx = puzzles[i] as CrosswordResult | null;
+        if (cx) puzzles[i] = applyCluesToCrossword(cx, clueMap);
+      }
     }
   }
 

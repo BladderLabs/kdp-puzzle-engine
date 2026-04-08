@@ -1,3 +1,5 @@
+import { anthropic } from "@workspace/integrations-anthropic-ai";
+
 export function shuf<T>(a: T[]): T[] {
   const b = [...a];
   for (let i = b.length - 1; i > 0; i--) {
@@ -885,6 +887,83 @@ const CROSSWORD_CLUES: Record<string, string> = {
 
 function makeCrosswordClue(word: string): string {
   return CROSSWORD_CLUES[word] || `${word.length}-letter word`;
+}
+
+/**
+ * Batch-generates real crossword clues for words not in the static dictionary.
+ * Sends all unknown words to Claude Haiku in a single call.
+ * Falls back to a short descriptive hint (never "N-letter word") on AI failure.
+ */
+export async function generateCrosswordClues(
+  answers: string[],
+  difficulty: string = "Medium",
+  niche: string = "General",
+): Promise<Record<string, string>> {
+  const unique = [...new Set(answers.map(w => w.toUpperCase()))];
+  const unknown = unique.filter(w => !CROSSWORD_CLUES[w]);
+
+  const clueMap: Record<string, string> = {};
+  for (const w of unique) {
+    if (CROSSWORD_CLUES[w]) clueMap[w] = CROSSWORD_CLUES[w];
+  }
+
+  if (unknown.length > 0) {
+    const style = difficulty === "Easy"
+      ? "simple and literal (one short phrase or sentence)"
+      : difficulty === "Hard"
+      ? "slightly indirect but always fair and solvable"
+      : "clear and standard (one short phrase or sentence)";
+
+    const prompt = `You are a crossword puzzle editor. Write a concise crossword clue for each word listed below.
+Clue style: ${style}. The puzzle has a "${niche}" theme — tie clues to the theme where natural.
+
+Return ONLY a JSON object with word→clue pairs, no markdown:
+{"WORD": "Clue text", ...}
+
+Words: ${unknown.join(", ")}`;
+
+    try {
+      const msg = await anthropic.messages.create({
+        model: "claude-haiku-4-5",
+        max_tokens: Math.max(512, unknown.length * 30),
+        messages: [{ role: "user", content: prompt }],
+      });
+      const raw = msg.content[0].type === "text" ? msg.content[0].text : "{}";
+      const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      const start = cleaned.indexOf("{");
+      const end = cleaned.lastIndexOf("}");
+      if (start !== -1 && end !== -1) {
+        const parsed = JSON.parse(cleaned.slice(start, end + 1)) as Record<string, string>;
+        for (const [k, v] of Object.entries(parsed)) {
+          const key = k.toUpperCase();
+          if (typeof v === "string" && v.trim().length > 0) clueMap[key] = v.trim();
+        }
+      }
+    } catch {
+      // AI call failed — use a readable fallback (never "N-letter word")
+    }
+
+    // Final fallback for any word the AI didn't return
+    for (const w of unknown) {
+      if (!clueMap[w]) {
+        clueMap[w] = `${w.slice(0, 1)}${w.slice(1).toLowerCase()} (${w.length} letters)`;
+      }
+    }
+  }
+
+  return clueMap;
+}
+
+/**
+ * Replaces clues on a CrosswordResult using a precomputed clue map.
+ * Leaves clues unchanged for any word not in the map.
+ */
+export function applyCluesToCrossword(result: CrosswordResult, clueMap: Record<string, string>): CrosswordResult {
+  return {
+    ...result,
+    across: result.across.map(c => ({ ...c, clue: clueMap[c.answer] ?? c.clue })),
+    down: result.down.map(c => ({ ...c, clue: clueMap[c.answer] ?? c.clue })),
+  };
 }
 
 export function makeCrossword(words: string[], size: number, _isSeedFallback = false): CrosswordResult {

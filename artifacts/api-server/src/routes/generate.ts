@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { zipSync } from "fflate";
 import { GenerateBookBody, PreviewPuzzlesBody, CoverPreviewBody } from "@workspace/api-zod";
 import { buildInteriorHTML, buildCoverHTML, computeTotalPages, type BuildOpts, type CoverBuildOpts } from "../lib/html-builders";
-import { makeWordSearch, makeSudoku, makeMaze, makeNumberSearch, makeCryptogram, makeCrossword, shuf, DEFWORDS } from "../lib/puzzles";
+import { makeWordSearch, makeSudoku, makeMaze, makeNumberSearch, makeCryptogram, makeCrossword, generateCrosswordClues, applyCluesToCrossword, shuf, DEFWORDS } from "../lib/puzzles";
 import { htmlToPdf } from "../lib/pdf";
 
 const router: IRouter = Router();
@@ -43,7 +43,7 @@ function toOpts(data: ReturnType<typeof GenerateBookBody.parse>): CoverBuildOpts
 router.post("/generate", async (req, res) => {
   try {
     const opts = toOpts(GenerateBookBody.parse(req.body));
-    const interior = buildInteriorHTML(opts);
+    const interior = await buildInteriorHTML(opts);
     const cover = buildCoverHTML(opts, interior.totalPages);
     res.json({
       interiorHtml: interior.html,
@@ -82,7 +82,7 @@ router.post("/pdf/interior", async (req, res) => {
     } else {
       // Legacy / direct path: regenerate from opts
       const opts = toOpts(GenerateBookBody.parse(req.body));
-      const interior = buildInteriorHTML(opts);
+      const interior = await buildInteriorHTML(opts);
       html = interior.html;
       w = interior.trimW;
       h = interior.trimH;
@@ -179,7 +179,7 @@ router.post("/cover-preview", (req, res) => {
   }
 });
 
-router.post("/puzzles/preview", (req, res) => {
+router.post("/puzzles/preview", async (req, res) => {
   try {
     const data = PreviewPuzzlesBody.parse(req.body);
     const pt = (data.puzzleType as string) || "Word Search";
@@ -191,6 +191,7 @@ router.post("/puzzles/preview", (req, res) => {
     const gsz = lp ? 13 : 15;
 
     const puzzles = [];
+    const crosswordResults = [];
     for (let i = 0; i < count; i++) {
       if (pt === "Word Search") {
         const bank = words.length >= 5 ? shuf(words).slice(0, Math.min(words.length, lp ? 16 : 20)) : DEFWORDS.slice(0, 16);
@@ -205,9 +206,33 @@ router.post("/puzzles/preview", (req, res) => {
         puzzles.push({ type: "Cryptogram", cryptogram: makeCryptogram() });
       } else if (pt === "Crossword") {
         const bank = words.length >= 5 ? shuf(words).slice(0, 20) : DEFWORDS.slice(0, 20);
-        puzzles.push({ type: "Crossword", crossword: makeCrossword(bank, lp ? 11 : 13) });
+        const cx = makeCrossword(bank, lp ? 11 : 13);
+        crosswordResults.push({ idx: puzzles.length, cx });
+        puzzles.push({ type: "Crossword", crossword: cx });
       }
     }
+
+    // Enrich crossword clues with AI if there are any crossword puzzles
+    if (crosswordResults.length > 0) {
+      const allAnswers: string[] = [];
+      for (const { cx } of crosswordResults) {
+        if (cx) {
+          cx.across.forEach(c => allAnswers.push(c.answer));
+          cx.down.forEach(c => allAnswers.push(c.answer));
+        }
+      }
+      if (allAnswers.length > 0) {
+        try {
+          const clueMap = await generateCrosswordClues(allAnswers, diff, "General");
+          for (const { idx, cx } of crosswordResults) {
+            if (cx) (puzzles[idx] as { crossword: typeof cx }).crossword = applyCluesToCrossword(cx, clueMap);
+          }
+        } catch {
+          // Non-fatal: preview still works with static clues
+        }
+      }
+    }
+
     res.json({ puzzles, puzzleType: pt });
   } catch (err) {
     req.log.error({ err }, "Failed to generate preview");
@@ -223,7 +248,7 @@ router.post("/puzzles/preview", (req, res) => {
 router.post("/bundle", async (req, res) => {
   try {
     const opts = toOpts(GenerateBookBody.parse(req.body));
-    const interior = buildInteriorHTML(opts);
+    const interior = await buildInteriorHTML(opts);
     const cover = buildCoverHTML(opts, interior.totalPages);
 
     req.log.info(`Generating ZIP bundle: ${interior.totalPages} pages, ${interior.trimW}"×${interior.trimH}"`);
