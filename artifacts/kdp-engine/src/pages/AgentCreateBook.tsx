@@ -367,10 +367,16 @@ const COMPETITION_COLORS: Record<string, { bg: string; text: string }> = {
   High: { bg: "rgba(239,68,68,0.12)", text: "#ef4444" },
 };
 
+interface SavedTopic {
+  keyword: string;
+  puzzleType?: string;
+  results: ApifyProduct[];
+}
+
 function MarketIntelligencePanel({
   onEvidenceSelected,
 }: {
-  onEvidenceSelected: (evidence: ApifyProduct[], topicLabel: string) => void;
+  onEvidenceSelected: (evidence: ApifyProduct[], topicLabel: string, briefText?: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [selectedChip, setSelectedChip] = useState<string | null>(null);
@@ -378,6 +384,8 @@ function MarketIntelligencePanel({
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<MarketResearchResult | null>(null);
   const [selectedCard, setSelectedCard] = useState<number | null>(null);
+  // Up to 3 saved topics for comparison
+  const [savedTopics, setSavedTopics] = useState<SavedTopic[]>([]);
 
   const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -411,14 +419,40 @@ function MarketIntelligencePanel({
     else if (keyword.trim()) fetchMarketData("", keyword);
   };
 
+  const currentTopic = keyword.trim() || selectedChip || "";
+
   const handleUseCard = (product: ApifyProduct) => {
-    onEvidenceSelected([product], product.title);
+    // pre-fill the brief with the search keyword; pass evidence for pipeline grounding
+    const briefText = currentTopic;
+    onEvidenceSelected([product], product.title, briefText || undefined);
   };
 
   const handleAIPicks = () => {
     if (result && result.results.length > 0) {
-      onEvidenceSelected(result.results.slice(0, 5), `${selectedChip ?? "puzzle"} market data (AI selects best)`);
+      // Top 3 by demand_score (already sorted descending from API)
+      const top3 = [...result.results].sort((a, b) => b.demand_score - a.demand_score).slice(0, 3);
+      onEvidenceSelected(top3, `${selectedChip ?? "puzzle"} top 3 by demand`, currentTopic || undefined);
     }
+  };
+
+  const handleSaveTopic = () => {
+    if (!result || result.results.length === 0) return;
+    const label = currentTopic;
+    if (!label) return;
+    setSavedTopics(prev => {
+      // Avoid duplicates by keyword
+      const filtered = prev.filter(t => t.keyword !== label);
+      const next: SavedTopic[] = [
+        ...filtered,
+        { keyword: label, puzzleType: selectedChip ?? undefined, results: result.results },
+      ];
+      return next.slice(-3); // keep last 3 (max 3)
+    });
+  };
+
+  const handleUseSavedTopic = (topic: SavedTopic) => {
+    const top3 = [...topic.results].sort((a, b) => b.demand_score - a.demand_score).slice(0, 3);
+    onEvidenceSelected(top3, `${topic.keyword} top 3 by demand`, topic.keyword);
   };
 
   return (
@@ -448,6 +482,80 @@ function MarketIntelligencePanel({
 
       {open && (
         <div className="px-5 pb-5 space-y-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+
+          {/* ── Saved topics comparison (up to 3) ─────────────────────────── */}
+          {savedTopics.length > 0 && (
+            <div className="pt-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.30)" }}>
+                  Saved topics — pick one to use
+                </p>
+                <button
+                  onClick={() => setSavedTopics([])}
+                  className="text-xs transition-opacity hover:opacity-80"
+                  style={{ color: "rgba(255,255,255,0.25)" }}
+                >
+                  clear all
+                </button>
+              </div>
+              {savedTopics.map((topic, ti) => {
+                const top = topic.results[0];
+                const comp = top ? COMPETITION_COLORS[top.competition_level] : null;
+                const avgDemand = topic.results.length > 0
+                  ? Math.round(topic.results.slice(0, 3).reduce((s, r) => s + r.demand_score, 0) / Math.min(3, topic.results.length))
+                  : 0;
+                return (
+                  <div
+                    key={ti}
+                    className="rounded-xl p-3"
+                    style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-white/70 truncate">{topic.keyword}</p>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+                            {topic.results.length} results
+                          </span>
+                          <span className="text-xs" style={{ color: GOLD }}>
+                            avg demand {avgDemand}/10
+                          </span>
+                          {comp && top && (
+                            <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: comp.bg, color: comp.text }}>
+                              {top.competition_level} competition
+                            </span>
+                          )}
+                          {top?.bsr && (
+                            <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+                              best BSR #{top.bsr.toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 flex-shrink-0">
+                        <button
+                          onClick={() => setSavedTopics(prev => prev.filter((_, i) => i !== ti))}
+                          className="text-xs transition-opacity hover:opacity-80"
+                          style={{ color: "rgba(255,255,255,0.25)" }}
+                        >
+                          ✕
+                        </button>
+                        <button
+                          onClick={() => handleUseSavedTopic(topic)}
+                          className="text-xs px-3 py-1.5 rounded-lg font-bold transition-opacity hover:opacity-80"
+                          style={{ background: `${GOLD}20`, border: `1px solid ${GOLD}45`, color: GOLD }}
+                        >
+                          Use this topic →
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="border-t" style={{ borderColor: "rgba(255,255,255,0.05)" }} />
+            </div>
+          )}
+
           {/* Keyword input */}
           <div className="pt-4 flex gap-2">
             <input
@@ -516,17 +624,28 @@ function MarketIntelligencePanel({
           {/* Results cards */}
           {result && result.results.length > 0 && !loading && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
                 <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.30)" }}>
-                  Top results · click to select
+                  Top results · click to use this topic
                 </p>
-                <button
-                  onClick={handleAIPicks}
-                  className="text-xs px-3 py-1.5 rounded-lg font-bold transition-opacity hover:opacity-80"
-                  style={{ background: `${GOLD}15`, border: `1px solid ${GOLD}35`, color: GOLD }}
-                >
-                  AI picks best →
-                </button>
+                <div className="flex gap-2">
+                  {savedTopics.length < 3 && currentTopic && (
+                    <button
+                      onClick={handleSaveTopic}
+                      className="text-xs px-2.5 py-1.5 rounded-lg font-bold transition-opacity hover:opacity-80"
+                      style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.55)" }}
+                    >
+                      + Compare
+                    </button>
+                  )}
+                  <button
+                    onClick={handleAIPicks}
+                    className="text-xs px-3 py-1.5 rounded-lg font-bold transition-opacity hover:opacity-80"
+                    style={{ background: `${GOLD}15`, border: `1px solid ${GOLD}35`, color: GOLD }}
+                  >
+                    AI picks best →
+                  </button>
+                </div>
               </div>
               {result.results.slice(0, 8).map((product, i) => {
                 const compColor = COMPETITION_COLORS[product.competition_level];
@@ -816,10 +935,14 @@ export function AgentCreateBook() {
     [updateStage],
   );
 
-  const handleEvidenceSelected = useCallback((evidence: ApifyProduct[], label: string) => {
+  const handleEvidenceSelected = useCallback((evidence: ApifyProduct[], label: string, briefText?: string) => {
     setMarketEvidence(evidence);
     setEvidenceLabel(label);
     evidenceRef.current = evidence;
+    if (briefText) {
+      setBrief(briefText);
+      briefRef.current = briefText;
+    }
   }, []);
 
   const handleStart = () => {

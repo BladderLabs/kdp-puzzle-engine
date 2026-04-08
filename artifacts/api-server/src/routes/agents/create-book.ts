@@ -65,7 +65,11 @@ router.post("/agents/create-book", async (req, res) => {
 
   const parsed = CreateBookAgentBody.safeParse(req.body);
   const brief = parsed.success ? parsed.data.brief : undefined;
-  const marketEvidence = parsed.success ? (parsed.data.marketEvidence as ApifyProduct[] | undefined) : undefined;
+  // Normalize evidence: top 3 by demand_score (contract for Market Scout grounding)
+  const rawEvidence = parsed.success ? (parsed.data.marketEvidence as ApifyProduct[] | undefined) : undefined;
+  const marketEvidence = rawEvidence && rawEvidence.length > 0
+    ? [...rawEvidence].sort((a, b) => b.demand_score - a.demand_score).slice(0, 3)
+    : undefined;
 
   // ─── Stage 1: Market Intelligence Council ────────────────────────────────────
   let market: MarketScoutResult;
