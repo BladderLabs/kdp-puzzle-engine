@@ -421,9 +421,11 @@ Example: ["WORD1","WORD2","WORD3"]`;
       .filter(w => w.length >= 3 && w.length <= 15 && /^[A-Z]+$/.test(w))
       .filter(w => !seedSet.has(w));
 
-    const merged = [...seedSet, ...new Set(newWords)];
-    if (merged.length < 80) return [...seedSet];
+    // Key fallback off AI-generated word count (not merged total).
+    // Task spec: "if the AI call fails or returns fewer than 80 words, fall back".
+    if (newWords.length < 80) return [...seedSet];
 
+    const merged = [...seedSet, ...new Set(newWords)];
     return merged;
   } catch {
     return [...seedSet];

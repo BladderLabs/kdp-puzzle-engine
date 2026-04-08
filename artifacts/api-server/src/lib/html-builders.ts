@@ -98,23 +98,32 @@ export async function buildInteriorHTML(opts: BuildOpts): Promise<BuildResult> {
   const categoryBank = opts.wordCategory && WORD_BANKS[opts.wordCategory] ? WORD_BANKS[opts.wordCategory] : null;
   const wordBank = customWords || categoryBank || WORD_BANKS.General;
 
-  // ── Rotating word pool for cross-puzzle deduplication ───────────────────────
-  // Words are drawn sequentially from a shuffled pool. When the pool is exhausted
-  // it reshuffles and restarts — this ensures each word appears as infrequently
-  // as possible across the book (with an expanded 200-word bank, each word only
-  // appears once per 10-16 puzzles instead of in every puzzle).
-  let wordPool = shuf(wordBank.slice());
-  let poolIdx = 0;
+  // ── Strict per-book word deduplication (expanded banks only) ───────────────
+  // When an expanded bank (≥ 80 words, added by expandNicheWordBank in the pipeline)
+  // is available, each word is assigned to at most ONE puzzle. A Set tracks used
+  // words; once the pool is exhausted, all remaining puzzles switch back to the
+  // original per-puzzle random selection so behavior is preserved, not silently
+  // degraded. For small banks (< 80 words) or once the pool runs dry, the original
+  // shuf(wordBank).slice(n) path is used exactly as before.
+  const hasExpandedBank = wordBank.length >= 80;
+  const usedWords = new Set<string>();
+  let dedupePoolExhausted = false;
+
   function drawWordSet(n: number): string[] {
     const cap = Math.min(n, wordBank.length);
-    const drawn: string[] = [];
-    while (drawn.length < cap) {
-      if (poolIdx >= wordPool.length) {
-        wordPool = shuf(wordBank.slice());
-        poolIdx = 0;
-      }
-      drawn.push(wordPool[poolIdx++]);
+    // Fallback path: original per-puzzle random selection (preserves prior behavior)
+    if (!hasExpandedBank || dedupePoolExhausted) {
+      return shuf(wordBank).slice(0, cap);
     }
+    // Strict dedup: only words not yet used across this book
+    const available = wordBank.filter(w => !usedWords.has(w));
+    if (available.length < cap) {
+      // Pool exhausted — switch all remaining puzzles to original behavior
+      dedupePoolExhausted = true;
+      return shuf(wordBank).slice(0, cap);
+    }
+    const drawn = shuf(available).slice(0, cap);
+    drawn.forEach(w => usedWords.add(w));
     return drawn;
   }
 
