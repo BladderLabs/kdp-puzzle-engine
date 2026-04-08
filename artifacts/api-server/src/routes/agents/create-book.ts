@@ -686,20 +686,43 @@ router.post("/agents/create-book", async (req, res) => {
   // AI cover presence is indicated by coverImageUrl being non-null.
   const finalCoverStyle = finalStyle;
   // ── Canonical KDP HTML formatter ─────────────────────────────────────────────
-  // Deterministically structures the description into KDP-safe HTML so the stored
-  // field is always canonical regardless of model variance:
-  //   <p><b>hook sentence</b></p>
-  //   <body HTML (wrapped if plain text)>
-  // The PDF back cover strips HTML; Amazon KDP receives the raw HTML field.
+  // Deterministically structures the description into KDP-safe HTML regardless of
+  // model variance. Rules:
+  //   1. If body already contains KDP HTML tags (<p>, <ul>, <li>), keep as-is.
+  //   2. If body is plain text with bullet-like lines (•, -, *, "1."), convert
+  //      those lines to <ul><li> and non-bullet lines to <p>.
+  //   3. Single-paragraph plain text → <p>.
+  //   4. Hook sentence (always plain text) → prepended as <p><b>…</b></p>.
+  // The PDF back cover strips all HTML via stripForPrint(); Amazon KDP product
+  // page receives the raw HTML field directly (seller copy-pastes into KDP).
   const fullBackDescription = (() => {
-    let html = finalBackDescription.trim();
-    if (!/<[a-z]/i.test(html)) {
-      html = `<p>${html}</p>`;
+    const hook = finalHookSentence?.trim() ?? "";
+    let body = finalBackDescription.trim();
+
+    if (!/<(?:ul|ol|p|li|b|br)[\s>]/i.test(body)) {
+      const lines = body.split(/\n+/).map(l => l.trim()).filter(Boolean);
+      if (lines.length === 0) {
+        body = "<p>Carefully crafted puzzles for hours of enjoyment.</p>";
+      } else if (lines.length === 1) {
+        body = `<p>${lines[0]}</p>`;
+      } else {
+        const bulletRe = /^[•\-\*]|\d+[.)]\s/;
+        const bulletLines = lines.filter(l => bulletRe.test(l));
+        const paraLines = lines.filter(l => !bulletRe.test(l));
+        const paras = paraLines.map(l => `<p>${l}</p>`).join("\n");
+        if (bulletLines.length >= 2) {
+          const items = bulletLines
+            .map(l => l.replace(/^[•\-\*\d]+[.)]\s*/, ""))
+            .map(l => `<li>${l}</li>`)
+            .join("");
+          body = (paras ? paras + "\n" : "") + `<ul>${items}</ul>`;
+        } else {
+          body = lines.map(l => `<p>${l}</p>`).join("\n");
+        }
+      }
     }
-    if (finalHookSentence?.trim()) {
-      return `<p><b>${finalHookSentence.trim()}</b></p>\n${html}`;
-    }
-    return html;
+
+    return hook ? `<p><b>${hook}</b></p>\n${body}` : body;
   })();
 
   // ── Series continuation: resolve seriesName + auto-increment volumeNumber ────

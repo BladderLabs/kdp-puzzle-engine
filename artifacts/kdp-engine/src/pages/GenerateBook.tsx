@@ -331,7 +331,7 @@ export function GenerateBook() {
               },
               {
                 label: "Back cover description ≥ 80 words",
-                pass: (book.backDescription || "").trim().split(/\s+/).filter(Boolean).length >= 80,
+                pass: (book.backDescription || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().split(/\s+/).filter(Boolean).length >= 80,
                 fix: "Click the description field in Book Setup to auto-fill a template",
               },
               {
