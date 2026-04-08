@@ -93,7 +93,7 @@ router.post("/agents/create-book", async (req, res) => {
   let coverImageDataUrl: string | null = null;
   let hasCoverImage = false;
   try {
-    const result = await runCoverArtDirector(market.theme, market.puzzleType, market.coverStyle, content.title);
+    const result = await runCoverArtDirector(market.theme, market.puzzleType, market.coverStyle, content.title, market.audienceProfile);
     if (result) {
       coverImageDataUrl = `data:${result.mimeType};base64,${result.b64_json}`;
       hasCoverImage = true;
@@ -197,6 +197,9 @@ router.post("/agents/create-book", async (req, res) => {
   }
 
   // ─── Stage 5: Assemble & Save ───
+  // Auto-select "photo" cover style when AI image was generated — highest quality output
+  const finalCoverStyle = hasCoverImage ? "photo" : market.coverStyle;
+
   emit(res, "assemble", "running", { message: "Saving book project to your library…" });
   try {
     const [book] = await db.insert(booksTable).values({
@@ -209,7 +212,7 @@ router.post("/agents/create-book", async (req, res) => {
       largePrint: market.largePrint,
       paperType: "white",
       theme: market.theme,
-      coverStyle: market.coverStyle,
+      coverStyle: finalCoverStyle,
       backDescription: content.backDescription,
       words: content.words,
       wordCategory: content.wordCategory,

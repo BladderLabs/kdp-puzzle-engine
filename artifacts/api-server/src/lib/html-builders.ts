@@ -1247,6 +1247,8 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
 
   const vn = opts.volumeNumber ?? 0;
   const titleWordCount = (opts.title || "Book Title").trim().split(/\s+/).length;
+  // Adaptive title font size based on word count — prevents overflow across all cover styles
+  const adaptiveTitlePx = titleWordCount <= 5 ? 72 : titleWordCount <= 8 ? 60 : 48;
   const seriesBadge = (vn >= 1 && vn <= 3)
     ? `<div style="position:absolute;top:0.6in;right:0.6in;z-index:10;padding:4px 10px;border:1.5px solid ${ac}88;border-radius:3px;font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:2px;color:${ac};">Volume ${vn}</div>`
     : "";
@@ -1315,16 +1317,18 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
     imageBlock = buildThemeCoverArt(opts.theme || "midnight", ac, bg);
   }
 
-  // Back cover: exactly 5-line centered checkmark list (spec-required wording/order, always 5 lines)
+  // Back cover: 6-line centered checkmark list (spec-required wording/order)
   const formatLabel = isLargePrint ? "Extra-Large Print Edition (8.5\" × 11\")" : "Standard 6\u00d79 Format";
   const cleanFeatures = [
     `&#10003; ${PC} Unique Puzzles`,
     `&#10003; ${opts.difficulty || "Medium"} Difficulty Level`,
     `&#10003; ${formatLabel}`,
     `&#10003; One Puzzle Per Page`,
-    `&#10003; Complete Solutions Included`,
+    `&#10003; Answer Key Included`,
+    `&#10003; Perfect Gift for Puzzle Lovers`,
   ];
   const featureList = cleanFeatures.map(f => `<div style="font-family:'Source Code Pro',monospace;font-size:10px;color:${tx};line-height:2.2;opacity:0.70;text-align:center;">${f}</div>`).join("");
+  const readerCTA = `<div style="font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:1px;color:${tx};opacity:0.45;text-align:center;margin-bottom:18px;">If you enjoy these puzzles, we'd love your review!</div>`;
 
   const back = `<div style="position:absolute;left:${bleed}in;top:${bleed}in;width:${trimW}in;height:${trimH}in;background:${bgGrad};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5in 1in;text-align:center;box-sizing:border-box;">` +
     `<div style="font-family:Lora,serif;font-size:16px;color:${tx}dd;line-height:1.8;margin-bottom:28px;">${backDesc}</div>` +
@@ -1332,6 +1336,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
     `<div style="width:50px;height:1px;background:${ac};margin-bottom:30px;"></div>` +
     `<div style="font-family:Lora,serif;font-size:13px;color:${tx};margin-bottom:12px;">${author}</div>` +
     `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:3px;color:${tx}cc;">${meta}</div>` +
+    `<div style="position:absolute;bottom:1.9in;left:${trimW * 0.1}in;right:${trimW * 0.1}in;">${readerCTA}</div>` +
     `<div style="position:absolute;bottom:0.5in;right:0.4in;width:2in;height:1.2in;border:1px dashed ${ac}44;display:flex;align-items:center;justify-content:center;"><div style="font-family:'Source Code Pro',monospace;font-size:7px;color:${ac}88;">BARCODE AREA</div></div></div>`;
 
   // Spine: larger + bolder text
@@ -1359,7 +1364,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `${opts.puzzleType ? `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:6px;text-transform:uppercase;color:${ac};margin-bottom:14px;opacity:0.85;">${opts.puzzleType}</div>` : ""}` +
       `<div style="width:40px;height:1px;background:${ac};margin:0 auto 16px;"></div>` +
       `${lpBanner}` +
-      `<div style="font-family:'Oswald',sans-serif;font-size:62px;font-weight:700;text-transform:uppercase;letter-spacing:4px;color:${tx};margin-bottom:14px;line-height:1.2;">${title}</div>` +
+      `<div style="font-family:'Oswald',sans-serif;font-size:${adaptiveTitlePx}px;font-weight:700;text-transform:uppercase;letter-spacing:4px;color:${tx};margin-bottom:14px;line-height:1.2;">${title}</div>` +
       `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:16px;">${sub}</div>` +
       `${imageBlock}` +
       `${sellDiv}` +
@@ -1378,7 +1383,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="position:relative;z-index:1;text-align:left;width:100%;">` +
       `${audienceCallout}` +
       `${lpBanner}` +
-      `<div style="font-family:'Oswald',sans-serif;font-size:68px;font-weight:700;color:${titleOnBg};line-height:1.05;margin-bottom:16px;text-shadow:2px 2px 12px rgba(0,0,0,0.4);">${title}</div>` +
+      `<div style="font-family:'Oswald',sans-serif;font-size:${adaptiveTitlePx}px;font-weight:700;color:${titleOnBg};line-height:1.05;margin-bottom:16px;text-shadow:2px 2px 12px rgba(0,0,0,0.4);">${title}</div>` +
       `<div style="font-size:19px;color:${tx}ee;letter-spacing:0.5px;margin-bottom:14px;">${sub}</div>` +
       `${imageBlock}` +
       `${sellDiv}` +
@@ -1398,7 +1403,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="position:relative;z-index:1;">` +
       `${audienceCallout}` +
       `${lpBanner}` +
-      `<div style="font-family:'Oswald',sans-serif;font-size:64px;font-weight:700;color:${titleOnBg};line-height:1.05;margin-bottom:14px;">${title}</div>` +
+      `<div style="font-family:'Oswald',sans-serif;font-size:${adaptiveTitlePx}px;font-weight:700;color:${titleOnBg};line-height:1.05;margin-bottom:14px;">${title}</div>` +
       `<div style="font-size:19px;color:${ac};font-style:italic;letter-spacing:0.5px;margin-bottom:12px;">${sub}</div>` +
       `${imageBlock}` +
       `${sellDiv}` +
@@ -1416,7 +1421,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `</div>` +
       `${audienceCallout}` +
       `${lpBanner}` +
-      `<div style="font-family:'Oswald',sans-serif;font-size:64px;font-weight:700;color:${tx};line-height:1.05;margin-bottom:20px;letter-spacing:1px;">${title}</div>` +
+      `<div style="font-family:'Oswald',sans-serif;font-size:${adaptiveTitlePx}px;font-weight:700;color:${tx};line-height:1.05;margin-bottom:20px;letter-spacing:1px;">${title}</div>` +
       `${sub ? `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:16px;">${sub}</div>` : ""}` +
       `${imageBlock}` +
       `${sellDiv}` +
@@ -1431,7 +1436,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:6px;color:${ac};text-transform:uppercase;margin-bottom:12px;">★ &nbsp; ${opts.puzzleType || "Puzzles"} &nbsp; ★</div>` +
       `${audienceCallout}` +
       `${lpBanner}` +
-      `<div style="font-family:'Oswald',sans-serif;font-size:60px;font-weight:700;color:${tx};line-height:1.05;margin-bottom:12px;text-transform:uppercase;letter-spacing:2px;">${title}</div>` +
+      `<div style="font-family:'Oswald',sans-serif;font-size:${adaptiveTitlePx}px;font-weight:700;color:${tx};line-height:1.05;margin-bottom:12px;text-transform:uppercase;letter-spacing:2px;">${title}</div>` +
       `${sub ? `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:12px;">${sub}</div>` : ""}` +
       `<div style="width:80px;height:2px;background:${ac};margin:8px auto 14px;"></div>` +
       `${imageBlock}` +
@@ -1451,7 +1456,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="font-family:'Source Code Pro',monospace;font-size:22px;color:${ac};opacity:0.9;margin-bottom:20px;letter-spacing:4px;">✦</div>` +
       `${audienceCallout}` +
       `${lpBanner}` +
-      `<div style="font-family:'Oswald',sans-serif;font-size:${titleWordCount <= 3 ? "72" : "62"}px;font-weight:700;color:${isDark ? tx : ac};line-height:1.1;margin-bottom:22px;padding:0 0.2in;">${title}</div>` +
+      `<div style="font-family:'Oswald',sans-serif;font-size:${adaptiveTitlePx}px;font-weight:700;color:${isDark ? tx : ac};line-height:1.1;margin-bottom:22px;padding:0 0.2in;">${title}</div>` +
       `<div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:20px;">` +
       `<div style="flex:1;max-width:60px;height:1px;background:${ac};opacity:0.6;"></div>` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:14px;color:${ac};">✦</div>` +
@@ -1464,6 +1469,33 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:${tx}dd;">${meta}</div>` +
       `</div></div>`;
 
+  } else if (cs === "photo") {
+    // Full-bleed AI photo cover. The AI image fills the entire front panel as a background.
+    // A gradient overlay rises from the bottom to ensure text legibility.
+    // Layout: optional LP banner (top strip) → puzzle-type pill badge (top-left) → lower-third text block
+    const ptPill = `<div style="position:absolute;top:0.55in;left:0.55in;z-index:5;padding:5px 14px;background:${ac};border-radius:20px;font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:3px;color:${bannerTx};font-weight:600;text-transform:uppercase;">${ptBadge} · ${PC} PUZZLES</div>`;
+    const lpStrip = isLargePrint
+      ? `<div style="position:absolute;top:0;left:0;right:0;z-index:5;background:${ac};padding:6px 16px;text-align:center;letter-spacing:6px;font-family:'Source Code Pro',monospace;font-size:11px;font-weight:700;color:${bannerTx};text-transform:uppercase;">✦ LARGE PRINT EDITION ✦</div>`
+      : "";
+    const photoImageLayer = safeImgUrl
+      ? `<div style="position:absolute;top:0;left:0;right:0;bottom:0;z-index:0;overflow:hidden;"><img src="${safeImgUrl}" alt="Cover" style="width:100%;height:100%;object-fit:cover;object-position:center top;display:block;" /></div>`
+      : `<div style="position:absolute;top:0;left:0;right:0;bottom:0;z-index:0;">${buildThemeCoverArt(opts.theme || "midnight", ac, bg)}</div>`;
+    const photoGradient = `<div style="position:absolute;top:0;left:0;right:0;bottom:0;z-index:1;background:linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.58) 45%, rgba(0,0,0,0.18) 100%);"></div>`;
+    const photoTextBlock = `<div style="position:absolute;bottom:0;left:0;right:0;z-index:4;padding:0.6in 0.6in 0.7in;text-align:center;">` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:5px;text-transform:uppercase;color:${ac};opacity:0.9;margin-bottom:14px;">${opts.puzzleType || "Puzzle Book"}</div>` +
+      `<div style="font-family:'Oswald',sans-serif;font-size:${adaptiveTitlePx}px;font-weight:700;color:#ffffff;line-height:1.08;margin-bottom:14px;text-shadow:0 2px 16px rgba(0,0,0,0.7);">${title}</div>` +
+      `${sub ? `<div style="font-size:17px;font-style:italic;color:rgba(255,255,255,0.88);letter-spacing:0.5px;margin-bottom:18px;text-shadow:0 1px 8px rgba(0,0,0,0.6);">${sub}</div>` : ""}` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:3px;color:rgba(255,255,255,0.70);">${author}</div>` +
+      `</div>`;
+    front = `<div style="${fb}padding:0;overflow:hidden;">` +
+      photoImageLayer +
+      photoGradient +
+      lpStrip +
+      ptPill +
+      seriesBadge +
+      photoTextBlock +
+      `</div>`;
+
   } else {
     // classic (default). Exact 9-section order: (volume badge abs) → puzzleType label → thin rule → title UPPERCASE → subtitle → imageBlock → selling points → author → metadata
     front = `<div style="${fb}text-align:center;padding:1in;">${puzzleTexture}${seriesBadge}` +
@@ -1471,7 +1503,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `${opts.puzzleType ? `<div style="font-family:'Source Code Pro',monospace;font-size:11px;letter-spacing:6px;text-transform:uppercase;color:${ac};margin-bottom:12px;">${opts.puzzleType}</div>` : ""}` +
       `<div style="width:56px;height:2px;background:${ac};margin:0 auto 28px;"></div>` +
       `${lpBanner}` +
-      `<div style="font-family:'Oswald',sans-serif;font-size:${titleWordCount <= 3 ? "68" : "60"}px;font-weight:700;text-transform:uppercase;color:${ac};line-height:1.1;margin-bottom:18px;padding:0 0.3in;">${title}</div>` +
+      `<div style="font-family:'Oswald',sans-serif;font-size:${adaptiveTitlePx}px;font-weight:700;text-transform:uppercase;color:${ac};line-height:1.1;margin-bottom:18px;padding:0 0.3in;">${title}</div>` +
       `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:16px;">${sub}</div>` +
       `${imageBlock}` +
       `${sellDiv}` +

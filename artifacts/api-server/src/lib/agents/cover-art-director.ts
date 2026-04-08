@@ -21,30 +21,86 @@ const STYLE_MODIFIERS: Record<string, string> = {
   geometric: "with geometric pattern overlays and precise mathematical symmetry",
   luxury: "luxuriously opulent with gold leaf accents and premium feel",
   bold: "bold high-contrast graphic art style with strong visual impact",
-  minimal: "minimalist composition with generous negative space",
+  minimal: "minimalist composition with generous negative space in the lower third",
   retro: "retro vintage aesthetic with muted tones and nostalgic feel",
   warmth: "warm cozy intimate atmosphere with soft inviting textures",
+  photo: "photographic fine art style, full-panel composition with visual weight concentrated in the upper two thirds",
 };
+
+/**
+ * Map audience profile keywords to niche-specific subject hints that make the imagery
+ * feel immediately relevant to the target buyer at a glance.
+ */
+function buildNicheHint(niche: string): string {
+  const n = niche.toLowerCase();
+  if (n.includes("cat") || n.includes("kitten") || n.includes("feline")) {
+    return "with adorable illustrated cats or kittens as the central subject, whimsical and charming";
+  }
+  if (n.includes("dog") || n.includes("puppy") || n.includes("canine")) {
+    return "with charming illustrated dogs or puppies as the central subject, warm and loveable";
+  }
+  if (n.includes("christmas") || n.includes("holiday") || n.includes("festive") || n.includes("winter")) {
+    return "with festive Christmas decorations, snow, and warm golden holiday lighting as the central elements";
+  }
+  if (n.includes("senior") || n.includes("elder") || n.includes("60+") || n.includes("retire")) {
+    return "with a peaceful, cozy atmosphere — a warm armchair, afternoon light, a cup of tea — evoking calm and comfort";
+  }
+  if (n.includes("garden") || n.includes("flower") || n.includes("botanical") || n.includes("nature")) {
+    return "with lush illustrated flowers, botanical elements, and verdant garden scenes as the central subject";
+  }
+  if (n.includes("ocean") || n.includes("beach") || n.includes("coastal") || n.includes("sea") || n.includes("marine")) {
+    return "with serene ocean waves, coastal scenery, and sea life as the central subject";
+  }
+  if (n.includes("bird") || n.includes("wildlife") || n.includes("animal")) {
+    return "with beautifully illustrated birds or wildlife as the central subject, nature-inspired and vivid";
+  }
+  if (n.includes("coffee") || n.includes("tea") || n.includes("café") || n.includes("cozy")) {
+    return "with a cozy café atmosphere, warm beverages, and inviting domestic comfort as the central theme";
+  }
+  if (n.includes("travel") || n.includes("adventure") || n.includes("explore")) {
+    return "with inspiring travel landscapes, distant horizons, and a sense of adventure as the central subject";
+  }
+  if (n.includes("halloween") || n.includes("spook") || n.includes("gothic")) {
+    return "with dramatic Halloween imagery — pumpkins, candles, moonlit scenes — as the central subject";
+  }
+  if (n.includes("kid") || n.includes("child") || n.includes("junior") || n.includes("young")) {
+    return "with bright, playful, and child-friendly illustrated characters and cheerful colors as the central subject";
+  }
+  if (n.includes("music") || n.includes("musician") || n.includes("concert")) {
+    return "with elegant musical instruments and sheet music as the central artistic subject";
+  }
+  return "";
+}
 
 export async function runCoverArtDirector(
   theme: string,
   puzzleType: string,
   coverStyle: string,
   title: string,
+  niche?: string,
 ): Promise<CoverArtResult | null> {
   try {
     const { generateImage } = await import("@workspace/integrations-gemini-ai/image");
 
     const themeDesc = THEME_DESCRIPTIONS[theme] || THEME_DESCRIPTIONS.midnight;
-    const styleDesc = STYLE_MODIFIERS[coverStyle] || STYLE_MODIFIERS.classic;
+    const styleDesc = STYLE_MODIFIERS[coverStyle] || STYLE_MODIFIERS[theme === "photo" ? "photo" : "classic"];
+
+    const nicheHint = niche ? buildNicheHint(niche) : "";
+    const subjectLine = nicheHint
+      ? `Subject matter: ${nicheHint}.`
+      : `Scene: ${themeDesc}.`;
 
     const prompt = [
-      `Create a stunning ${styleDesc} book cover illustration for a "${puzzleType}" puzzle book titled "${title}".`,
-      `Scene: ${themeDesc}.`,
-      `Requirements: NO text, NO letters, NO numbers, NO words, NO symbols anywhere in the image.`,
-      `Style: painterly, high quality, rich fine details, professional book cover art worthy of a bestseller.`,
-      `Composition: portrait orientation approximately 6×9 inches, visually striking and balanced.`,
-      `Quality: museum-quality illustration suitable for commercial print publication.`,
+      `Create a stunning ${styleDesc} book cover background illustration for a "${puzzleType}" puzzle book titled "${title}".`,
+      subjectLine,
+      `Atmosphere and color palette: ${themeDesc}.`,
+      `CRITICAL COMPOSITION RULE: Use a strong VERTICAL portrait composition (2:3 aspect ratio, taller than wide).`,
+      `Place the primary subject and visual interest in the UPPER TWO-THIRDS of the image.`,
+      `The LOWER THIRD must be kept relatively clear and dark — it will be overlaid with title text.`,
+      `ABSOLUTELY NO text, letters, numbers, words, symbols, watermarks, or UI elements anywhere in the image.`,
+      `Style: painterly fine art, rich fine details, high contrast, professional commercial print quality.`,
+      `Quality: museum-quality illustration suitable for 300 DPI commercial print publication on Amazon KDP.`,
+      `The image must look stunning and professional as a full-panel background for a bestselling puzzle book.`,
     ].join(" ");
 
     return await generateImage(prompt);
