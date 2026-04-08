@@ -1242,10 +1242,10 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const PC = opts.puzzleCount ?? 100;
 
   // Parse hook sentence: backDescription may be "Hook sentence\n\nBody copy"
-  // Hook is strictly detected as text before the FIRST double-newline:
-  //   - must be 5–20 words (rejects legacy multi-sentence openers)
-  //   - must not contain a period (sentence-like content, not paragraph)
-  //   - must not start with a digit (rejects count-first legacy descriptions like "100 puzzles...")
+  // Detection: text before the FIRST double-newline, kept as hook when:
+  //   - between 3 and 30 words (generous range to handle all valid hooks)
+  //   - the remainder after the separator is non-empty (not the entire description)
+  // All other formats fall through unchanged (legacy single-paragraph descriptions, etc.)
   const rawBack = opts.backDescription ||
     `${PC} carefully crafted ${diffLabel} ${ptLabel} puzzles designed for stress-free brain training. Each puzzle is presented on its own page with generous space for working through solutions.${lpLabel2} A full answer key is included at the back.`;
   const doubleLfIdx = rawBack.indexOf("\n\n");
@@ -1253,12 +1253,11 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   let bodyText = rawBack;
   if (doubleLfIdx !== -1) {
     const candidate = rawBack.slice(0, doubleLfIdx).trim();
+    const remainder = rawBack.slice(doubleLfIdx + 2).trim();
     const wordCount = candidate.split(/\s+/).length;
-    const startsWithDigit = /^\d/.test(candidate);
-    const hasPeriod = candidate.includes(".");
-    if (wordCount >= 5 && wordCount <= 20 && !startsWithDigit && !hasPeriod) {
+    if (wordCount >= 3 && wordCount <= 30 && remainder.length > 0) {
       hookText = candidate;
-      bodyText = rawBack.slice(doubleLfIdx + 2).trim();
+      bodyText = remainder;
     }
   }
   const backDesc = escapeHtml(bodyText);
@@ -1381,9 +1380,9 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
 
   // Puzzle count badge — bottom-right of front cover on all styles
   // Two-line treatment: large bold count on top, "PUZZLES" label below — readable at thumbnail scale
-  const puzzlePill = `<div style="position:absolute;bottom:0.42in;right:0.42in;z-index:10;background:${ac};border-radius:10px;padding:8px 14px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.35);min-width:68px;">` +
-    `<div style="font-family:'Oswald',sans-serif;font-size:30px;font-weight:700;color:${bannerTx};line-height:1;">${PC}</div>` +
-    `<div style="font-family:'Source Code Pro',monospace;font-size:7px;letter-spacing:3px;color:${bannerTx};opacity:0.9;text-transform:uppercase;margin-top:3px;">PUZZLES</div>` +
+  const puzzlePill = `<div style="position:absolute;bottom:0.42in;right:0.42in;z-index:10;background:${ac};border-radius:10px;padding:9px 16px;text-align:center;box-shadow:0 3px 12px rgba(0,0,0,0.40);min-width:76px;">` +
+    `<div style="font-family:'Oswald',sans-serif;font-size:40px;font-weight:700;color:${bannerTx};line-height:1;">${PC}</div>` +
+    `<div style="font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:3px;color:${bannerTx};opacity:0.95;text-transform:uppercase;margin-top:4px;">PUZZLES</div>` +
     `</div>`;
 
   // Prominent LARGE PRINT banner — full-width accent-colored strip, clearly visible in thumbnail
