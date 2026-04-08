@@ -4,6 +4,15 @@ import { z } from "zod";
 import { db, booksTable } from "@workspace/db";
 import { runMarketScout, type MarketScoutResult } from "../../lib/agents/market-scout";
 import { runContentArchitect, type ContentArchitectResult } from "../../lib/agents/content-architect";
+import { runContentExcellenceCouncil, type ContentSpec } from "../../lib/agents/content-excellence-council";
+import { runCoverDesignAnalyst } from "../../lib/agents/cover-design-analyst";
+import { runCoverColorStrategist } from "../../lib/agents/cover-color-strategist";
+import { runCoverTypographyDirector } from "../../lib/agents/cover-typography-director";
+import { runCoverDirector, type CoverDesignSpec } from "../../lib/agents/cover-director";
+import { runPuzzleProductionCouncil, type PuzzleSpec } from "../../lib/agents/puzzle-production-council";
+import { runInteriorDesignCouncil, type LayoutSpec } from "../../lib/agents/interior-design-council";
+import { runProductionPricingCouncil, type ProductionSpec } from "../../lib/agents/production-pricing-council";
+import { runMasterBookDirector, type BookSpec } from "../../lib/agents/master-book-director";
 import { runCoverArtDirector } from "../../lib/agents/cover-art-director";
 import { runQAReviewer, type QAIssue } from "../../lib/agents/qa-reviewer";
 
@@ -19,13 +28,18 @@ function emit(res: Response, stage: string, status: string, data: Record<string,
 
 /**
  * POST /agents/create-book
- * Multi-agent KDP book creation pipeline with SSE streaming.
- * Pipeline order:
- *   1. market_scout   — research niche & puzzle config
- *   2. content_architect — title, subtitle, description, words
- *   3. cover_art      — AI-generated illustration (hasImage determined here)
- *   4. qa_review      — 6-check gate on final assembled spec incl. hasImage
- *   5. assemble       — persist to DB, emit done event
+ * Expert Book Intelligence Pipeline — 9 stages:
+ *   1. market_scout        — market research
+ *   2. content_architect   — draft content
+ *   3. content_council     — Content Excellence Council (parallel with cover_research)
+ *   4. cover_research      — Cover Design Council: 3 specialists + director (parallel with content_council)
+ *   5. puzzle_council      — Puzzle Production Council (parallel with interior + production)
+ *   6. interior_council    — Interior Design Council (parallel with puzzle + production)
+ *   7. production_council  — Production & Pricing Council (parallel with puzzle + interior)
+ *   8. master_director     — Master Book Director (synthesises all 5 councils)
+ *   9. cover_art           — AI-generated cover illustration
+ *  10. qa_review           — quality gate
+ *  11. assemble            — persist to DB
  */
 router.post("/agents/create-book", async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
@@ -36,7 +50,7 @@ router.post("/agents/create-book", async (req, res) => {
   const parsed = CreateBookAgentBody.safeParse(req.body);
   const brief = parsed.success ? parsed.data.brief : undefined;
 
-  // ─── Stage 1: Market Scout ───
+  // ─── Stage 1: Market Scout ────────────────────────────────────────────────────
   let market: MarketScoutResult;
   emit(res, "market_scout", "running", { message: "Scanning KDP niches and market data…" });
   try {
@@ -68,17 +82,17 @@ router.post("/agents/create-book", async (req, res) => {
     };
   }
 
-  // ─── Stage 2: Content Architect ───
-  let content: ContentArchitectResult;
-  emit(res, "content_architect", "running", { message: "Crafting title, description, and puzzle words…" });
+  // ─── Stage 2: Content Architect (draft) ─────────────────────────────────────
+  let draft: ContentArchitectResult;
+  emit(res, "content_architect", "running", { message: "Drafting title, description, and puzzle words…" });
   try {
-    content = await runContentArchitect(market, brief);
-    req.log.info({ title: content.title }, "Content Architect done");
+    draft = await runContentArchitect(market, brief);
+    req.log.info({ title: draft.title }, "Content Architect done");
     emit(res, "content_architect", "done", {
-      message: `Title: "${content.title}"`,
-      title: content.title,
-      subtitle: content.subtitle,
-      wordCount: content.backDescription.trim().split(/\s+/).filter(Boolean).length,
+      message: `Draft: "${draft.title}"`,
+      title: draft.title,
+      subtitle: draft.subtitle,
+      wordCount: draft.backDescription.trim().split(/\s+/).filter(Boolean).length,
     });
   } catch (err) {
     req.log.error({ err }, "Content Architect failed");
@@ -88,21 +102,246 @@ router.post("/agents/create-book", async (req, res) => {
     return;
   }
 
-  // Compute finalTheme early so cover art generation uses the conversion-optimized theme
-  const finalTheme = market.recommendedTheme ?? market.theme;
+  // ─── Stages 3 & 4: Content Council + Cover Research (parallel) ───────────────
+  let contentSpec: ContentSpec = {
+    title: draft.title,
+    subtitle: draft.subtitle,
+    backDescription: draft.backDescription,
+    hookSentence: draft.hookSentence ?? "",
+    keywords: market.keywords,
+    titleRationale: "Kept original draft",
+    copyRationale: "Kept original draft",
+    changesApplied: [],
+  };
+  let coverDesignSpec: CoverDesignSpec = {
+    theme: market.recommendedTheme ?? market.theme,
+    style: market.coverStyle,
+    accentHex: "#F5C842",
+    backgroundHex: "#0D1B3E",
+    fontStyleDirective: "bold condensed sans-serif",
+    casingDirective: "Title Case",
+    compositionNotes: "Centered composition with visual weight in upper two-thirds",
+    enrichedImagePrompt: "",
+    conflictsResolved: [],
+    rationale: "Default cover spec",
+  };
 
-  // ─── Stage 3: Cover Art Director (before QA so QA gets real hasImage) ───
-  emit(res, "cover_art", "running", { message: `Generating AI cover illustration for ${finalTheme} theme…` });
+  emit(res, "content_council", "running", { message: "Title Specialist + Sales Copy Expert researching…" });
+  emit(res, "cover_research", "running", { message: "Design Analyst · Color Strategist · Typography Director starting…" });
+
+  // Track cover sub-agent completion for progress messages
+  const coverSubAgentDone: string[] = [];
+  function coverProgress(): string {
+    const icons = {
+      "Design Analyst": "🎨",
+      "Color Strategist": "🎨",
+      "Typography Director": "🔤",
+    };
+    return coverSubAgentDone.map(a => `${icons[a as keyof typeof icons] ?? "·"} ${a} ✓`).join(" · ") +
+      (coverSubAgentDone.length < 3 ? " · remaining running…" : " · Director synthesising…");
+  }
+
+  try {
+    const [contentResult, coverResult] = await Promise.all([
+      // Content Excellence Council
+      runContentExcellenceCouncil(market, draft)
+        .then(r => {
+          req.log.info({ title: r.title }, "Content Council done");
+          emit(res, "content_council", "done", {
+            message: `"${r.title}" — ${r.changesApplied.length} improvement${r.changesApplied.length !== 1 ? "s" : ""} applied`,
+            title: r.title,
+            changesApplied: r.changesApplied,
+          });
+          return r;
+        })
+        .catch(err => {
+          req.log.error({ err }, "Content Council failed — using draft");
+          emit(res, "content_council", "done", { message: "Content Council degraded — using original draft" });
+          return null;
+        }),
+
+      // Cover Design Council — 3 specialists in parallel, then director
+      (async () => {
+        const hasAiImage = true;
+        const [designAnalysis, colorStrategy, typographySpec] = await Promise.all([
+          runCoverDesignAnalyst(market.niche, market.nicheLabel, market.puzzleType, market.audienceProfile, hasAiImage)
+            .then(r => {
+              coverSubAgentDone.push("Design Analyst");
+              emit(res, "cover_research", "running", { message: coverProgress() });
+              return r;
+            }),
+          runCoverColorStrategist(market.niche, market.nicheLabel, market.puzzleType, market.audienceProfile, market.largePrint === true)
+            .then(r => {
+              coverSubAgentDone.push("Color Strategist");
+              emit(res, "cover_research", "running", { message: coverProgress() });
+              return r;
+            }),
+          runCoverTypographyDirector(market.niche, market.nicheLabel, market.puzzleType, market.audienceProfile, market.largePrint === true)
+            .then(r => {
+              coverSubAgentDone.push("Typography Director");
+              emit(res, "cover_research", "running", { message: coverProgress() });
+              return r;
+            }),
+        ]);
+
+        emit(res, "cover_research", "running", { message: "Cover Director synthesising council findings…" });
+        const spec = await runCoverDirector(market, draft, designAnalysis, colorStrategy, typographySpec);
+        req.log.info({ theme: spec.theme, style: spec.style }, "Cover Research done");
+        emit(res, "cover_research", "done", {
+          message: `${spec.theme} theme · ${spec.style} style · ${colorStrategy.thumbnailLegibilityScore}/10 thumbnail score`,
+          theme: spec.theme,
+          style: spec.style,
+          accentHex: spec.accentHex,
+          rationale: spec.rationale,
+          conflictsResolved: spec.conflictsResolved,
+        });
+        return spec;
+      })()
+        .catch(err => {
+          req.log.error({ err }, "Cover Research failed — using defaults");
+          emit(res, "cover_research", "done", { message: "Cover Research degraded — using market defaults" });
+          return null;
+        }),
+    ]);
+
+    if (contentResult) contentSpec = contentResult;
+    if (coverResult) coverDesignSpec = coverResult;
+  } catch (err) {
+    req.log.error({ err }, "Council group A failed");
+  }
+
+  // ─── Stages 5, 6, 7: Puzzle + Interior + Production (parallel) ────────────────
+  let puzzleSpec: PuzzleSpec | null = null;
+  let layoutSpec: LayoutSpec | null = null;
+  let productionSpec: ProductionSpec | null = null;
+
+  emit(res, "puzzle_council", "running", { message: "Difficulty Calibrator + Layout Engineer researching…" });
+  emit(res, "interior_council", "running", { message: "Typography Expert + Page Layout Architect researching…" });
+  emit(res, "production_council", "running", { message: "Format Strategist + Pricing Expert researching…" });
+
+  try {
+    const estimatedPageCount = Math.ceil((market.puzzleCount ?? 100) * 1.15) + 20;
+    const [puzzle, layout, production] = await Promise.all([
+      runPuzzleProductionCouncil(market)
+        .then(r => {
+          req.log.info({ puzzleCount: r.recommendedPuzzleCount }, "Puzzle Council done");
+          emit(res, "puzzle_council", "done", {
+            message: `${r.recommendedPuzzleCount} puzzles · ${r.difficultyDescriptor}`,
+            puzzleCount: r.recommendedPuzzleCount,
+            difficultyDescriptor: r.difficultyDescriptor,
+          });
+          return r;
+        })
+        .catch(err => {
+          req.log.error({ err }, "Puzzle Council failed");
+          emit(res, "puzzle_council", "done", { message: "Puzzle Council degraded — using market defaults" });
+          return null;
+        }),
+
+      runInteriorDesignCouncil(market, estimatedPageCount)
+        .then(r => {
+          req.log.info({ bodyFont: r.bodyFontSizePt }, "Interior Council done");
+          emit(res, "interior_council", "done", {
+            message: `${r.bodyFontSizePt}pt body · ${r.innerMarginIn}" gutter · ${r.fontFamilyApproach.split(",")[0]}`,
+            bodyFontSizePt: r.bodyFontSizePt,
+            innerMarginIn: r.innerMarginIn,
+          });
+          return r;
+        })
+        .catch(err => {
+          req.log.error({ err }, "Interior Council failed");
+          emit(res, "interior_council", "done", { message: "Interior Council degraded — using defaults" });
+          return null;
+        }),
+
+      runProductionPricingCouncil(market)
+        .then(r => {
+          req.log.info({ price: r.recommendedPrice, paper: r.paperType }, "Production Council done");
+          emit(res, "production_council", "done", {
+            message: `$${r.recommendedPrice} · ${r.paperType} paper · ~$${r.royaltyEstimate.toFixed(2)} royalty`,
+            recommendedPrice: r.recommendedPrice,
+            paperType: r.paperType,
+            royaltyEstimate: r.royaltyEstimate,
+          });
+          return r;
+        })
+        .catch(err => {
+          req.log.error({ err }, "Production Council failed");
+          emit(res, "production_council", "done", { message: "Production Council degraded — using defaults" });
+          return null;
+        }),
+    ]);
+
+    puzzleSpec = puzzle;
+    layoutSpec = layout;
+    productionSpec = production;
+  } catch (err) {
+    req.log.error({ err }, "Council group B failed");
+  }
+
+  // ─── Stage 8: Master Book Director ───────────────────────────────────────────
+  let bookSpec: BookSpec | null = null;
+  emit(res, "master_director", "running", { message: "Master Director reviewing all council recommendations…" });
+  try {
+    if (puzzleSpec && layoutSpec && productionSpec) {
+      bookSpec = await runMasterBookDirector(
+        market,
+        contentSpec,
+        coverDesignSpec,
+        puzzleSpec,
+        layoutSpec,
+        productionSpec,
+      );
+      req.log.info({ title: bookSpec.title, price: bookSpec.recommendedPrice }, "Master Director done");
+      emit(res, "master_director", "done", {
+        message: `Book Spec finalised · ${bookSpec.conflictsResolved.length} conflict(s) resolved`,
+        councilSummary: bookSpec.councilSummary,
+        conflictsResolved: bookSpec.conflictsResolved,
+        overallRationale: bookSpec.overallRationale,
+        recommendedPrice: bookSpec.recommendedPrice,
+        royaltyEstimate: bookSpec.royaltyEstimate,
+      });
+    } else {
+      emit(res, "master_director", "done", { message: "Master Director skipped — some councils degraded" });
+    }
+  } catch (err) {
+    req.log.error({ err }, "Master Director failed");
+    emit(res, "master_director", "done", { message: "Master Director degraded — using council outputs directly" });
+  }
+
+  // Resolve final values (bookSpec wins over council defaults, council wins over market defaults)
+  const finalTheme = bookSpec?.coverTheme ?? coverDesignSpec.theme ?? market.recommendedTheme ?? market.theme;
+  const finalStyle = bookSpec?.coverStyle ?? coverDesignSpec.style ?? market.coverStyle;
+  const finalTitle = bookSpec?.title ?? contentSpec.title;
+  const finalSubtitle = bookSpec?.subtitle ?? contentSpec.subtitle;
+  const finalBackDescription = bookSpec?.backDescription ?? contentSpec.backDescription;
+  const finalHookSentence = bookSpec?.hookSentence ?? contentSpec.hookSentence;
+  const finalKeywords = bookSpec?.keywords ?? contentSpec.keywords;
+  const finalPuzzleCount = bookSpec?.puzzleCount ?? puzzleSpec?.recommendedPuzzleCount ?? market.puzzleCount ?? 100;
+  const finalPaperType = bookSpec?.paperType ?? productionSpec?.paperType ?? "white";
+  const enrichedImagePrompt = bookSpec?.coverImagePrompt ?? coverDesignSpec.enrichedImagePrompt;
+
+  // ─── Stage 9: Cover Art Director ────────────────────────────────────────────
+  emit(res, "cover_art", "running", { message: `Generating AI cover with research-backed ${finalTheme} theme prompt…` });
   let coverImageDataUrl: string | null = null;
   let hasCoverImage = false;
   try {
-    const result = await runCoverArtDirector(finalTheme, market.puzzleType, market.coverStyle, content.title, market.audienceProfile);
+    const result = await runCoverArtDirector(
+      finalTheme,
+      market.puzzleType,
+      finalStyle,
+      finalTitle,
+      market.niche,
+      enrichedImagePrompt || undefined,
+    );
     if (result) {
       coverImageDataUrl = `data:${result.mimeType};base64,${result.b64_json}`;
       hasCoverImage = true;
       req.log.info({ mimeType: result.mimeType, b64Length: result.b64_json.length }, "Cover Art done");
       emit(res, "cover_art", "done", {
-        message: "Cover illustration generated",
+        message: enrichedImagePrompt
+          ? "Cover generated using expert research-backed prompt"
+          : "Cover illustration generated",
         hasImage: true,
       });
     } else {
@@ -114,25 +353,25 @@ router.post("/agents/create-book", async (req, res) => {
     emit(res, "cover_art", "done", { message: "Cover art unavailable — using SVG theme art", hasImage: false });
   }
 
-  // ─── Stage 4: QA Review (with actual hasImage + one optional revision + re-check) ───
-  const buildQASpec = (c: ContentArchitectResult) => ({
-    title: c.title,
-    subtitle: c.subtitle,
-    backDescription: c.backDescription,
-    puzzleCount: market.puzzleCount,
-    keywords: market.keywords,
+  // ─── Stage 10: QA Review ────────────────────────────────────────────────────
+  const buildQASpec = () => ({
+    title: finalTitle,
+    subtitle: finalSubtitle,
+    backDescription: finalBackDescription,
+    puzzleCount: finalPuzzleCount,
+    keywords: finalKeywords,
     hasImage: hasCoverImage,
-    words: c.words,
-    author: c.author,
+    words: draft.words,
+    author: draft.author,
   });
 
   let qaFailed = false;
   let finalQAIssues: QAIssue[] = [];
   let finalQAPassed = false;
 
-  emit(res, "qa_review", "running", { message: "Running 6 KDP quality checks…" });
+  emit(res, "qa_review", "running", { message: "Running KDP quality checks on final Book Spec…" });
   try {
-    const qaResult = await runQAReviewer(buildQASpec(content));
+    const qaResult = await runQAReviewer(buildQASpec());
     req.log.info({ passed: qaResult.passed, issues: qaResult.issues.length }, "QA first pass done");
 
     if (!qaResult.needs_revision) {
@@ -140,7 +379,7 @@ router.post("/agents/create-book", async (req, res) => {
       finalQAPassed = qaResult.passed;
       emit(res, "qa_review", "done", {
         message: qaResult.passed
-          ? "All 6 checks passed"
+          ? "All checks passed"
           : `${qaResult.issues.length} minor issue(s) noted — no revision required`,
         passed: qaResult.passed,
         issues: qaResult.issues,
@@ -148,30 +387,35 @@ router.post("/agents/create-book", async (req, res) => {
       });
     } else {
       emit(res, "qa_review", "needs_revision", {
-        message: `${qaResult.issues.length} issue${qaResult.issues.length !== 1 ? "s" : ""} found — revising…`,
+        message: `${qaResult.issues.length} issue${qaResult.issues.length !== 1 ? "s" : ""} found — revising content…`,
         issues: qaResult.issues,
       });
 
-      // Single revision round
       emit(res, "content_architect", "running", {
         message: "Re-drafting content with QA feedback…",
         revision: true,
       });
       try {
         const issueDescriptions = qaResult.issues.map(i => `${i.field}: ${i.problem} — Fix: ${i.fix}`);
-        content = await runContentArchitect(market, brief, issueDescriptions);
-        req.log.info({ title: content.title }, "Content revision done");
+        const revised = await runContentArchitect(market, brief, issueDescriptions);
+        req.log.info({ title: revised.title }, "Content revision done");
         emit(res, "content_architect", "done", {
-          message: `Revised: "${content.title}"`,
-          title: content.title,
-          subtitle: content.subtitle,
+          message: `Revised: "${revised.title}"`,
+          title: revised.title,
+          subtitle: revised.subtitle,
           revision: true,
-          wordCount: content.backDescription.trim().split(/\s+/).filter(Boolean).length,
+          wordCount: revised.backDescription.trim().split(/\s+/).filter(Boolean).length,
         });
 
-        // Re-run QA on revised content — strict, no fallback
+        // Re-run QA
         emit(res, "qa_review", "running", { message: "Re-checking revised content…" });
-        const reQA = await runQAReviewer(buildQASpec(content));
+        const reQA = await runQAReviewer({
+          ...buildQASpec(),
+          title: revised.title,
+          subtitle: revised.subtitle,
+          backDescription: revised.backDescription,
+          words: revised.words,
+        });
         req.log.info({ passed: reQA.passed, issues: reQA.issues.length }, "QA re-check done");
         finalQAIssues = reQA.issues;
         finalQAPassed = reQA.passed;
@@ -185,8 +429,8 @@ router.post("/agents/create-book", async (req, res) => {
         });
       } catch (revErr) {
         req.log.error({ revErr }, "Revision or re-QA failed");
-        emit(res, "content_architect", "failed", { message: "Revision failed. Using original content.", revision: true });
-        emit(res, "qa_review", "failed", { message: "Re-check failed. Proceeding with original content.", issues: qaResult.issues });
+        emit(res, "content_architect", "failed", { message: "Revision failed. Using council content.", revision: true });
+        emit(res, "qa_review", "failed", { message: "Re-check failed. Proceeding with council content.", issues: qaResult.issues });
         finalQAIssues = qaResult.issues;
         qaFailed = true;
       }
@@ -199,59 +443,65 @@ router.post("/agents/create-book", async (req, res) => {
     return;
   }
 
-  // ─── Stage 5: Assemble & Save ───
-  // Auto-select "photo" cover style when AI image was generated — highest quality output
-  const finalCoverStyle = hasCoverImage ? "photo" : market.coverStyle;
-  // Prepend hook sentence to back description with separator so the cover builder
-  // can detect and render it in larger bold text separately from the body copy.
-  const finalBackDescription = content.hookSentence
-    ? `${content.hookSentence}\n\n${content.backDescription}`
-    : content.backDescription;
+  // ─── Stage 11: Assemble & Save ──────────────────────────────────────────────
+  const finalCoverStyle = hasCoverImage ? "photo" : finalStyle;
+  const fullBackDescription = finalHookSentence
+    ? `${finalHookSentence}\n\n${finalBackDescription}`
+    : finalBackDescription;
 
-  emit(res, "assemble", "running", { message: "Saving book project to your library…" });
+  emit(res, "assemble", "running", { message: "Saving Book Spec to your library…" });
   try {
     const [book] = await db.insert(booksTable).values({
-      title: content.title,
-      subtitle: content.subtitle,
-      author: content.author,
+      title: finalTitle,
+      subtitle: finalSubtitle,
+      author: draft.author,
       puzzleType: market.puzzleType,
-      puzzleCount: market.puzzleCount,
+      puzzleCount: finalPuzzleCount,
       difficulty: market.difficulty,
       largePrint: market.largePrint,
-      paperType: "white",
+      paperType: finalPaperType,
       theme: finalTheme,
       coverStyle: finalCoverStyle,
-      backDescription: finalBackDescription,
-      words: content.words,
-      wordCategory: content.wordCategory,
+      backDescription: fullBackDescription,
+      words: draft.words,
+      wordCategory: draft.wordCategory,
       coverImageUrl: coverImageDataUrl,
       niche: market.niche,
-      volumeNumber: content.volumeNumber,
+      volumeNumber: draft.volumeNumber,
       dedication: null,
       difficultyMode: "uniform",
       challengeDays: null,
-      keywords: market.keywords ?? [],
+      keywords: finalKeywords,
     }).returning();
 
     req.log.info({ bookId: book.id, title: book.title }, "Book assembled and saved");
-
     emit(res, "assemble", "done", { message: "Book saved to your library!" });
 
-    // Send full cover data URL in the done event so frontend can display it
-    // (only if present — omit to reduce payload size when no cover was generated)
     const donePayload: Record<string, unknown> = {
       stage: "done",
       bookId: book.id,
-      title: content.title,
-      subtitle: content.subtitle,
+      title: finalTitle,
+      subtitle: finalSubtitle,
       puzzleType: market.puzzleType,
-      puzzleCount: market.puzzleCount,
+      puzzleCount: finalPuzzleCount,
       theme: finalTheme,
       hasCoverImage,
       qaFailed,
       qaPassed: finalQAPassed,
       qaIssues: finalQAIssues,
-      descWordCount: content.backDescription.trim().split(/\s+/).filter(Boolean).length,
+      descWordCount: finalBackDescription.trim().split(/\s+/).filter(Boolean).length,
+      // Book Intelligence Report
+      bookIntelligence: bookSpec ? {
+        councilSummary: bookSpec.councilSummary,
+        overallRationale: bookSpec.overallRationale,
+        conflictsResolved: bookSpec.conflictsResolved,
+        recommendedPrice: bookSpec.recommendedPrice,
+        royaltyEstimate: bookSpec.royaltyEstimate,
+        pricingNotes: bookSpec.pricingNotes,
+        coverRationale: bookSpec.coverRationale,
+        puzzleQualityNotes: bookSpec.puzzleQualityNotes,
+        difficultyDescriptor: bookSpec.difficultyDescriptor,
+      } : null,
     };
     if (coverImageDataUrl) {
       donePayload.coverDataUrl = coverImageDataUrl;

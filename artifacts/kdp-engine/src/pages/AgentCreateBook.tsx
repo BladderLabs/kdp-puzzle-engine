@@ -8,15 +8,27 @@ type StageStatus = "pending" | "running" | "done" | "failed" | "needs_revision";
 interface StageConfig {
   id: string;
   label: string;
+  subLabel?: string;
+  isGroup?: boolean;
 }
 
 const STAGES: StageConfig[] = [
   { id: "market_scout", label: "Market Scout" },
   { id: "content_architect", label: "Content Architect" },
+  { id: "content_council", label: "Content Excellence Council", subLabel: "Title · Copy · Keywords" },
+  { id: "cover_research", label: "Cover Design Council", subLabel: "Design · Color · Typography" },
+  { id: "puzzle_council", label: "Puzzle Production Council", subLabel: "Difficulty · Layout" },
+  { id: "interior_council", label: "Interior Design Council", subLabel: "Typography · Margins" },
+  { id: "production_council", label: "Production & Pricing Council", subLabel: "Format · Price" },
+  { id: "master_director", label: "Master Book Director", subLabel: "Synthesising all councils" },
   { id: "cover_art", label: "Cover Art Director" },
   { id: "qa_review", label: "QA Reviewer" },
   { id: "assemble", label: "Assembling" },
 ];
+
+const COUNCIL_IDS = new Set([
+  "content_council", "cover_research", "puzzle_council", "interior_council", "production_council"
+]);
 
 interface StageState {
   status: StageStatus;
@@ -28,6 +40,18 @@ interface QAIssue {
   field: string;
   problem: string;
   fix: string;
+}
+
+interface BookIntelligence {
+  councilSummary: string;
+  overallRationale: string;
+  conflictsResolved: string[];
+  recommendedPrice: number;
+  royaltyEstimate: number;
+  pricingNotes: string;
+  coverRationale: string;
+  puzzleQualityNotes: string;
+  difficultyDescriptor: string;
 }
 
 interface CompletionInfo {
@@ -43,12 +67,15 @@ interface CompletionInfo {
   qaPassed: boolean;
   qaIssues: QAIssue[];
   descWordCount?: number;
+  bookIntelligence?: BookIntelligence | null;
 }
 
 const initStages = (): Record<string, StageState> =>
   Object.fromEntries(STAGES.map(s => [s.id, { status: "pending" as StageStatus, message: "", data: {} }]));
 
 function StageRow({ stage, state }: { stage: StageConfig; state: StageState }) {
+  const isCouncil = COUNCIL_IDS.has(stage.id) || stage.id === "master_director";
+
   const icon =
     state.status === "done" ? (
       <span style={{ color: "#22c55e", fontSize: 18 }}>✓</span>
@@ -78,14 +105,23 @@ function StageRow({ stage, state }: { stage: StageConfig; state: StageState }) {
       ? "#ef4444"
       : "rgba(255,255,255,0.35)";
 
+  const bgStyle = isCouncil && state.status !== "pending"
+    ? { background: "rgba(200,149,26,0.03)", borderLeft: `2px solid ${GOLD}22`, paddingLeft: 8, borderRadius: 4 }
+    : {};
+
   return (
-    <div className="flex items-start gap-3 py-2.5">
+    <div className="flex items-start gap-3 py-2" style={bgStyle}>
       <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center mt-0.5">{icon}</div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-semibold" style={{ color: labelColor }}>
             {stage.label}
           </span>
+          {stage.subLabel && state.status !== "pending" && (
+            <span className="text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>
+              {stage.subLabel}
+            </span>
+          )}
           {state.status === "needs_revision" && (
             <span
               className="text-xs px-1.5 py-0.5 rounded"
@@ -103,6 +139,35 @@ function StageRow({ stage, state }: { stage: StageConfig; state: StageState }) {
         {state.status === "done" && state.data.title && (
           <p className="text-xs mt-1 italic" style={{ color: "rgba(255,255,255,0.55)" }}>
             "{String(state.data.title)}"
+          </p>
+        )}
+        {/* Council-specific done details */}
+        {state.status === "done" && stage.id === "cover_research" && state.data.theme && (
+          <div className="flex gap-2 mt-1 flex-wrap">
+            <span className="text-xs px-2 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.45)" }}>
+              {String(state.data.theme)} theme
+            </span>
+            <span className="text-xs px-2 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.45)" }}>
+              {String(state.data.style)} style
+            </span>
+            {state.data.accentHex && (
+              <span className="text-xs px-2 py-0.5 rounded flex items-center gap-1" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.45)" }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: String(state.data.accentHex), display: "inline-block" }} />
+                {String(state.data.accentHex)}
+              </span>
+            )}
+          </div>
+        )}
+        {state.status === "done" && stage.id === "production_council" && state.data.recommendedPrice && (
+          <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.45)" }}>
+            ${String(state.data.recommendedPrice)} · {String(state.data.paperType)} paper · ~${Number(state.data.royaltyEstimate).toFixed(2)} royalty
+          </p>
+        )}
+        {state.status === "done" && stage.id === "master_director" && state.data.conflictsResolved && (
+          <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>
+            {(state.data.conflictsResolved as string[]).length > 0
+              ? `Resolved: ${(state.data.conflictsResolved as string[]).join(" · ")}`
+              : "No cross-council conflicts"}
           </p>
         )}
       </div>
@@ -152,6 +217,94 @@ function QAChecklist({ issues, passed }: { issues: QAIssue[]; passed: boolean })
         <p className="text-xs mt-1 ml-5" style={{ color: "#22c55e" }}>
           All quality checks passed ✓
         </p>
+      )}
+    </div>
+  );
+}
+
+function BookIntelligenceReport({ intel }: { intel: BookIntelligence }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{ border: `1px solid ${GOLD}30`, background: `${GOLD}08` }}
+    >
+      <button
+        className="w-full flex items-center justify-between px-4 py-3 text-left"
+        onClick={() => setExpanded(e => !e)}
+        style={{ background: `${GOLD}10` }}
+      >
+        <div className="flex items-center gap-2">
+          <span style={{ color: GOLD, fontSize: 14 }}>◆</span>
+          <span className="text-xs font-bold uppercase tracking-widest" style={{ color: GOLD }}>
+            Book Intelligence Report
+          </span>
+        </div>
+        <span className="text-xs" style={{ color: `${GOLD}80` }}>{expanded ? "▲ collapse" : "▼ expand"}</span>
+      </button>
+
+      {expanded && (
+        <div className="px-4 pb-4 pt-3 space-y-4">
+          {/* Summary */}
+          <div>
+            <p className="text-xs font-semibold mb-1" style={{ color: GOLD }}>Council Summary</p>
+            <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.60)" }}>{intel.councilSummary}</p>
+          </div>
+
+          {/* Why this book will sell */}
+          <div>
+            <p className="text-xs font-semibold mb-1" style={{ color: GOLD }}>Market Rationale</p>
+            <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.60)" }}>{intel.overallRationale}</p>
+          </div>
+
+          {/* Pricing */}
+          <div>
+            <p className="text-xs font-semibold mb-1" style={{ color: GOLD }}>Pricing Strategy</p>
+            <div className="flex gap-3 mb-1">
+              <div className="rounded-lg px-3 py-2 flex-1" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <p className="text-xs" style={{ color: "rgba(255,255,255,0.40)" }}>Recommended Price</p>
+                <p className="text-sm font-bold mt-0.5" style={{ color: "#22c55e" }}>${intel.recommendedPrice}</p>
+              </div>
+              <div className="rounded-lg px-3 py-2 flex-1" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <p className="text-xs" style={{ color: "rgba(255,255,255,0.40)" }}>Est. Royalty</p>
+                <p className="text-sm font-bold mt-0.5" style={{ color: "#22c55e" }}>${intel.royaltyEstimate.toFixed(2)}</p>
+              </div>
+            </div>
+            <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.50)" }}>{intel.pricingNotes}</p>
+          </div>
+
+          {/* Cover rationale */}
+          <div>
+            <p className="text-xs font-semibold mb-1" style={{ color: GOLD }}>Cover Design Rationale</p>
+            <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.60)" }}>{intel.coverRationale}</p>
+          </div>
+
+          {/* Puzzle quality */}
+          <div>
+            <p className="text-xs font-semibold mb-1" style={{ color: GOLD }}>Puzzle Quality Spec</p>
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.50)" }}>
+              <span style={{ color: "rgba(255,255,255,0.30)" }}>Difficulty: </span>
+              {intel.difficultyDescriptor}
+            </p>
+            <p className="text-xs mt-1 leading-relaxed" style={{ color: "rgba(255,255,255,0.50)" }}>{intel.puzzleQualityNotes}</p>
+          </div>
+
+          {/* Conflicts resolved */}
+          {intel.conflictsResolved.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold mb-1" style={{ color: GOLD }}>Conflicts Resolved by Director</p>
+              <ul className="space-y-1">
+                {intel.conflictsResolved.map((c, i) => (
+                  <li key={i} className="text-xs flex gap-2" style={{ color: "rgba(255,255,255,0.50)" }}>
+                    <span style={{ color: GOLD, flexShrink: 0 }}>→</span>
+                    {c}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -235,6 +388,7 @@ export function AgentCreateBook() {
                   qaPassed: event.qaPassed === true,
                   qaIssues: Array.isArray(event.qaIssues) ? (event.qaIssues as QAIssue[]) : [],
                   descWordCount: typeof event.descWordCount === "number" ? event.descWordCount : undefined,
+                  bookIntelligence: event.bookIntelligence as BookIntelligence | null | undefined,
                 });
                 done_flag = true;
                 break;
@@ -301,11 +455,11 @@ export function AgentCreateBook() {
           <div style={{ fontSize: 42, lineHeight: 1.2 }}>🧠</div>
           <h1 className="text-3xl font-extrabold text-white tracking-tight">AI Book Creator</h1>
           <p className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
-            Four AI agents research the market, craft your content, generate cover art, and save your book — in under 90 seconds.
+            Ten specialist agents — each grounded in professional publishing knowledge — research, debate, and build your book.
           </p>
         </div>
 
-        {/* Input card — show only when idle, no completion */}
+        {/* Input card */}
         {!running && !isComplete && (
           <div
             className="rounded-2xl p-6 space-y-4"
@@ -317,14 +471,7 @@ export function AgentCreateBook() {
                 style={{ color: "rgba(255,255,255,0.40)" }}
               >
                 Book idea{" "}
-                <span
-                  style={{
-                    color: "rgba(255,255,255,0.25)",
-                    fontWeight: 400,
-                    textTransform: "none",
-                    letterSpacing: 0,
-                  }}
-                >
+                <span style={{ color: "rgba(255,255,255,0.25)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
                   (optional — leave blank for AI-driven market choice)
                 </span>
               </label>
@@ -361,11 +508,11 @@ export function AgentCreateBook() {
               className="w-full py-3.5 rounded-xl text-black font-bold text-base transition-all duration-150"
               style={{ background: GOLD, boxShadow: `0 4px 20px ${GOLD}30` }}
             >
-              🧠 Start AI Pipeline
+              🧠 Start Expert Pipeline
             </button>
 
             <p className="text-center text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>
-              Uses Replit AI credits · Market Scout → Content Architect → Cover Art → QA → Assemble
+              Uses Replit AI credits · 10 specialist agents across 9 pipeline stages
             </p>
           </div>
         )}
@@ -380,9 +527,9 @@ export function AgentCreateBook() {
               className="text-xs font-bold mb-4 uppercase tracking-widest"
               style={{ color: GOLD + "99" }}
             >
-              Pipeline Progress
+              Expert Pipeline — {STAGES.length} Stages
             </h2>
-            <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+            <div className="space-y-0.5">
               {STAGES.map(stage => (
                 <StageRow key={stage.id} stage={stage} state={stages[stage.id]} />
               ))}
@@ -412,9 +559,7 @@ export function AgentCreateBook() {
             >
               <div className="flex items-center gap-2">
                 <span style={{ color: GOLD, fontSize: 20 }}>◆</span>
-                <h2 className="font-bold" style={{ color: GOLD }}>
-                  Book Created!
-                </h2>
+                <h2 className="font-bold" style={{ color: GOLD }}>Book Created!</h2>
                 {completion.qaFailed && (
                   <span
                     className="text-xs px-2 py-0.5 rounded ml-auto"
@@ -467,42 +612,41 @@ export function AgentCreateBook() {
               {/* Spec details */}
               <div className="grid grid-cols-2 gap-2 text-xs">
                 {completion.puzzleType && (
-                  <div
-                    className="rounded-lg px-3 py-2"
-                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-                  >
+                  <div className="rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
                     <span style={{ color: "rgba(255,255,255,0.40)" }}>Puzzle Type</span>
                     <p className="font-semibold text-white/80 mt-0.5">{completion.puzzleType}</p>
                   </div>
                 )}
                 {completion.puzzleCount !== undefined && (
-                  <div
-                    className="rounded-lg px-3 py-2"
-                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-                  >
+                  <div className="rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
                     <span style={{ color: "rgba(255,255,255,0.40)" }}>Puzzle Count</span>
                     <p className="font-semibold text-white/80 mt-0.5">{completion.puzzleCount}</p>
                   </div>
                 )}
                 {completion.theme && (
-                  <div
-                    className="rounded-lg px-3 py-2"
-                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-                  >
+                  <div className="rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
                     <span style={{ color: "rgba(255,255,255,0.40)" }}>Theme</span>
                     <p className="font-semibold text-white/80 mt-0.5 capitalize">{completion.theme}</p>
                   </div>
                 )}
-                {completion.descWordCount !== undefined && (
-                  <div
-                    className="rounded-lg px-3 py-2"
-                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-                  >
+                {completion.bookIntelligence?.recommendedPrice && (
+                  <div className="rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    <span style={{ color: "rgba(255,255,255,0.40)" }}>Recommended Price</span>
+                    <p className="font-semibold mt-0.5" style={{ color: "#22c55e" }}>${completion.bookIntelligence.recommendedPrice}</p>
+                  </div>
+                )}
+                {completion.descWordCount !== undefined && !completion.bookIntelligence?.recommendedPrice && (
+                  <div className="rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
                     <span style={{ color: "rgba(255,255,255,0.40)" }}>Description</span>
                     <p className="font-semibold text-white/80 mt-0.5">{completion.descWordCount} words</p>
                   </div>
                 )}
               </div>
+
+              {/* Book Intelligence Report */}
+              {completion.bookIntelligence && (
+                <BookIntelligenceReport intel={completion.bookIntelligence} />
+              )}
 
               {/* QA Checklist */}
               <div>
@@ -535,11 +679,7 @@ export function AgentCreateBook() {
                   onClick={handleRegenerate}
                   disabled={running}
                   className="w-full py-2.5 rounded-xl text-sm transition-all disabled:opacity-40"
-                  style={{
-                    background: "transparent",
-                    border: "1px solid rgba(255,255,255,0.10)",
-                    color: "rgba(255,255,255,0.50)",
-                  }}
+                  style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.50)" }}
                 >
                   ↺ Regenerate (new variation)
                 </button>

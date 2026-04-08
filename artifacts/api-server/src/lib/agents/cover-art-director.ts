@@ -27,10 +27,6 @@ const STYLE_MODIFIERS: Record<string, string> = {
   photo: "photographic fine art style, full-panel composition with visual weight concentrated in the upper two thirds",
 };
 
-/**
- * Map audience profile keywords to niche-specific subject hints that make the imagery
- * feel immediately relevant to the target buyer at a glance.
- */
 function buildNicheHint(niche: string): string {
   const n = niche.toLowerCase();
   if (n.includes("cat") || n.includes("kitten") || n.includes("feline")) {
@@ -78,33 +74,48 @@ export async function runCoverArtDirector(
   coverStyle: string,
   title: string,
   niche?: string,
+  enrichedImagePrompt?: string,
 ): Promise<CoverArtResult | null> {
   try {
     const { generateImage } = await import("@workspace/integrations-gemini-ai/image");
 
-    const themeDesc = THEME_DESCRIPTIONS[theme] || THEME_DESCRIPTIONS.midnight;
-    const styleDesc = STYLE_MODIFIERS[coverStyle] || STYLE_MODIFIERS.classic;
+    let prompt: string;
 
-    const nicheHint = niche ? buildNicheHint(niche) : "";
-    // Always include raw audience context in subject line, even when no keyword matches
-    const subjectLine = nicheHint
-      ? `Subject matter: ${nicheHint}.`
-      : niche
-        ? `Target audience: ${niche}. Scene: ${themeDesc}.`
-        : `Scene: ${themeDesc}.`;
+    if (enrichedImagePrompt && enrichedImagePrompt.trim().length > 20) {
+      // Use research-backed enriched prompt from Cover Design Council
+      prompt = [
+        `Create a stunning professional book cover background illustration for a "${puzzleType}" puzzle book titled "${title}".`,
+        enrichedImagePrompt.trim(),
+        `CRITICAL COMPOSITION RULE: Use a strong VERTICAL portrait composition (2:3 aspect ratio, taller than wide).`,
+        `Place the primary subject and visual interest in the UPPER TWO-THIRDS of the image.`,
+        `The LOWER THIRD must be kept relatively clear — it will be overlaid with title text.`,
+        `ABSOLUTELY NO text, letters, numbers, words, symbols, watermarks, or UI elements anywhere in the image.`,
+        `Quality: museum-quality illustration suitable for 300 DPI commercial print publication on Amazon KDP.`,
+      ].join(" ");
+    } else {
+      // Fallback: legacy basic prompt
+      const themeDesc = THEME_DESCRIPTIONS[theme] || THEME_DESCRIPTIONS.midnight;
+      const styleDesc = STYLE_MODIFIERS[coverStyle] || STYLE_MODIFIERS.classic;
+      const nicheHint = niche ? buildNicheHint(niche) : "";
+      const subjectLine = nicheHint
+        ? `Subject matter: ${nicheHint}.`
+        : niche
+          ? `Target audience: ${niche}. Scene: ${themeDesc}.`
+          : `Scene: ${themeDesc}.`;
 
-    const prompt = [
-      `Create a stunning ${styleDesc} book cover background illustration for a "${puzzleType}" puzzle book titled "${title}".`,
-      subjectLine,
-      `Atmosphere and color palette: ${themeDesc}.`,
-      `CRITICAL COMPOSITION RULE: Use a strong VERTICAL portrait composition (2:3 aspect ratio, taller than wide).`,
-      `Place the primary subject and visual interest in the UPPER TWO-THIRDS of the image.`,
-      `The LOWER THIRD must be kept relatively clear and dark — it will be overlaid with title text.`,
-      `ABSOLUTELY NO text, letters, numbers, words, symbols, watermarks, or UI elements anywhere in the image.`,
-      `Style: painterly fine art, rich fine details, high contrast, professional commercial print quality.`,
-      `Quality: museum-quality illustration suitable for 300 DPI commercial print publication on Amazon KDP.`,
-      `The image must look stunning and professional as a full-panel background for a bestselling puzzle book.`,
-    ].join(" ");
+      prompt = [
+        `Create a stunning ${styleDesc} book cover background illustration for a "${puzzleType}" puzzle book titled "${title}".`,
+        subjectLine,
+        `Atmosphere and color palette: ${themeDesc}.`,
+        `CRITICAL COMPOSITION RULE: Use a strong VERTICAL portrait composition (2:3 aspect ratio, taller than wide).`,
+        `Place the primary subject and visual interest in the UPPER TWO-THIRDS of the image.`,
+        `The LOWER THIRD must be kept relatively clear and dark — it will be overlaid with title text.`,
+        `ABSOLUTELY NO text, letters, numbers, words, symbols, watermarks, or UI elements anywhere in the image.`,
+        `Style: painterly fine art, rich fine details, high contrast, professional commercial print quality.`,
+        `Quality: museum-quality illustration suitable for 300 DPI commercial print publication on Amazon KDP.`,
+        `The image must look stunning and professional as a full-panel background for a bestselling puzzle book.`,
+      ].join(" ");
+    }
 
     return await generateImage(prompt);
   } catch {
