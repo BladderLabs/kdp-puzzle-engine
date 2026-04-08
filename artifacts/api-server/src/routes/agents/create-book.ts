@@ -451,11 +451,21 @@ router.post("/agents/create-book", async (req, res) => {
   let finalStyle = bookSpec?.coverStyle ?? coverDesignSpec.style ?? market.coverStyle;
   const finalTitle = bookSpec?.title ?? contentSpec.title;
   const finalSubtitle = bookSpec?.subtitle ?? contentSpec.subtitle;
-  const finalBackDescription = bookSpec?.backDescription ?? contentSpec.backDescription;
   const finalHookSentence = bookSpec?.hookSentence ?? contentSpec.hookSentence;
   const finalKeywords = bookSpec?.keywords ?? contentSpec.keywords;
+  // finalPuzzleCount resolved BEFORE description so we can normalise any stale count in the copy
   const finalPuzzleCount = bookSpec?.puzzleCount ?? puzzleSpec?.recommendedPuzzleCount ?? market.puzzleCount ?? 100;
   const finalPaperType = bookSpec?.paperType ?? productionSpec?.paperType ?? "white";
+  // Normalise puzzle count in description: replace any "N puzzle(s)" pattern with the authoritative count.
+  // This prevents hallucinated counts (e.g. "50 relaxing puzzles") when the Puzzle Council or Master
+  // Director overrides the Market Scout's initial recommendation.
+  const finalBackDescription = (() => {
+    const raw = bookSpec?.backDescription ?? contentSpec.backDescription;
+    return raw.replace(
+      /\b\d{1,3}(\s+(?:unique|carefully\s+crafted|relaxing|stimulating|fun|challenging|themed|original|hand-crafted|engaging|brand-new))*\s+puzzles?\b/gi,
+      (match) => match.replace(/^\d{1,3}/, String(finalPuzzleCount)),
+    );
+  })();
   const enrichedImagePrompt = bookSpec?.coverImagePrompt ?? coverDesignSpec.enrichedImagePrompt;
 
   // ─── Stage 9: Cover Art Director ────────────────────────────────────────────

@@ -143,10 +143,11 @@ CURRENT DRAFT:
 BOOK DETAILS:
 - Niche: ${market.nicheLabel} (${market.niche})
 - Puzzle type: ${market.puzzleType}
+- Puzzle count: ${market.puzzleCount} — LOCKED. You MUST use this exact number when mentioning puzzles. Do not substitute any other number.
 - Audience: ${market.audienceProfile}
 - Large print: ${market.largePrint}
 
-Apply the direct-response framework. Preserve the author's voice and core message. Improve structure, benefit language, and CTA. Keep the hook sentence warm and personal (no period at end).
+Apply the direct-response framework. Preserve the author's voice and core message. Improve structure, benefit language, and CTA. Keep the hook sentence warm and personal (no period at end). The description MUST reference the exact puzzle count (${market.puzzleCount}) at least once.
 
 IMPORTANT — KDP HTML FORMATTING:
 The optimizedDescription must use Amazon KDP-supported HTML tags for better readability on the product page:

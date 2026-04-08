@@ -45,6 +45,7 @@ Market intelligence for this book:
 - Puzzle type: ${market.puzzleType}
 - Difficulty: ${market.difficulty}
 - Large print: ${market.largePrint}
+- Puzzle count: ${market.puzzleCount} — THIS IS THE EXACT NUMBER. Use it verbatim in the title and description. Do not invent a different number.
 - Target price: $${market.pricePoint}
 - Audience: ${market.audienceProfile}
 - Keywords: ${market.keywords.join(", ")}
@@ -53,18 +54,18 @@ Market intelligence for this book:
 Create publication-ready content for this KDP puzzle book.
 
 Rules:
-- Title: must be 6+ words, keyword-rich, appealing to the niche
+- Title: must be 6+ words, keyword-rich, appealing to the niche. Include the puzzle count (${market.puzzleCount}) in the title.
 - Subtitle: punchy benefit statement, 8–15 words
 - Author: use a realistic pen name suitable for the niche
 - Hook sentence: 10–15 words, audience-specific, benefit-led opening line for the back cover. Example: "The perfect brain-training gift for the cat lover in your life!" Do NOT end with a period. Must feel personal and warm to the exact audience.
-- Back description: 100–150 words, compelling sales copy using emotional triggers and benefits. Do NOT repeat the hook sentence here.
+- Back description: 100–150 words, compelling sales copy using emotional triggers and benefits. MUST mention the exact puzzle count (${market.puzzleCount} puzzles) at least once. Do NOT repeat the hook sentence here.
 - Word category: must be one of: ${WORD_CATEGORIES.join(", ")}
 - Words: 30–50 thematically relevant words for the puzzle type and niche (only for Word Search/Cryptogram)
 - Volume: 1
 
 Return ONLY a JSON object (no markdown, no explanation):
 {
-  "title": "Large Print Word Search for Seniors: 100 Stimulating Puzzles for Sharp Minds",
+  "title": "Large Print Word Search for Seniors: ${market.puzzleCount} Stimulating Puzzles for Sharp Minds",
   "subtitle": "Big Letters, Easy to Read — Perfect for Brain Training and Daily Relaxation",
   "author": "Eleanor Bennett",
   "hookSentence": "The perfect brain-training gift for every puzzle-loving senior in your life",
