@@ -501,7 +501,8 @@ export function Home() {
   const filteredStandalones = q
     ? allStandaloneBooks.filter(b =>
         b.title.toLowerCase().includes(q) ||
-        b.puzzleType.toLowerCase().includes(q)
+        b.puzzleType.toLowerCase().includes(q) ||
+        (b.seriesName ?? "").toLowerCase().includes(q)
       )
     : allStandaloneBooks;
 
