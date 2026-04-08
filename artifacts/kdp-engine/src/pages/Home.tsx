@@ -459,11 +459,16 @@ export function Home() {
       }
     }
     for (const [name, volumes] of groupMap) {
-      const latestUpdate = volumes.reduce(
-        (best, v) => (v.updatedAt > best ? v.updatedAt : best),
-        volumes[0]?.updatedAt ?? ""
-      );
-      allSeriesGroups.push({ name, volumes, latestUpdate });
+      if (volumes.length >= 2) {
+        const latestUpdate = volumes.reduce(
+          (best, v) => (v.updatedAt > best ? v.updatedAt : best),
+          volumes[0]?.updatedAt ?? ""
+        );
+        allSeriesGroups.push({ name, volumes, latestUpdate });
+      } else {
+        // Single-volume "series" — treat as standalone
+        allStandaloneBooks.push(...volumes);
+      }
     }
     // Sort series groups by most recently updated
     allSeriesGroups.sort((a, b) => b.latestUpdate.localeCompare(a.latestUpdate));
