@@ -15,7 +15,7 @@ function toOpts(data: ReturnType<typeof GenerateBookBody.parse>): CoverBuildOpts
     puzzleType: data.puzzleType ?? "Word Search",
     puzzleCount: data.puzzleCount ?? 100,
     difficulty: data.difficulty ?? "Medium",
-    largePrint: data.largePrint !== false,
+    largePrint: data.largePrint === true,
     paperType: data.paperType ?? "white",
     theme: data.theme ?? "midnight",
     coverStyle: data.coverStyle ?? "classic",
@@ -155,7 +155,7 @@ router.post("/cover-preview", (req, res) => {
       puzzleType: b.puzzleType ?? "Word Search",
       puzzleCount: b.puzzleCount ?? 100,
       difficulty: b.difficulty ?? "Medium",
-      largePrint: b.largePrint !== false,
+      largePrint: b.largePrint === true,
       paperType: b.paperType ?? "white",
       theme: b.theme ?? "midnight",
       coverStyle: b.coverStyle ?? "classic",
@@ -178,7 +178,7 @@ router.post("/puzzles/preview", (req, res) => {
     const data = PreviewPuzzlesBody.parse(req.body);
     const pt = (data.puzzleType as string) || "Word Search";
     const diff = (data.difficulty as string) || "Medium";
-    const lp = data.largePrint !== false;
+    const lp = data.largePrint === true;
     const rawWords = Array.isArray(data.words) ? (data.words as string[]) : [];
     const words = rawWords.filter(w => w.trim().length >= 3);
     const count = Math.min((data.count as number) || 2, 3);

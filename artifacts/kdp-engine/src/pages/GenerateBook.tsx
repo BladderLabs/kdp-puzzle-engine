@@ -80,6 +80,7 @@ export function GenerateBook() {
   const [coverHtml, setCoverHtml] = useState<string | null>(null);
   const [samplePageHtml, setSamplePageHtml] = useState<string | null>(null);
   const [coverDimsState, setCoverDimsState] = useState<{ fullW: number; fullH: number } | null>(null);
+  const [confirmedTotalPages, setConfirmedTotalPages] = useState<number | null>(null);
 
   const downloadBlob = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
@@ -109,6 +110,7 @@ export function GenerateBook() {
     coverBlobRef.current = null;
     setCoverHtml(null);
     setSamplePageHtml(null);
+    setConfirmedTotalPages(null);
 
     const bookConfig = {
       title: book.title,
@@ -139,11 +141,12 @@ export function GenerateBook() {
         body: JSON.stringify(bookConfig),
       });
       if (!genRes.ok) throw new Error(`Generate failed: ${await genRes.text()}`);
-      const { interiorHtml, interiorDims, coverHtml: cHtml, coverDims } = await genRes.json();
+      const { interiorHtml, interiorDims, coverHtml: cHtml, coverDims, totalPages: tp } = await genRes.json();
 
       setCoverHtml(cHtml);
       setCoverDimsState(coverDims);
       setSamplePageHtml(extractFirstPuzzlePage(interiorHtml));
+      if (typeof tp === "number") setConfirmedTotalPages(tp);
 
       setStatus("pdf_interior");
       const interiorRes = await fetch("/api/pdf/interior", {
@@ -187,6 +190,7 @@ export function GenerateBook() {
     setCoverHtml(null);
     setSamplePageHtml(null);
     setCoverDimsState(null);
+    setConfirmedTotalPages(null);
     setStatus("idle");
     setErrorMsg("");
   };
@@ -207,16 +211,19 @@ export function GenerateBook() {
   }
 
   const thick = book.paperType === "cream" ? 0.0025 : 0.002252;
-  const aPer = book.puzzleType === "Word Search" ? (book.largePrint ? 9 : 12)
-    : book.puzzleType === "Sudoku" ? (book.largePrint ? 6 : 8)
-    : book.puzzleType === "Maze" ? (book.largePrint ? 4 : 6)
-    : book.puzzleType === "Number Search" ? (book.largePrint ? 9 : 12)
-    : (book.largePrint ? 6 : 8);
+  const LP = book.largePrint === true;
+  const aPer = book.puzzleType === "Word Search"   ? (LP ? 4 : 6)
+    : book.puzzleType === "Sudoku"                 ? (LP ? 6 : 8)
+    : book.puzzleType === "Maze"                   ? (LP ? 4 : 6)
+    : book.puzzleType === "Number Search"          ? (LP ? 9 : 12)
+    : book.puzzleType === "Crossword"              ? (LP ? 4 : 6)
+    : (LP ? 6 : 8);
   const pc = book.puzzleCount ?? 100;
   const progressive = book.difficultyMode === "progressive";
   const frontMatter = 3 + (book.dedication ? 1 : 0) + (book.challengeDays ? 1 : 0);
   const dividers = progressive ? (pc < 3 ? 1 : 3) : 0;
-  const totP = frontMatter + 4 + pc + Math.ceil(pc / aPer) + dividers;
+  const estimatedTotP = frontMatter + 4 + pc + Math.ceil(pc / aPer) + dividers;
+  const totP = confirmedTotalPages ?? estimatedTotP;
   const spineW = totP * thick + 0.06;
 
   const isGenerating = status === "generating" || status === "pdf_interior" || status === "pdf_cover";
@@ -247,8 +254,12 @@ export function GenerateBook() {
           <div><span className="text-muted-foreground">Count:</span> <strong>{pc} puzzles</strong></div>
           <div><span className="text-muted-foreground">Difficulty:</span> <strong>{book.difficulty}</strong></div>
           <div><span className="text-muted-foreground">Paper:</span> <strong>{book.paperType}</strong></div>
-          <div><span className="text-muted-foreground">Size:</span> <strong>{book.largePrint ? '8.5"×11" Large Print' : '6"×9" Standard'}</strong></div>
-          <div><span className="text-muted-foreground">Est. pages / spine:</span> <strong>{totP} pages · {spineW.toFixed(3)}"</strong></div>
+          <div><span className="text-muted-foreground">Size:</span> <strong>{LP ? '8.5"×11" Large Print' : '6"×9" Standard'}</strong></div>
+          <div>
+            <span className="text-muted-foreground">{confirmedTotalPages ? "Pages / spine:" : "Est. pages / spine:"}</span>{" "}
+            <strong>{totP} pages · {spineW.toFixed(3)}"</strong>
+            {confirmedTotalPages && <span className="text-xs text-green-500 ml-1">✓ confirmed</span>}
+          </div>
           <div><span className="text-muted-foreground">Theme:</span> <strong className="capitalize">{book.theme}</strong></div>
           <div><span className="text-muted-foreground">Cover style:</span> <strong className="capitalize">{book.coverStyle}</strong></div>
         </CardContent>
