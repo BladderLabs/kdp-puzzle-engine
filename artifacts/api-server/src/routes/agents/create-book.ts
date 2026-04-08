@@ -272,11 +272,16 @@ router.post("/agents/create-book", async (req, res) => {
             }),
         ]);
 
-        // Round-2 cross-talk: deterministic compatibility checks between specialist outputs
+        // Round-2 cross-talk: 3 parallel Haiku calls — each specialist checks compatibility with the other two
+        const [designCrossTalk, colorCrossTalk, typographyCrossTalk] = await Promise.all([
+          roundTwoDesignCompatibility(designAnalysis, colorStrategy, typographySpec),
+          roundTwoColorCompatibility(colorStrategy, designAnalysis, typographySpec),
+          roundTwoTypographyCompatibility(typographySpec, designAnalysis, colorStrategy),
+        ]);
         const crossTalkFlags = {
-          design: roundTwoDesignCompatibility(designAnalysis, colorStrategy, typographySpec),
-          color: roundTwoColorCompatibility(colorStrategy, designAnalysis, typographySpec),
-          typography: roundTwoTypographyCompatibility(typographySpec, designAnalysis, colorStrategy),
+          design: designCrossTalk,
+          color: colorCrossTalk,
+          typography: typographyCrossTalk,
         };
         req.log.info({ crossTalkFlags }, "Round-2 cross-talk complete");
 
@@ -682,7 +687,7 @@ router.post("/agents/create-book", async (req, res) => {
         difficultyMode: "uniform",
         challengeDays: null,
         keywords: finalKeywords,
-        accentHexOverride: coverDesignSpec.accentHex ?? null,
+        accentHexOverride: bookSpec?.coverAccentHex ?? coverDesignSpec.accentHex ?? null,
         casingOverride: coverDesignSpec.casingDirective ?? null,
         fontStyleDirective: coverDesignSpec.fontStyleDirective ?? null,
       }).returning(),
@@ -735,9 +740,9 @@ router.post("/agents/create-book", async (req, res) => {
       } : null,
       // Buyer Psychology Profile — for UI display and future generate requests
       buyerProfile: buyerProfile ?? null,
-      // Cover design directives from specialist agents — pass to /generate for cover HTML
+      // Cover design directives — Master Director's accent wins over Cover Director's default
       coverDirectives: {
-        accentHexOverride: coverDesignSpec.accentHex,
+        accentHexOverride: bookSpec?.coverAccentHex ?? coverDesignSpec.accentHex,
         casingOverride: coverDesignSpec.casingDirective,
         fontStyleDirective: coverDesignSpec.fontStyleDirective,
       },

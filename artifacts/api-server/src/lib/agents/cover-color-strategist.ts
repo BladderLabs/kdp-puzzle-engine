@@ -17,26 +17,32 @@ export const CoverColorStrategySchema = z.object({
 
 export type CoverColorStrategy = z.infer<typeof CoverColorStrategySchema>;
 
-export function roundTwoColorCompatibility(
+export async function roundTwoColorCompatibility(
   colorStrategy: CoverColorStrategy,
   designAnalysis: CoverDesignAnalysis,
   typography: CoverTypographySpec,
-): string {
-  const flags: string[] = [];
-  const darkThemes = ["midnight", "forest", "crimson", "violet", "teal"];
-  if (darkThemes.includes(colorStrategy.recommendedTheme) && typography.thumbnailReadabilityScore < 7) {
-    flags.push(`Color: dark theme '${colorStrategy.recommendedTheme}' demands high-contrast type — typography readability ${typography.thumbnailReadabilityScore}/10 is below safe threshold`);
+): Promise<string> {
+  try {
+    const msg = await anthropic.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 100,
+      messages: [{
+        role: "user",
+        content: `You are a color strategist doing a quick cross-check for a KDP book cover council.
+
+Color theme: ${colorStrategy.recommendedTheme} (legibility: ${colorStrategy.thumbnailLegibilityScore}/10, accent: ${colorStrategy.accentHex})
+Design style: ${designAnalysis.recommendedStyle}
+Typography: ${typography.fontStyleDirective} (readability: ${typography.thumbnailReadabilityScore}/10)
+
+Do the color choices work with the design style and typography for a high-converting Amazon cover?
+Reply with ONLY "compatible" OR a single sentence (max 20 words) describing the specific conflict to flag.`,
+      }],
+    });
+    const text = msg.content[0].type === "text" ? msg.content[0].text.trim() : "compatible";
+    return text || "compatible";
+  } catch {
+    return "compatible";
   }
-  if (designAnalysis.recommendedStyle === "geometric" && colorStrategy.recommendedTheme === "parchment") {
-    flags.push("Color: parchment vintage palette conflicts with geometric style's modern/clean aesthetic — consider teal or slate");
-  }
-  if (designAnalysis.recommendedStyle === "warmth" && ["slate", "teal"].includes(colorStrategy.recommendedTheme)) {
-    flags.push(`Color: warmth layout requires warm tones — '${colorStrategy.recommendedTheme}' is too cool/modern, suggest sunrise or parchment`);
-  }
-  if (colorStrategy.thumbnailLegibilityScore < 7) {
-    flags.push(`Color: legibility score ${colorStrategy.thumbnailLegibilityScore}/10 is below recommended threshold of 7 — consider higher-contrast theme`);
-  }
-  return flags.length > 0 ? flags.join("; ") : "Color strategy fully compatible with design style and typography.";
 }
 
 const EXPERT_KNOWLEDGE = `

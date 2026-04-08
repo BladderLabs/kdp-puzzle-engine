@@ -16,25 +16,32 @@ export const CoverTypographySpecSchema = z.object({
 
 export type CoverTypographySpec = z.infer<typeof CoverTypographySpecSchema>;
 
-export function roundTwoTypographyCompatibility(
+export async function roundTwoTypographyCompatibility(
   typography: CoverTypographySpec,
   designAnalysis: CoverDesignAnalysis,
   colorStrategy: CoverColorStrategy,
-): string {
-  const flags: string[] = [];
-  if (typography.thumbnailReadabilityScore < colorStrategy.thumbnailLegibilityScore - 2) {
-    flags.push(`Typography: readability score ${typography.thumbnailReadabilityScore}/10 lags color legibility ${colorStrategy.thumbnailLegibilityScore}/10 — consider bolder weight or higher contrast`);
+): Promise<string> {
+  try {
+    const msg = await anthropic.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 100,
+      messages: [{
+        role: "user",
+        content: `You are a typographer doing a quick cross-check for a KDP book cover council.
+
+Typography: ${typography.fontStyleDirective}, casing: ${typography.casingDirective} (readability: ${typography.thumbnailReadabilityScore}/10)
+Design style: ${designAnalysis.recommendedStyle}
+Color theme: ${colorStrategy.recommendedTheme} (legibility: ${colorStrategy.thumbnailLegibilityScore}/10)
+
+Does the typography work with the design style and color theme for a professional Amazon cover?
+Reply with ONLY "compatible" OR a single sentence (max 20 words) describing the specific conflict to flag.`,
+      }],
+    });
+    const text = msg.content[0].type === "text" ? msg.content[0].text.trim() : "compatible";
+    return text || "compatible";
+  } catch {
+    return "compatible";
   }
-  if (typography.fontStyleDirective.includes("geometric") && designAnalysis.recommendedStyle === "luxury") {
-    flags.push("Typography: geometric-sans may undercut luxury aesthetic — elegant serif would better complement the luxury layout");
-  }
-  if (typography.fontStyleDirective.includes("playful") && designAnalysis.recommendedStyle === "geometric") {
-    flags.push("Typography: playful rounded-sans conflicts with geometric style's technical precision aesthetic");
-  }
-  if (typography.casingDirective === "ALL CAPS" && designAnalysis.recommendedStyle === "warmth") {
-    flags.push("Typography: ALL CAPS casing feels aggressive for warmth/cozy style — Title Case would feel more inviting");
-  }
-  return flags.length > 0 ? flags.join("; ") : "Typography directive fully compatible with design style and color theme.";
 }
 
 const EXPERT_KNOWLEDGE = `

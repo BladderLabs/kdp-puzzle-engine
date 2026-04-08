@@ -15,25 +15,32 @@ export const CoverDesignAnalysisSchema = z.object({
 
 export type CoverDesignAnalysis = z.infer<typeof CoverDesignAnalysisSchema>;
 
-export function roundTwoDesignCompatibility(
+export async function roundTwoDesignCompatibility(
   analysis: CoverDesignAnalysis,
   colorStrategy: CoverColorStrategy,
   typography: CoverTypographySpec,
-): string {
-  const flags: string[] = [];
-  if (analysis.recommendedStyle === "luxury" && !typography.fontStyleDirective.includes("serif")) {
-    flags.push(`Design: 'luxury' style needs serif typography — font directive "${typography.fontStyleDirective}" may undercut premium positioning`);
+): Promise<string> {
+  try {
+    const msg = await anthropic.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 100,
+      messages: [{
+        role: "user",
+        content: `You are a book cover design reviewer doing a quick compatibility cross-check.
+
+Design style: ${analysis.recommendedStyle}
+Color theme: ${colorStrategy.recommendedTheme} (accent: ${colorStrategy.accentHex})
+Typography: ${typography.fontStyleDirective}, casing: ${typography.casingDirective}
+
+Do these three outputs work together visually for a professional KDP cover?
+Reply with ONLY "compatible" OR a single sentence (max 20 words) describing the specific conflict to flag.`,
+      }],
+    });
+    const text = msg.content[0].type === "text" ? msg.content[0].text.trim() : "compatible";
+    return text || "compatible";
+  } catch {
+    return "compatible";
   }
-  if (analysis.recommendedStyle === "minimal" && typography.fontStyleDirective.includes("bold condensed")) {
-    flags.push("Design: 'minimal' style pairs better with geometric-sans or elegant-serif than bold condensed");
-  }
-  if (analysis.recommendedStyle === "retro" && !["parchment", "sunrise"].includes(colorStrategy.recommendedTheme)) {
-    flags.push(`Design: 'retro' style pairs best with parchment/sunrise — theme '${colorStrategy.recommendedTheme}' may clash`);
-  }
-  if (analysis.recommendedStyle === "warmth" && ["slate", "teal", "midnight"].includes(colorStrategy.recommendedTheme)) {
-    flags.push(`Design: 'warmth' layout needs warm palette — cool/dark theme '${colorStrategy.recommendedTheme}' conflicts, suggest sunrise or parchment`);
-  }
-  return flags.length > 0 ? flags.join("; ") : "Design style fully compatible with proposed color and typography.";
 }
 
 const EXPERT_KNOWLEDGE = `

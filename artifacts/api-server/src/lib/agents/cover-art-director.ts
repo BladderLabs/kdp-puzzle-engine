@@ -64,8 +64,8 @@ function buildNicheHint(niche: string): string {
   if (n.includes("spring") || n.includes("easter")) {
     return "with vibrant spring blossoms — cherry blossoms, daffodils, and fresh green leaves — evoking renewal, joy, and lightness";
   }
-  // Autumn / fall (without thanksgiving)
-  if (n.includes("autumn") || n.includes("fall-puzzle")) {
+  // Autumn / fall / october (without thanksgiving)
+  if (n.includes("autumn") || n.includes("fall") || n.includes("october")) {
     return "with stunning autumn foliage — crimson, amber, and gold leaves against a misty forest backdrop — evoking the cozy beauty of the season";
   }
   // Bible / faith / spiritual / christian

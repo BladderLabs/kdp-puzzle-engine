@@ -129,7 +129,7 @@ Book specification:
 - Has cover image: ${spec.hasImage}
 - Has placeholder text detected: ${hasPlaceholder}
 
-Run these 6 quality checks (checks 7-10 are evaluated deterministically, not by LLM):
+Run these 6 quality checks (checks 7-10 are pre-evaluated deterministically; LLM reviews checks 1-6 only):
 1. Title has 6+ words AND is keyword-rich and appealing to the target audience
 2. Subtitle is present AND is a compelling benefit statement (8+ words)
 3. Back description has 80+ words AND is compelling sales copy (no placeholder text)
@@ -172,7 +172,7 @@ Be strict but fair. Only flag genuine issues that would hurt sales or violate KD
   if (deterministicIssues.length > 0) {
     llmResult.issues = [...deterministicIssues, ...llmResult.issues];
     // cover_combination and hook_sentence require revision; cover_image and title_keyword are advisory
-    const blockingFields = new Set(["cover_combination"]);
+    const blockingFields = new Set(["cover_combination", "hook_sentence"]);
     const hasBlocker = deterministicIssues.some(i => blockingFields.has(i.field));
     if (hasBlocker) {
       llmResult.passed = false;
