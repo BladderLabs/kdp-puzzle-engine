@@ -510,7 +510,7 @@ components:
           enum: [midnight, forest, crimson, ocean, violet, slate, sunrise, teal, parchment, sky]
         coverStyle:
           type: string
-          enum: [classic, geometric, luxury, bold, minimal, retro, warmth]
+          enum: [classic, geometric, luxury, bold, minimal, retro, warmth, photo]
         backDescription:
           type: string
         words:

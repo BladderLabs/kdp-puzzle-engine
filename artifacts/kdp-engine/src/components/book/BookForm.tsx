@@ -43,7 +43,7 @@ const THEMES = [
   { value: "parchment", label: "Parchment Quill", bg: "#F5E4C0", ac: "#7B3A00" },
   { value: "sky",       label: "Clear Sky",       bg: "#E0EFFF", ac: "#2050B8" },
 ];
-const COVER_STYLES = ["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth"] as const;
+const COVER_STYLES = ["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth", "photo"] as const;
 
 const NICHE_PICKS = [
   { value: "Seniors & Large Print", titlePrefix: "Large Print", audience: "seniors" },

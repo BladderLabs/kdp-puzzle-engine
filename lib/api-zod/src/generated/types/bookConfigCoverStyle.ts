@@ -17,4 +17,5 @@ export const BookConfigCoverStyle = {
   minimal: "minimal",
   retro: "retro",
   warmth: "warmth",
+  photo: "photo",
 } as const;

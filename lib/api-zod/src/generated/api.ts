@@ -202,7 +202,7 @@ export const GenerateBookBody = zod.object({
     ])
     .optional(),
   coverStyle: zod
-    .enum(["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth"])
+    .enum(["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth", "photo"])
     .optional(),
   backDescription: zod.string().optional(),
   words: zod.array(zod.string()).optional(),
@@ -260,7 +260,7 @@ export const RenderInteriorPdfBody = zod.object({
     ])
     .optional(),
   coverStyle: zod
-    .enum(["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth"])
+    .enum(["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth", "photo"])
     .optional(),
   backDescription: zod.string().optional(),
   words: zod.array(zod.string()).optional(),
@@ -303,7 +303,7 @@ export const RenderCoverPdfBody = zod.object({
     ])
     .optional(),
   coverStyle: zod
-    .enum(["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth"])
+    .enum(["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth", "photo"])
     .optional(),
   backDescription: zod.string().optional(),
   words: zod.array(zod.string()).optional(),
