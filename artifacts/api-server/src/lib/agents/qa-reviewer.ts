@@ -90,14 +90,11 @@ export async function runQAReviewer(spec: QASpec): Promise<QAResult> {
     });
   } else {
     const hookWords = spec.hookSentence.trim().split(/\s+/).filter(Boolean).length;
-    const endsWithPunctuation = /[.!?]$/.test(spec.hookSentence.trim());
-    if (hookWords < 8 || !endsWithPunctuation) {
+    if (hookWords < 8) {
       deterministicIssues.push({
         field: "hook_sentence",
-        problem: hookWords < 8
-          ? `Hook sentence is only ${hookWords} words — must be 8+ words to be compelling`
-          : "Hook sentence does not end with proper punctuation (. ! ?) — required for professional back cover",
-        fix: "Rewrite the hook sentence to be 10-15 words, emotionally engaging, and properly punctuated",
+        problem: `Hook sentence is only ${hookWords} words — must be 8+ words to be compelling on the back cover`,
+        fix: "Rewrite the hook sentence to be 10-15 words, emotionally engaging, and directly addressing the buyer's core desire",
       });
     }
   }

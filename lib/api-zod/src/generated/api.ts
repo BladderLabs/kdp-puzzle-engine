@@ -57,6 +57,18 @@ export const ListBooksResponseItem = zod.object({
     .array(zod.string())
     .max(listBooksResponseKeywordsMax)
     .optional(),
+  accentHexOverride: zod
+    .string()
+    .nullish()
+    .describe("Accent color override from Cover Design Council (hex code)"),
+  casingOverride: zod
+    .string()
+    .nullish()
+    .describe("Title casing directive from Cover Typography Director"),
+  fontStyleDirective: zod
+    .string()
+    .nullish()
+    .describe("Font style directive from Cover Typography Director"),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -149,9 +161,18 @@ export const GetBookResponse = zod.object({
     .optional()
     .describe("Name of the series this book belongs to"),
   keywords: zod.array(zod.string()).max(getBookResponseKeywordsMax).optional(),
-  accentHexOverride: zod.string().optional().nullable(),
-  casingOverride: zod.string().optional().nullable(),
-  fontStyleDirective: zod.string().optional().nullable(),
+  accentHexOverride: zod
+    .string()
+    .nullish()
+    .describe("Accent color override from Cover Design Council (hex code)"),
+  casingOverride: zod
+    .string()
+    .nullish()
+    .describe("Title casing directive from Cover Typography Director"),
+  fontStyleDirective: zod
+    .string()
+    .nullish()
+    .describe("Font style directive from Cover Typography Director"),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -243,6 +264,18 @@ export const UpdateBookResponse = zod.object({
     .array(zod.string())
     .max(updateBookResponseKeywordsMax)
     .optional(),
+  accentHexOverride: zod
+    .string()
+    .nullish()
+    .describe("Accent color override from Cover Design Council (hex code)"),
+  casingOverride: zod
+    .string()
+    .nullish()
+    .describe("Title casing directive from Cover Typography Director"),
+  fontStyleDirective: zod
+    .string()
+    .nullish()
+    .describe("Font style directive from Cover Typography Director"),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -265,6 +298,7 @@ export const CloneBookParams = zod.object({
  * @summary Generate interior and cover HTML for a book
  */
 export const generateBookBodyDifficultyModeDefault = `uniform`;
+export const generateBookBodyKeywordsMax = 7;
 
 export const GenerateBookBody = zod.object({
   title: zod.string(),
@@ -328,10 +362,23 @@ export const GenerateBookBody = zod.object({
     .union([zod.literal(30), zod.literal(60), zod.literal(90)])
     .optional()
     .describe("Adds a Solve-a-Day tracker page for 30, 60, or 90 days"),
-  keywords: zod.array(zod.string()).optional(),
-  accentHexOverride: zod.string().optional().describe("Agent-recommended accent color override (hex)"),
-  casingOverride: zod.string().optional().describe("Agent-recommended title casing (ALL CAPS / Title Case / Mixed)"),
-  fontStyleDirective: zod.string().optional().describe("Agent-recommended font style for cover title"),
+  keywords: zod
+    .array(zod.string())
+    .max(generateBookBodyKeywordsMax)
+    .optional()
+    .describe("Amazon KDP keywords for SEO (up to 7)"),
+  accentHexOverride: zod
+    .string()
+    .optional()
+    .describe("Accent hex color override from Cover Design Council"),
+  casingOverride: zod
+    .string()
+    .optional()
+    .describe("Title casing override directive from Cover Typography Director"),
+  fontStyleDirective: zod
+    .string()
+    .optional()
+    .describe("Font style directive from Cover Typography Director"),
 });
 
 export const GenerateBookResponse = zod.object({
@@ -349,6 +396,7 @@ export const GenerateBookResponse = zod.object({
  * @summary Render interior HTML to PDF via Puppeteer
  */
 export const renderInteriorPdfBodyDifficultyModeDefault = `uniform`;
+export const renderInteriorPdfBodyKeywordsMax = 7;
 
 export const RenderInteriorPdfBody = zod.object({
   title: zod.string(),
@@ -412,12 +460,30 @@ export const RenderInteriorPdfBody = zod.object({
     .union([zod.literal(30), zod.literal(60), zod.literal(90)])
     .optional()
     .describe("Adds a Solve-a-Day tracker page for 30, 60, or 90 days"),
+  keywords: zod
+    .array(zod.string())
+    .max(renderInteriorPdfBodyKeywordsMax)
+    .optional()
+    .describe("Amazon KDP keywords for SEO (up to 7)"),
+  accentHexOverride: zod
+    .string()
+    .optional()
+    .describe("Accent hex color override from Cover Design Council"),
+  casingOverride: zod
+    .string()
+    .optional()
+    .describe("Title casing override directive from Cover Typography Director"),
+  fontStyleDirective: zod
+    .string()
+    .optional()
+    .describe("Font style directive from Cover Typography Director"),
 });
 
 /**
  * @summary Render full-wrap cover HTML to PDF via Puppeteer
  */
 export const renderCoverPdfBodyDifficultyModeDefault = `uniform`;
+export const renderCoverPdfBodyKeywordsMax = 7;
 
 export const RenderCoverPdfBody = zod.object({
   title: zod.string(),
@@ -481,6 +547,23 @@ export const RenderCoverPdfBody = zod.object({
     .union([zod.literal(30), zod.literal(60), zod.literal(90)])
     .optional()
     .describe("Adds a Solve-a-Day tracker page for 30, 60, or 90 days"),
+  keywords: zod
+    .array(zod.string())
+    .max(renderCoverPdfBodyKeywordsMax)
+    .optional()
+    .describe("Amazon KDP keywords for SEO (up to 7)"),
+  accentHexOverride: zod
+    .string()
+    .optional()
+    .describe("Accent hex color override from Cover Design Council"),
+  casingOverride: zod
+    .string()
+    .optional()
+    .describe("Title casing override directive from Cover Typography Director"),
+  fontStyleDirective: zod
+    .string()
+    .optional()
+    .describe("Font style directive from Cover Typography Director"),
 });
 
 /**
@@ -501,9 +584,18 @@ export const CoverPreviewBody = zod.object({
   difficulty: zod.string().optional(),
   paperType: zod.string().optional(),
   coverImageUrl: zod.string().optional(),
-  accentHexOverride: zod.string().optional(),
-  casingOverride: zod.string().optional(),
-  fontStyleDirective: zod.string().optional(),
+  accentHexOverride: zod
+    .string()
+    .optional()
+    .describe("Accent hex color override from Cover Design Council"),
+  casingOverride: zod
+    .string()
+    .optional()
+    .describe("Title casing override directive"),
+  fontStyleDirective: zod
+    .string()
+    .optional()
+    .describe("Font style directive from Cover Typography Director"),
 });
 
 export const CoverPreviewResponse = zod.object({

@@ -537,6 +537,21 @@ components:
           type: integer
           enum: [30, 60, 90]
           description: Adds a Solve-a-Day tracker page for 30, 60, or 90 days
+        keywords:
+          type: array
+          items:
+            type: string
+          maxItems: 7
+          description: Amazon KDP keywords for SEO (up to 7)
+        accentHexOverride:
+          type: string
+          description: Accent hex color override from Cover Design Council
+        casingOverride:
+          type: string
+          description: Title casing override directive from Cover Typography Director
+        fontStyleDirective:
+          type: string
+          description: Font style directive from Cover Typography Director
       required:
         - title
         - puzzleType
@@ -659,6 +674,18 @@ components:
           items:
             type: string
           maxItems: 7
+        accentHexOverride:
+          type: string
+          nullable: true
+          description: Accent color override from Cover Design Council (hex code)
+        casingOverride:
+          type: string
+          nullable: true
+          description: Title casing directive from Cover Typography Director
+        fontStyleDirective:
+          type: string
+          nullable: true
+          description: Font style directive from Cover Typography Director
         createdAt:
           type: string
           format: date-time
@@ -752,6 +779,15 @@ components:
           type: string
         coverImageUrl:
           type: string
+        accentHexOverride:
+          type: string
+          description: Accent hex color override from Cover Design Council
+        casingOverride:
+          type: string
+          description: Title casing override directive
+        fontStyleDirective:
+          type: string
+          description: Font style directive from Cover Typography Director
       required:
         - title
 

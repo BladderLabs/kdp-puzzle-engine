@@ -118,6 +118,17 @@ export interface BookConfig {
   difficultyMode?: BookConfigDifficultyMode;
   /** Adds a Solve-a-Day tracker page for 30, 60, or 90 days */
   challengeDays?: BookConfigChallengeDays;
+  /**
+   * Amazon KDP keywords for SEO (up to 7)
+   * @maxItems 7
+   */
+  keywords?: string[];
+  /** Accent hex color override from Cover Design Council */
+  accentHexOverride?: string;
+  /** Title casing override directive from Cover Typography Director */
+  casingOverride?: string;
+  /** Font style directive from Cover Typography Director */
+  fontStyleDirective?: string;
 }
 
 export type CreateBookBodyDifficultyMode =
@@ -215,6 +226,12 @@ export interface Book {
   seriesName?: string;
   /** @maxItems 7 */
   keywords?: string[];
+  /** Accent color override from Cover Design Council (hex code) */
+  accentHexOverride?: string | null;
+  /** Title casing directive from Cover Typography Director */
+  casingOverride?: string | null;
+  /** Font style directive from Cover Typography Director */
+  fontStyleDirective?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -255,6 +272,12 @@ export interface CoverPreviewRequest {
   difficulty?: string;
   paperType?: string;
   coverImageUrl?: string;
+  /** Accent hex color override from Cover Design Council */
+  accentHexOverride?: string;
+  /** Title casing override directive */
+  casingOverride?: string;
+  /** Font style directive from Cover Typography Director */
+  fontStyleDirective?: string;
 }
 
 export interface CoverPreviewResult {
