@@ -25,6 +25,9 @@ export const booksTable = pgTable("books", {
   challengeDays: integer("challenge_days"),
   keywords: jsonb("keywords").$type<string[]>(),
   seriesName: text("series_name"),
+  accentHexOverride: text("accent_hex_override"),
+  casingOverride: text("casing_override"),
+  fontStyleDirective: text("font_style_directive"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

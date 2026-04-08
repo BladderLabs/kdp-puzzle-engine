@@ -74,6 +74,21 @@ interface BookIntelligence {
   difficultyDescriptor: string;
 }
 
+interface BuyerProfile {
+  buyerPersona: string;
+  emotionalHook: string;
+  purchaseTriggers: string[];
+  visualPreferences: string;
+  hookSentenceTemplate: string;
+  psychologyNote: string;
+}
+
+interface CoverDirectives {
+  accentHexOverride?: string;
+  casingOverride?: string;
+  fontStyleDirective?: string;
+}
+
 interface CompletionInfo {
   bookId: number;
   title: string;
@@ -89,6 +104,8 @@ interface CompletionInfo {
   descWordCount?: number;
   bookIntelligence?: BookIntelligence | null;
   seriesArc?: SeriesArc | null;
+  buyerProfile?: BuyerProfile | null;
+  coverDirectives?: CoverDirectives | null;
 }
 
 const initStages = (): Record<string, StageState> =>
@@ -243,6 +260,72 @@ function QAChecklist({ issues, passed }: { issues: QAIssue[]; passed: boolean })
         <p className="text-xs mt-1 ml-5" style={{ color: "#22c55e" }}>
           All quality checks passed ✓
         </p>
+      )}
+    </div>
+  );
+}
+
+function PsychologyProfileCard({ profile }: { profile: BuyerProfile }) {
+  const [expanded, setExpanded] = useState(false);
+  const PSYCH_COLOR = "#c084fc";
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{ border: `1px solid ${PSYCH_COLOR}30`, background: `${PSYCH_COLOR}08` }}
+    >
+      <button
+        className="w-full flex items-center justify-between px-4 py-3 text-left"
+        onClick={() => setExpanded(e => !e)}
+        style={{ background: `${PSYCH_COLOR}10` }}
+      >
+        <div className="flex items-center gap-2">
+          <span style={{ color: PSYCH_COLOR, fontSize: 14 }}>◈</span>
+          <span className="text-xs font-bold uppercase tracking-widest" style={{ color: PSYCH_COLOR }}>
+            Buyer Psychology Profile
+          </span>
+        </div>
+        <span className="text-xs" style={{ color: `${PSYCH_COLOR}80` }}>{expanded ? "▲ collapse" : "▼ expand"}</span>
+      </button>
+
+      {expanded && (
+        <div className="px-4 pb-4 pt-3 space-y-3">
+          <div>
+            <p className="text-xs font-semibold mb-1" style={{ color: PSYCH_COLOR }}>Buyer Persona</p>
+            <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.65)" }}>{profile.buyerPersona}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold mb-1" style={{ color: PSYCH_COLOR }}>Emotional Hook</p>
+            <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.65)" }}>{profile.emotionalHook}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold mb-1" style={{ color: PSYCH_COLOR }}>Purchase Triggers</p>
+            <ul className="space-y-1">
+              {profile.purchaseTriggers.map((t, i) => (
+                <li key={i} className="text-xs flex gap-2" style={{ color: "rgba(255,255,255,0.55)" }}>
+                  <span style={{ color: PSYCH_COLOR, flexShrink: 0 }}>→</span>
+                  {t}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <p className="text-xs font-semibold mb-1" style={{ color: PSYCH_COLOR }}>Visual Preferences</p>
+            <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.55)" }}>{profile.visualPreferences}</p>
+          </div>
+          {profile.hookSentenceTemplate && (
+            <div>
+              <p className="text-xs font-semibold mb-1" style={{ color: PSYCH_COLOR }}>Hook Sentence</p>
+              <p className="text-xs italic leading-relaxed" style={{ color: "rgba(255,255,255,0.70)" }}>"{profile.hookSentenceTemplate}"</p>
+            </div>
+          )}
+          {profile.psychologyNote && (
+            <div>
+              <p className="text-xs font-semibold mb-1" style={{ color: PSYCH_COLOR }}>Psychology Note</p>
+              <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>{profile.psychologyNote}</p>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -1103,6 +1186,8 @@ export function AgentCreateBook() {
                   descWordCount: typeof event.descWordCount === "number" ? event.descWordCount : undefined,
                   bookIntelligence: event.bookIntelligence as BookIntelligence | null | undefined,
                   seriesArc: event.seriesArc as SeriesArc | null | undefined,
+                  buyerProfile: event.buyerProfile as BuyerProfile | null | undefined,
+                  coverDirectives: event.coverDirectives as CoverDirectives | null | undefined,
                 });
                 done_flag = true;
                 break;
@@ -1478,6 +1563,11 @@ export function AgentCreateBook() {
                   </div>
                 )}
               </div>
+
+              {/* Buyer Psychology Profile */}
+              {completion.buyerProfile && (
+                <PsychologyProfileCard profile={completion.buyerProfile} />
+              )}
 
               {/* Book Intelligence Report */}
               {completion.bookIntelligence && (

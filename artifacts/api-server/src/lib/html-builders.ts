@@ -875,6 +875,9 @@ export interface CoverBuildOpts extends BuildOpts {
   customAccent?: string;
   customText?: string;
   coverImageUrl?: string;
+  accentHexOverride?: string;
+  casingOverride?: string;
+  fontStyleDirective?: string;
 }
 
 export interface CoverResult {
@@ -1211,10 +1214,18 @@ function buildThemeCoverArt(theme: string, ac: string, bg: string): string {
 export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverResult {
   const th = THEMES[opts.theme || "midnight"] || THEMES.midnight;
   const bg = opts.customBg || th.bg;
-  const ac = opts.customAccent || th.ac;
+  const ac = opts.accentHexOverride || opts.customAccent || th.ac;
   const tx = opts.customText || th.tx;
   const isDark = th.isDark;
   const gradTop = th.gradTop;
+
+  // Typography directives from Cover Design Council — map to CSS properties
+  const titleFont = (() => {
+    const d = (opts.fontStyleDirective || "").toLowerCase();
+    if (d.includes("elegant serif") || d.includes("condensed bold serif")) return "Lora,serif";
+    return "'Oswald',sans-serif";
+  })();
+  const titleTransform = opts.casingOverride === "ALL CAPS" ? "uppercase" : "none";
 
   // Gradient for dark themes: subtle top-to-bottom lightening; light themes stay flat
   const bgGrad = isDark ? `linear-gradient(to bottom, ${gradTop}, ${bg})` : bg;
@@ -1401,7 +1412,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `${opts.puzzleType ? `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:6px;text-transform:uppercase;color:${ac};margin-bottom:14px;opacity:0.85;">${opts.puzzleType}</div>` : ""}` +
       `<div style="width:40px;height:1px;background:${ac};margin:0 auto 16px;"></div>` +
       `${lpBanner}` +
-      `<div style="font-family:'Oswald',sans-serif;font-size:${adaptiveTitlePx}px;font-weight:700;text-transform:uppercase;letter-spacing:4px;color:${tx};margin-bottom:14px;line-height:1.2;">${title}</div>` +
+      `<div style="font-family:${titleFont};font-size:${adaptiveTitlePx}px;font-weight:700;text-transform:${titleTransform};letter-spacing:4px;color:${tx};margin-bottom:14px;line-height:1.2;">${title}</div>` +
       `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:16px;">${sub}</div>` +
       `${imageBlock}` +
       `${sellDiv}` +
@@ -1420,7 +1431,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="position:relative;z-index:1;text-align:left;width:100%;">` +
       `${audienceCallout}` +
       `${lpBanner}` +
-      `<div style="font-family:'Oswald',sans-serif;font-size:${adaptiveTitlePx}px;font-weight:700;color:${titleOnBg};line-height:1.05;margin-bottom:16px;text-shadow:2px 2px 12px rgba(0,0,0,0.4);">${title}</div>` +
+      `<div style="font-family:${titleFont};font-size:${adaptiveTitlePx}px;font-weight:700;text-transform:${titleTransform};color:${titleOnBg};line-height:1.05;margin-bottom:16px;text-shadow:2px 2px 12px rgba(0,0,0,0.4);">${title}</div>` +
       `<div style="font-size:19px;color:${tx}ee;letter-spacing:0.5px;margin-bottom:14px;">${sub}</div>` +
       `${imageBlock}` +
       `${sellDiv}` +
@@ -1440,7 +1451,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="position:relative;z-index:1;">` +
       `${audienceCallout}` +
       `${lpBanner}` +
-      `<div style="font-family:'Oswald',sans-serif;font-size:${adaptiveTitlePx}px;font-weight:700;color:${titleOnBg};line-height:1.05;margin-bottom:14px;">${title}</div>` +
+      `<div style="font-family:${titleFont};font-size:${adaptiveTitlePx}px;font-weight:700;text-transform:${titleTransform};color:${titleOnBg};line-height:1.05;margin-bottom:14px;">${title}</div>` +
       `<div style="font-size:19px;color:${ac};font-style:italic;letter-spacing:0.5px;margin-bottom:12px;">${sub}</div>` +
       `${imageBlock}` +
       `${sellDiv}` +
@@ -1458,7 +1469,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `</div>` +
       `${audienceCallout}` +
       `${lpBanner}` +
-      `<div style="font-family:'Oswald',sans-serif;font-size:${adaptiveTitlePx}px;font-weight:700;color:${tx};line-height:1.05;margin-bottom:20px;letter-spacing:1px;">${title}</div>` +
+      `<div style="font-family:${titleFont};font-size:${adaptiveTitlePx}px;font-weight:700;text-transform:${titleTransform};color:${tx};line-height:1.05;margin-bottom:20px;letter-spacing:1px;">${title}</div>` +
       `${sub ? `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:16px;">${sub}</div>` : ""}` +
       `${imageBlock}` +
       `${sellDiv}` +
@@ -1473,7 +1484,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:6px;color:${ac};text-transform:uppercase;margin-bottom:12px;">★ &nbsp; ${opts.puzzleType || "Puzzles"} &nbsp; ★</div>` +
       `${audienceCallout}` +
       `${lpBanner}` +
-      `<div style="font-family:'Oswald',sans-serif;font-size:${adaptiveTitlePx}px;font-weight:700;color:${tx};line-height:1.05;margin-bottom:12px;text-transform:uppercase;letter-spacing:2px;">${title}</div>` +
+      `<div style="font-family:${titleFont};font-size:${adaptiveTitlePx}px;font-weight:700;color:${tx};line-height:1.05;margin-bottom:12px;text-transform:${titleTransform};letter-spacing:2px;">${title}</div>` +
       `${sub ? `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:12px;">${sub}</div>` : ""}` +
       `<div style="width:80px;height:2px;background:${ac};margin:8px auto 14px;"></div>` +
       `${imageBlock}` +
@@ -1493,7 +1504,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="font-family:'Source Code Pro',monospace;font-size:22px;color:${ac};opacity:0.9;margin-bottom:20px;letter-spacing:4px;">✦</div>` +
       `${audienceCallout}` +
       `${lpBanner}` +
-      `<div style="font-family:'Oswald',sans-serif;font-size:${adaptiveTitlePx}px;font-weight:700;color:${isDark ? tx : ac};line-height:1.1;margin-bottom:22px;padding:0 0.2in;">${title}</div>` +
+      `<div style="font-family:${titleFont};font-size:${adaptiveTitlePx}px;font-weight:700;text-transform:${titleTransform};color:${isDark ? tx : ac};line-height:1.1;margin-bottom:22px;padding:0 0.2in;">${title}</div>` +
       `<div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:20px;">` +
       `<div style="flex:1;max-width:60px;height:1px;background:${ac};opacity:0.6;"></div>` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:14px;color:${ac};">✦</div>` +
@@ -1520,7 +1531,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
     const photoGradient = `<div style="position:absolute;top:0;left:0;right:0;bottom:0;z-index:1;background:linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.58) 45%, rgba(0,0,0,0.18) 100%);"></div>`;
     const photoTextBlock = `<div style="position:absolute;bottom:0;left:0;right:0;z-index:4;padding:0.6in 0.6in 0.7in;text-align:center;">` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:5px;text-transform:uppercase;color:${ac};opacity:0.9;margin-bottom:14px;">${opts.puzzleType || "Puzzle Book"}</div>` +
-      `<div style="font-family:'Oswald',sans-serif;font-size:${adaptiveTitlePx}px;font-weight:700;color:#ffffff;line-height:1.08;margin-bottom:14px;text-shadow:0 2px 16px rgba(0,0,0,0.7);">${title}</div>` +
+      `<div style="font-family:${titleFont};font-size:${adaptiveTitlePx}px;font-weight:700;text-transform:${titleTransform};color:#ffffff;line-height:1.08;margin-bottom:14px;text-shadow:0 2px 16px rgba(0,0,0,0.7);">${title}</div>` +
       `${sub ? `<div style="font-size:17px;font-style:italic;color:rgba(255,255,255,0.88);letter-spacing:0.5px;margin-bottom:18px;text-shadow:0 1px 8px rgba(0,0,0,0.6);">${sub}</div>` : ""}` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:3px;color:rgba(255,255,255,0.70);">${author}</div>` +
       `</div>`;
@@ -1541,7 +1552,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `${opts.puzzleType ? `<div style="font-family:'Source Code Pro',monospace;font-size:11px;letter-spacing:6px;text-transform:uppercase;color:${ac};margin-bottom:12px;">${opts.puzzleType}</div>` : ""}` +
       `<div style="width:56px;height:2px;background:${ac};margin:0 auto 28px;"></div>` +
       `${lpBanner}` +
-      `<div style="font-family:'Oswald',sans-serif;font-size:${adaptiveTitlePx}px;font-weight:700;text-transform:uppercase;color:${ac};line-height:1.1;margin-bottom:18px;padding:0 0.3in;">${title}</div>` +
+      `<div style="font-family:${titleFont};font-size:${adaptiveTitlePx}px;font-weight:700;text-transform:${titleTransform};color:${ac};line-height:1.1;margin-bottom:18px;padding:0 0.3in;">${title}</div>` +
       `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:16px;">${sub}</div>` +
       `${imageBlock}` +
       `${sellDiv}` +

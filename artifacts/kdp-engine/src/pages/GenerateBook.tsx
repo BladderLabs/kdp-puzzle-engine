@@ -131,6 +131,9 @@ export function GenerateBook() {
       dedication: book.dedication ?? undefined,
       difficultyMode: book.difficultyMode ?? "uniform",
       challengeDays: book.challengeDays ?? undefined,
+      accentHexOverride: book.accentHexOverride ?? undefined,
+      casingOverride: book.casingOverride ?? undefined,
+      fontStyleDirective: book.fontStyleDirective ?? undefined,
     };
 
     try {

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
+import type { BuyerProfile } from "./buyer-psychology-profiler";
 
 export const CoverDesignAnalysisSchema = z.object({
   recommendedStyle: z.enum(["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth", "photo"]),
@@ -55,9 +56,19 @@ export async function runCoverDesignAnalyst(
   puzzleType: string,
   audienceProfile: string,
   hasAiImage: boolean,
+  buyerProfile?: BuyerProfile,
 ): Promise<CoverDesignAnalysis> {
-  const prompt = `${EXPERT_KNOWLEDGE}
+  const psychologyBlock = buyerProfile
+    ? `\nBUYER PSYCHOLOGY (from Buyer Psychology Profiler — integrate into your layout decision):
+- Buyer persona: ${buyerProfile.buyerPersona}
+- Primary motivation: ${buyerProfile.primaryMotivation}
+- Emotional hook: ${buyerProfile.emotionalHook}
+- Visual preferences: ${buyerProfile.visualPreferences}
+- Purchase triggers: ${buyerProfile.purchaseTriggers.join(", ")}
+Your layout MUST reinforce these triggers. A buyer motivated by "relaxation" needs warmth/softness; a buyer motivated by "gift quality" needs luxury signals.\n`
+    : "";
 
+  const prompt = `${EXPERT_KNOWLEDGE}${psychologyBlock}
 Analyse the optimal cover layout for this KDP puzzle book:
 - Niche: ${nicheLabel} (${niche})
 - Puzzle type: ${puzzleType}

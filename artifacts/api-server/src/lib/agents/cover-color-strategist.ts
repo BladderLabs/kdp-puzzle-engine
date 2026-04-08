@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
+import type { BuyerProfile } from "./buyer-psychology-profiler";
 
 export const CoverColorStrategySchema = z.object({
   recommendedTheme: z.enum(["midnight", "forest", "crimson", "ocean", "violet", "slate", "sunrise", "teal", "parchment", "sky"]),
@@ -70,9 +71,18 @@ export async function runCoverColorStrategist(
   puzzleType: string,
   audienceProfile: string,
   largePrint: boolean,
+  buyerProfile?: BuyerProfile,
 ): Promise<CoverColorStrategy> {
-  const prompt = `${EXPERT_KNOWLEDGE}
+  const psychologyBlock = buyerProfile
+    ? `\nBUYER PSYCHOLOGY (from Buyer Psychology Profiler — integrate into your color decision):
+- Buyer persona: ${buyerProfile.buyerPersona}
+- Emotional hook: ${buyerProfile.emotionalHook}
+- Visual preferences: ${buyerProfile.visualPreferences}
+- Psychology note: ${buyerProfile.psychologyNote}
+Your color choice MUST trigger the stated emotional hook. Match the palette to what this specific buyer's nervous system responds to positively.\n`
+    : "";
 
+  const prompt = `${EXPERT_KNOWLEDGE}${psychologyBlock}
 Select the optimal color strategy for this KDP puzzle book:
 - Niche: ${nicheLabel} (${niche})
 - Puzzle type: ${puzzleType}

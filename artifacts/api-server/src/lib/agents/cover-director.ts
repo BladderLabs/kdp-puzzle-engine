@@ -5,6 +5,7 @@ import type { CoverColorStrategy } from "./cover-color-strategist";
 import type { CoverTypographySpec } from "./cover-typography-director";
 import type { MarketScoutResult } from "./market-scout";
 import type { ContentArchitectResult } from "./content-architect";
+import type { BuyerProfile } from "./buyer-psychology-profiler";
 
 export const CoverDesignSpecSchema = z.object({
   theme: z.string(),
@@ -56,13 +57,25 @@ export async function runCoverDirector(
   designAnalysis: CoverDesignAnalysis,
   colorStrategy: CoverColorStrategy,
   typographySpec: CoverTypographySpec,
+  buyerProfile?: BuyerProfile,
 ): Promise<CoverDesignSpec> {
+
+  const psychologyBlock = buyerProfile
+    ? `\nBUYER PSYCHOLOGY PROFILE (from Buyer Psychology Profiler — use to maximise cover conversion):
+- Buyer persona: ${buyerProfile.buyerPersona}
+- Primary motivation: ${buyerProfile.primaryMotivation}
+- Emotional hook: ${buyerProfile.emotionalHook}
+- Purchase triggers: ${buyerProfile.purchaseTriggers.join(", ")}
+- Visual preferences: ${buyerProfile.visualPreferences}
+- Psychology note: ${buyerProfile.psychologyNote}
+DIRECTIVE: Your enrichedImagePrompt MUST embed the emotional hook. The image must trigger "${buyerProfile.emotionalHook}" in the first 0.5 seconds of viewing. Every creative decision you make — colors, composition, subject — must serve this hook.\n`
+    : "";
 
   const prompt = `You are the Cover Design Director for an Amazon KDP puzzle book publishing house.
 Three specialist agents have submitted their recommendations. You must synthesise them into a final cover specification, resolve any conflicts, and produce an enriched image prompt for the AI image generator.
 
 ${PRIORITY_RULES}
-
+${psychologyBlock}
 BOOK DETAILS:
 - Title: "${content.title}"
 - Subtitle: "${content.subtitle}"
@@ -97,7 +110,7 @@ TYPOGRAPHY DIRECTOR RECOMMENDATION:
 
 Your tasks:
 1. Accept or override each recommendation (cite priority rule if overriding)
-2. Build the enrichedImagePrompt — a detailed paragraph for the Gemini AI image generator that describes the visual scene, mood, colors, and style. This replaces generic theme descriptions. Be highly specific: describe what the image should show (scene, objects, lighting, mood, color palette, composition), written as a professional AI art director's brief. Target 60-100 words.
+2. Build the enrichedImagePrompt — a detailed paragraph for the Gemini AI image generator that describes the visual scene, mood, colors, and style. This replaces generic theme descriptions. Be highly specific: describe what the image should show (scene, objects, lighting, mood, color palette, composition), written as a professional AI art director's brief. Target 60-100 words. If a buyer psychology profile is provided, the scene must trigger the stated emotional hook.
 
 The enrichedImagePrompt format: "A [scene/subject description], [lighting and atmosphere], [color palette notes], [mood/feeling], [composition notes — where subject sits, background treatment]. [Style note]. [What to exclude/avoid]."
 

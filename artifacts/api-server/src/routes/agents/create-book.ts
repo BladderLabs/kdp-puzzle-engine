@@ -19,6 +19,7 @@ import { runMasterBookDirector, type BookSpec } from "../../lib/agents/master-bo
 import { runSeriesArcPlanner, type SeriesArc } from "../../lib/agents/series-arc-planner";
 import { runCoverArtDirector } from "../../lib/agents/cover-art-director";
 import { runQAReviewer, type QAIssue } from "../../lib/agents/qa-reviewer";
+import { runBuyerPsychologyProfiler, type BuyerProfile } from "../../lib/agents/buyer-psychology-profiler";
 
 const router: IRouter = Router();
 
@@ -147,11 +148,30 @@ router.post("/agents/create-book", async (req, res) => {
     }
   }
 
+  // ─── Buyer Psychology Profiler (runs in parallel with Content Architect) ─────
+  // Needs market data (niche, puzzleType, audienceProfile) — starts immediately after market resolves
+  let buyerProfile: BuyerProfile | undefined;
+  const buyerProfilePromise = runBuyerPsychologyProfiler(
+    market.niche,
+    market.nicheLabel,
+    market.puzzleType,
+    market.audienceProfile,
+  ).then(profile => {
+    req.log.info({ persona: profile.buyerPersona }, "Buyer Psychology Profiler done");
+    buyerProfile = profile;
+    return profile;
+  }).catch(err => {
+    req.log.warn({ err }, "Buyer Psychology Profiler failed — proceeding without profile");
+    return undefined;
+  });
+
   // ─── Stage 2: Content Architect (draft) ─────────────────────────────────────
   let draft: ContentArchitectResult;
   emit(res, "content_architect", "running", { message: "Drafting title, description, and puzzle words…" });
   try {
-    draft = await runContentArchitect(market, brief);
+    // Run content architect and buyer profiler concurrently
+    const [architectResult] = await Promise.all([runContentArchitect(market, brief), buyerProfilePromise]);
+    draft = architectResult;
     req.log.info({ title: draft.title }, "Content Architect done");
     emit(res, "content_architect", "done", {
       message: `Draft: "${draft.title}"`,
@@ -229,19 +249,19 @@ router.post("/agents/create-book", async (req, res) => {
       (async () => {
         const hasAiImage = true;
         const [designAnalysis, colorStrategy, typographySpec] = await Promise.all([
-          runCoverDesignAnalyst(market.niche, market.nicheLabel, market.puzzleType, market.audienceProfile, hasAiImage)
+          runCoverDesignAnalyst(market.niche, market.nicheLabel, market.puzzleType, market.audienceProfile, hasAiImage, buyerProfile)
             .then(r => {
               coverSubAgentDone.push("Design Analyst");
               emit(res, "cover_research", "running", { message: coverProgress() });
               return r;
             }),
-          runCoverColorStrategist(market.niche, market.nicheLabel, market.puzzleType, market.audienceProfile, market.largePrint === true)
+          runCoverColorStrategist(market.niche, market.nicheLabel, market.puzzleType, market.audienceProfile, market.largePrint === true, buyerProfile)
             .then(r => {
               coverSubAgentDone.push("Color Strategist");
               emit(res, "cover_research", "running", { message: coverProgress() });
               return r;
             }),
-          runCoverTypographyDirector(market.niche, market.nicheLabel, market.puzzleType, market.audienceProfile, market.largePrint === true)
+          runCoverTypographyDirector(market.niche, market.nicheLabel, market.puzzleType, market.audienceProfile, market.largePrint === true, buyerProfile)
             .then(r => {
               coverSubAgentDone.push("Typography Director");
               emit(res, "cover_research", "running", { message: coverProgress() });
@@ -250,7 +270,7 @@ router.post("/agents/create-book", async (req, res) => {
         ]);
 
         emit(res, "cover_research", "running", { message: "Cover Director synthesising council findings…" });
-        const spec = await runCoverDirector(market, draft, designAnalysis, colorStrategy, typographySpec);
+        const spec = await runCoverDirector(market, draft, designAnalysis, colorStrategy, typographySpec, buyerProfile);
         req.log.info({ theme: spec.theme, style: spec.style }, "Cover Research done");
         emit(res, "cover_research", "done", {
           message: `${spec.theme} theme · ${spec.style} style · ${colorStrategy.thumbnailLegibilityScore}/10 thumbnail score`,
@@ -399,6 +419,7 @@ router.post("/agents/create-book", async (req, res) => {
       finalTitle,
       market.niche,
       enrichedImagePrompt || undefined,
+      buyerProfile,
     );
     if (result) {
       coverImageDataUrl = `data:${result.mimeType};base64,${result.b64_json}`;
@@ -433,6 +454,7 @@ router.post("/agents/create-book", async (req, res) => {
     hasImage: hasCoverImage,
     words: draft.words,
     author: draft.author,
+    hookSentence: finalHookSentence || undefined,
     coverCombo,
     usedCombos,
   });
@@ -501,6 +523,7 @@ router.post("/agents/create-book", async (req, res) => {
               finalTitle,
               market.niche,
               enrichedImagePrompt || undefined,
+              buyerProfile,
             );
             if (newCoverResult) {
               coverImageDataUrl = `data:${newCoverResult.mimeType};base64,${newCoverResult.b64_json}`;
@@ -648,6 +671,9 @@ router.post("/agents/create-book", async (req, res) => {
         difficultyMode: "uniform",
         challengeDays: null,
         keywords: finalKeywords,
+        accentHexOverride: coverDesignSpec.accentHex ?? null,
+        casingOverride: coverDesignSpec.casingDirective ?? null,
+        fontStyleDirective: coverDesignSpec.fontStyleDirective ?? null,
       }).returning(),
       runSeriesArcPlanner(
         market,
@@ -696,6 +722,14 @@ router.post("/agents/create-book", async (req, res) => {
         puzzleQualityNotes: bookSpec.puzzleQualityNotes,
         difficultyDescriptor: bookSpec.difficultyDescriptor,
       } : null,
+      // Buyer Psychology Profile — for UI display and future generate requests
+      buyerProfile: buyerProfile ?? null,
+      // Cover design directives from specialist agents — pass to /generate for cover HTML
+      coverDirectives: {
+        accentHexOverride: coverDesignSpec.accentHex,
+        casingOverride: coverDesignSpec.casingDirective,
+        fontStyleDirective: coverDesignSpec.fontStyleDirective,
+      },
     };
     if (coverImageDataUrl) {
       donePayload.coverDataUrl = coverImageDataUrl;

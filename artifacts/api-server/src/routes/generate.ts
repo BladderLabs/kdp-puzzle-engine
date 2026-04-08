@@ -28,6 +28,9 @@ function toOpts(data: ReturnType<typeof GenerateBookBody.parse>): CoverBuildOpts
     difficultyMode: data.difficultyMode ?? "uniform",
     challengeDays: data.challengeDays ?? undefined,
     keywords: data.keywords ?? [],
+    accentHexOverride: data.accentHexOverride ?? undefined,
+    casingOverride: data.casingOverride ?? undefined,
+    fontStyleDirective: data.fontStyleDirective ?? undefined,
   };
 }
 

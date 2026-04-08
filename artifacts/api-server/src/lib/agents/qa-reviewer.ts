@@ -10,6 +10,7 @@ export interface QASpec {
   hasImage: boolean;
   words: string[];
   author: string;
+  hookSentence?: string;
   // Cover uniqueness inputs (optional — added by Task #29)
   coverCombo?: string;       // "theme+coverStyle+niche" of this book
   usedCombos?: string[];     // all combos already in the library
@@ -56,17 +57,60 @@ export async function runQAReviewer(spec: QASpec): Promise<QAResult> {
     spec.subtitle.toLowerCase().includes(p),
   );
 
-  // ── Deterministic cover diversity check (check 7, 3-field: theme+coverStyle+niche) ─
-  const coverDiversityIssue: QAIssue | null = (() => {
-    if (!spec.coverCombo || !spec.usedCombos || spec.usedCombos.length === 0) return null;
-    // usedCombos contains only already-saved books; this book not yet saved — no self-exclusion needed
-    if (!spec.usedCombos.includes(spec.coverCombo)) return null;
-    return {
-      field: "cover_combination",
-      problem: `Cover combination "${spec.coverCombo}" (theme+coverStyle+niche) is already used by another book in your library`,
-      fix: `Select a different theme+style — currently used combos: ${spec.usedCombos.join(", ")}`,
-    };
-  })();
+  // ── Deterministic pre-checks (run before LLM) ─────────────────────────────
+
+  const deterministicIssues: QAIssue[] = [];
+
+  // Check 7: Cover combination uniqueness (3-field: theme+coverStyle+niche)
+  if (spec.coverCombo && spec.usedCombos && spec.usedCombos.length > 0) {
+    if (spec.usedCombos.includes(spec.coverCombo)) {
+      deterministicIssues.push({
+        field: "cover_combination",
+        problem: `Cover combination "${spec.coverCombo}" (theme+coverStyle+niche) is already used by another book in your library`,
+        fix: `Select a different theme+style — currently used combos: ${spec.usedCombos.join(", ")}`,
+      });
+    }
+  }
+
+  // Check 8: Cover image present — AI-generated cover strongly recommended for conversion
+  if (!spec.hasImage) {
+    deterministicIssues.push({
+      field: "cover_image",
+      problem: "No AI-generated cover image — books without a custom cover image have significantly lower click-through rates on Amazon",
+      fix: "Ensure the AI cover art generation step succeeds; retry if it failed",
+    });
+  }
+
+  // Check 9: Hook sentence quality — must be 8+ words and end with punctuation
+  if (spec.hookSentence) {
+    const hookWords = spec.hookSentence.trim().split(/\s+/).filter(Boolean).length;
+    const endsWithPunctuation = /[.!?]$/.test(spec.hookSentence.trim());
+    if (hookWords < 8 || !endsWithPunctuation) {
+      deterministicIssues.push({
+        field: "hook_sentence",
+        problem: hookWords < 8
+          ? `Hook sentence is only ${hookWords} words — should be 8+ words to be compelling`
+          : "Hook sentence does not end with proper punctuation (. ! ?) — required for professional presentation",
+        fix: "Rewrite the hook sentence to be 10-15 words, emotionally engaging, and properly punctuated",
+      });
+    }
+  }
+
+  // Check 10: Title keyword position — first keyword should appear in the title for SEO
+  if (spec.keywords.length > 0) {
+    const titleLower = spec.title.toLowerCase();
+    const firstKeyword = spec.keywords[0].toLowerCase();
+    // Check if any word from the first keyword phrase appears in the title
+    const keywordWords = firstKeyword.split(/\s+/);
+    const keywordInTitle = keywordWords.some(kw => kw.length > 3 && titleLower.includes(kw));
+    if (!keywordInTitle) {
+      deterministicIssues.push({
+        field: "title_keyword",
+        problem: `Primary keyword "${spec.keywords[0]}" has no overlap with the title — hurts Amazon search ranking`,
+        fix: `Include the primary keyword or its core terms in the title for better discoverability`,
+      });
+    }
+  }
 
   const prompt = `You are a KDP quality assurance expert reviewing a puzzle book for publication readiness.
 
@@ -80,7 +124,7 @@ Book specification:
 - Has cover image: ${spec.hasImage}
 - Has placeholder text detected: ${hasPlaceholder}
 
-Run these 6 quality checks (check 7 — cover combination uniqueness — is evaluated deterministically, not by LLM):
+Run these 6 quality checks (checks 7-10 are evaluated deterministically, not by LLM):
 1. Title has 6+ words AND is keyword-rich and appealing to the target audience
 2. Subtitle is present AND is a compelling benefit statement (8+ words)
 3. Back description has 80+ words AND is compelling sales copy (no placeholder text)
@@ -118,11 +162,17 @@ Be strict but fair. Only flag genuine issues that would hurt sales or violate KD
   const raw = parseModelJson(text);
   const llmResult = QAResultSchema.parse(raw);
 
-  // Merge deterministic cover diversity issue with LLM results
-  if (coverDiversityIssue) {
-    llmResult.issues = [coverDiversityIssue, ...llmResult.issues];
-    llmResult.passed = false;
-    llmResult.needs_revision = true;
+  // Merge deterministic issues with LLM results
+  // Deterministic issues always take precedence (prepended)
+  if (deterministicIssues.length > 0) {
+    llmResult.issues = [...deterministicIssues, ...llmResult.issues];
+    // cover_combination and hook_sentence require revision; cover_image and title_keyword are advisory
+    const blockingFields = new Set(["cover_combination"]);
+    const hasBlocker = deterministicIssues.some(i => blockingFields.has(i.field));
+    if (hasBlocker) {
+      llmResult.passed = false;
+      llmResult.needs_revision = true;
+    }
   }
 
   return llmResult;

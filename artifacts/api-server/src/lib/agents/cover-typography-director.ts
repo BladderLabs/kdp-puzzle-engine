@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
+import type { BuyerProfile } from "./buyer-psychology-profiler";
 
 export const CoverTypographySpecSchema = z.object({
   fontStyleDirective: z.string(),
@@ -74,9 +75,18 @@ export async function runCoverTypographyDirector(
   puzzleType: string,
   audienceProfile: string,
   largePrint: boolean,
+  buyerProfile?: BuyerProfile,
 ): Promise<CoverTypographySpec> {
-  const prompt = `${EXPERT_KNOWLEDGE}
+  const psychologyBlock = buyerProfile
+    ? `\nBUYER PSYCHOLOGY (from Buyer Psychology Profiler — integrate into your typography decision):
+- Buyer persona: ${buyerProfile.buyerPersona}
+- Visual preferences: ${buyerProfile.visualPreferences}
+- Purchase triggers: ${buyerProfile.purchaseTriggers.join(", ")}
+- Psychology note: ${buyerProfile.psychologyNote}
+Typography must DIRECTLY signal these triggers. A buyer expecting "premium quality" needs elegant serif; a buyer expecting "easy and fun" needs playful rounded sans.\n`
+    : "";
 
+  const prompt = `${EXPERT_KNOWLEDGE}${psychologyBlock}
 Select the optimal typography approach for this KDP puzzle book:
 - Niche: ${nicheLabel} (${niche})
 - Puzzle type: ${puzzleType}

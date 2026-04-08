@@ -149,6 +149,9 @@ export const GetBookResponse = zod.object({
     .optional()
     .describe("Name of the series this book belongs to"),
   keywords: zod.array(zod.string()).max(getBookResponseKeywordsMax).optional(),
+  accentHexOverride: zod.string().optional().nullable(),
+  casingOverride: zod.string().optional().nullable(),
+  fontStyleDirective: zod.string().optional().nullable(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -325,6 +328,10 @@ export const GenerateBookBody = zod.object({
     .union([zod.literal(30), zod.literal(60), zod.literal(90)])
     .optional()
     .describe("Adds a Solve-a-Day tracker page for 30, 60, or 90 days"),
+  keywords: zod.array(zod.string()).optional(),
+  accentHexOverride: zod.string().optional().describe("Agent-recommended accent color override (hex)"),
+  casingOverride: zod.string().optional().describe("Agent-recommended title casing (ALL CAPS / Title Case / Mixed)"),
+  fontStyleDirective: zod.string().optional().describe("Agent-recommended font style for cover title"),
 });
 
 export const GenerateBookResponse = zod.object({
