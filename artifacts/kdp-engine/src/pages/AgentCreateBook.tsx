@@ -13,7 +13,7 @@ interface StageConfig {
 }
 
 const STAGES: StageConfig[] = [
-  { id: "market_scout", label: "Market Scout" },
+  { id: "market_scout", label: "Market Intelligence Council", subLabel: "Opportunity · Competition · Director" },
   { id: "content_architect", label: "Content Architect" },
   { id: "content_council", label: "Content Excellence Council", subLabel: "Title · Copy · Keywords" },
   { id: "cover_research", label: "Cover Design Council", subLabel: "Design · Color · Typography" },
@@ -27,7 +27,7 @@ const STAGES: StageConfig[] = [
 ];
 
 const COUNCIL_IDS = new Set([
-  "content_council", "cover_research", "puzzle_council", "interior_council", "production_council"
+  "market_scout", "content_council", "cover_research", "puzzle_council", "interior_council", "production_council"
 ]);
 
 interface StageState {
@@ -40,6 +40,26 @@ interface QAIssue {
   field: string;
   problem: string;
   fix: string;
+}
+
+interface VolumeProposal {
+  volumeNumber: number;
+  title: string;
+  subtitle: string;
+  angle: string;
+  wordCategory: string;
+  difficulty: string;
+  largePrint: boolean;
+  theme: string;
+  keyDifferentiator: string;
+  suggestedSeriesName: string;
+}
+
+interface SeriesArc {
+  seriesName: string;
+  seriesTheme: string;
+  volumes: VolumeProposal[];
+  seriesRationale: string;
 }
 
 interface BookIntelligence {
@@ -68,6 +88,7 @@ interface CompletionInfo {
   qaIssues: QAIssue[];
   descWordCount?: number;
   bookIntelligence?: BookIntelligence | null;
+  seriesArc?: SeriesArc | null;
 }
 
 const initStages = (): Record<string, StageState> =>
@@ -139,6 +160,12 @@ function StageRow({ stage, state }: { stage: StageConfig; state: StageState }) {
         {state.status === "done" && state.data.title && (
           <p className="text-xs mt-1 italic" style={{ color: "rgba(255,255,255,0.55)" }}>
             "{String(state.data.title)}"
+          </p>
+        )}
+        {/* Market Intelligence Council done details */}
+        {state.status === "done" && stage.id === "market_scout" && state.data.winnerRationale && (
+          <p className="text-xs mt-1 leading-relaxed" style={{ color: "rgba(255,255,255,0.40)", fontStyle: "italic" }}>
+            {String(state.data.winnerRationale)}
           </p>
         )}
         {/* Council-specific done details */}
@@ -310,6 +337,113 @@ function BookIntelligenceReport({ intel }: { intel: BookIntelligence }) {
   );
 }
 
+const THEME_COLORS: Record<string, string> = {
+  midnight: "#0D1B3E", forest: "#1A3C1A", crimson: "#280808", ocean: "#1565A8",
+  violet: "#180635", slate: "#252E3A", sunrise: "#D44000", teal: "#062020",
+  parchment: "#7B3A00", sky: "#2050B8",
+};
+
+function SeriesArcSection({ arc, onCreateVolume }: { arc: SeriesArc; onCreateVolume: (brief: string) => void }) {
+  return (
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{ border: "1px solid rgba(255,255,255,0.10)", background: "rgba(255,255,255,0.02)" }}
+    >
+      <div
+        className="px-4 py-3 flex items-center gap-2"
+        style={{ borderBottom: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.03)" }}
+      >
+        <span style={{ color: GOLD, fontSize: 14 }}>◈</span>
+        <div>
+          <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.55)" }}>
+            Suggested Series Arc
+          </span>
+          <span
+            className="ml-2 text-xs font-semibold"
+            style={{ color: GOLD }}
+          >
+            {arc.seriesName}
+          </span>
+        </div>
+      </div>
+
+      <div className="px-4 pt-3 pb-1">
+        <p className="text-xs leading-relaxed mb-3" style={{ color: "rgba(255,255,255,0.40)" }}>
+          {arc.seriesRationale}
+        </p>
+        <div className="space-y-3">
+          {arc.volumes.map((vol) => {
+            const themeColor = THEME_COLORS[vol.theme] ?? "#111";
+            const brief = `Volume ${vol.volumeNumber} of "${arc.seriesName}" series: ${vol.title}. ${vol.angle} ${vol.keyDifferentiator}`;
+            return (
+              <div
+                key={vol.volumeNumber}
+                className="rounded-lg p-3 flex gap-3"
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
+              >
+                {/* Theme swatch */}
+                <div
+                  className="flex-shrink-0 rounded-md flex items-center justify-center text-xs font-bold"
+                  style={{
+                    width: 36,
+                    height: 44,
+                    background: themeColor,
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    color: "rgba(255,255,255,0.7)",
+                    fontSize: 10,
+                  }}
+                >
+                  V{vol.volumeNumber}
+                </div>
+                {/* Details */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold leading-snug text-white/80 truncate">{vol.title}</p>
+                  <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>{vol.subtitle}</p>
+                  <div className="flex gap-2 mt-1.5 flex-wrap">
+                    <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.40)" }}>
+                      {vol.theme}
+                    </span>
+                    <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.40)" }}>
+                      {vol.wordCategory}
+                    </span>
+                    <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.40)" }}>
+                      {vol.difficulty}
+                    </span>
+                  </div>
+                  <p className="text-xs mt-1.5 italic" style={{ color: "rgba(255,255,255,0.30)" }}>
+                    {vol.keyDifferentiator}
+                  </p>
+                </div>
+                {/* Create button */}
+                <div className="flex-shrink-0 flex items-center">
+                  <button
+                    onClick={() => onCreateVolume(brief)}
+                    className="text-xs px-2.5 py-1.5 rounded-lg font-bold transition-all hover:opacity-80"
+                    style={{
+                      background: `${GOLD}20`,
+                      border: `1px solid ${GOLD}50`,
+                      color: GOLD,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Create →
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="px-4 py-2">
+        <p className="text-xs" style={{ color: "rgba(255,255,255,0.20)" }}>
+          {arc.seriesTheme}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function AgentCreateBook() {
   const [, setLocation] = useLocation();
   const [brief, setBrief] = useState("");
@@ -389,6 +523,7 @@ export function AgentCreateBook() {
                   qaIssues: Array.isArray(event.qaIssues) ? (event.qaIssues as QAIssue[]) : [],
                   descWordCount: typeof event.descWordCount === "number" ? event.descWordCount : undefined,
                   bookIntelligence: event.bookIntelligence as BookIntelligence | null | undefined,
+                  seriesArc: event.seriesArc as SeriesArc | null | undefined,
                 });
                 done_flag = true;
                 break;
@@ -440,6 +575,17 @@ export function AgentCreateBook() {
     setCompletion(null);
     setBrief("");
     briefRef.current = "";
+  };
+
+  const handleCreateVolume = (volumeBrief: string) => {
+    abortRef.current?.abort();
+    setRunning(false);
+    setStages(initStages());
+    setError(null);
+    setCompletion(null);
+    setBrief(volumeBrief);
+    briefRef.current = volumeBrief;
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const isComplete = completion !== null && !running;
@@ -646,6 +792,11 @@ export function AgentCreateBook() {
               {/* Book Intelligence Report */}
               {completion.bookIntelligence && (
                 <BookIntelligenceReport intel={completion.bookIntelligence} />
+              )}
+
+              {/* Series Arc */}
+              {completion.seriesArc && (
+                <SeriesArcSection arc={completion.seriesArc} onCreateVolume={handleCreateVolume} />
               )}
 
               {/* QA Checklist */}

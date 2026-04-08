@@ -3,6 +3,7 @@ import type { Response } from "express";
 import { z } from "zod";
 import { db, booksTable } from "@workspace/db";
 import { runMarketScout, type MarketScoutResult } from "../../lib/agents/market-scout";
+import { runMarketIntelligenceCouncil } from "../../lib/agents/market-intelligence-council";
 import { runContentArchitect, type ContentArchitectResult } from "../../lib/agents/content-architect";
 import { runContentExcellenceCouncil, type ContentSpec } from "../../lib/agents/content-excellence-council";
 import { runCoverDesignAnalyst } from "../../lib/agents/cover-design-analyst";
@@ -13,6 +14,7 @@ import { runPuzzleProductionCouncil, type PuzzleSpec } from "../../lib/agents/pu
 import { runInteriorDesignCouncil, type LayoutSpec } from "../../lib/agents/interior-design-council";
 import { runProductionPricingCouncil, type ProductionSpec } from "../../lib/agents/production-pricing-council";
 import { runMasterBookDirector, type BookSpec } from "../../lib/agents/master-book-director";
+import { runSeriesArcPlanner, type SeriesArc } from "../../lib/agents/series-arc-planner";
 import { runCoverArtDirector } from "../../lib/agents/cover-art-director";
 import { runQAReviewer, type QAIssue } from "../../lib/agents/qa-reviewer";
 
@@ -28,8 +30,8 @@ function emit(res: Response, stage: string, status: string, data: Record<string,
 
 /**
  * POST /agents/create-book
- * Expert Book Intelligence Pipeline — 9 stages:
- *   1. market_scout        — market research
+ * Expert Book Intelligence Pipeline — 11 stages:
+ *   1. market_scout        — Market Intelligence Council: 3 sub-agents evaluate niche candidates
  *   2. content_architect   — draft content
  *   3. content_council     — Content Excellence Council (parallel with cover_research)
  *   4. cover_research      — Cover Design Council: 3 specialists + director (parallel with content_council)
@@ -50,36 +52,55 @@ router.post("/agents/create-book", async (req, res) => {
   const parsed = CreateBookAgentBody.safeParse(req.body);
   const brief = parsed.success ? parsed.data.brief : undefined;
 
-  // ─── Stage 1: Market Scout ────────────────────────────────────────────────────
+  // ─── Stage 1: Market Intelligence Council ────────────────────────────────────
   let market: MarketScoutResult;
-  emit(res, "market_scout", "running", { message: "Scanning KDP niches and market data…" });
+  emit(res, "market_scout", "running", { message: "Opportunity Finder scanning KDP market data…" });
   try {
-    market = await runMarketScout(brief);
-    req.log.info({ niche: market.niche, puzzleType: market.puzzleType }, "Market Scout done");
+    const intel = await runMarketIntelligenceCouncil(brief, (msg) => {
+      emit(res, "market_scout", "running", { message: msg });
+    });
+    market = intel;
+    req.log.info({ niche: market.niche, puzzleType: market.puzzleType, candidates: intel.candidates.length }, "Market Intelligence Council done");
     emit(res, "market_scout", "done", {
-      message: `Best opportunity: ${market.nicheLabel} ${market.puzzleType} (${market.largePrint ? "Large Print" : "Standard"})`,
+      message: `Best opportunity: ${market.nicheLabel} ${market.puzzleType} (${market.largePrint ? "Large Print" : "Standard"}) · ${intel.candidates.length} candidates evaluated`,
       niche: market.niche,
       nicheLabel: market.nicheLabel,
       puzzleType: market.puzzleType,
       theme: market.theme,
+      winnerRationale: intel.winnerRationale,
+      candidateCount: intel.candidates.length,
     });
   } catch (err) {
-    req.log.error({ err }, "Market Scout failed — using defaults");
-    emit(res, "market_scout", "failed", { message: "Market Scout failed. Using defaults." });
-    market = {
-      niche: "seniors",
-      nicheLabel: "Seniors & Large Print",
-      puzzleType: "Word Search",
-      difficulty: "Easy",
-      puzzleCount: 100,
-      largePrint: true,
-      theme: "midnight",
-      coverStyle: "classic",
-      pricePoint: 8.99,
-      keywords: ["senior word search", "large print puzzle", "easy word search", "brain games seniors", "word puzzle book", "activity book", "puzzle for adults"],
-      audienceProfile: "Adults 60+ seeking gentle mental stimulation",
-      whySells: "Seniors are the #1 KDP puzzle book buyer segment with consistent year-round demand",
-    };
+    req.log.error({ err }, "Market Intelligence Council failed — falling back to Market Scout");
+    emit(res, "market_scout", "running", { message: "Council degraded — running Market Scout fallback…" });
+    try {
+      market = await runMarketScout(brief);
+      req.log.info({ niche: market.niche }, "Market Scout fallback done");
+      emit(res, "market_scout", "done", {
+        message: `Market Scout (fallback): ${market.nicheLabel} ${market.puzzleType}`,
+        niche: market.niche,
+        nicheLabel: market.nicheLabel,
+        puzzleType: market.puzzleType,
+        theme: market.theme,
+      });
+    } catch (fallbackErr) {
+      req.log.error({ fallbackErr }, "Market Scout fallback also failed — using hardcoded defaults");
+      emit(res, "market_scout", "failed", { message: "Market research failed. Using defaults." });
+      market = {
+        niche: "seniors",
+        nicheLabel: "Seniors & Large Print",
+        puzzleType: "Word Search",
+        difficulty: "Easy",
+        puzzleCount: 100,
+        largePrint: true,
+        theme: "midnight",
+        coverStyle: "classic",
+        pricePoint: 8.99,
+        keywords: ["senior word search", "large print puzzle", "easy word search", "brain games seniors", "word puzzle book", "activity book", "puzzle for adults"],
+        audienceProfile: "Adults 60+ seeking gentle mental stimulation",
+        whySells: "Seniors are the #1 KDP puzzle book buyer segment with consistent year-round demand",
+      };
+    }
   }
 
   // ─── Stage 2: Content Architect (draft) ─────────────────────────────────────
@@ -443,39 +464,57 @@ router.post("/agents/create-book", async (req, res) => {
     return;
   }
 
-  // ─── Stage 11: Assemble & Save ──────────────────────────────────────────────
+  // ─── Stage 11: Assemble & Save (+ Series Arc Planner in parallel) ───────────
   const finalCoverStyle = hasCoverImage ? "photo" : finalStyle;
   const fullBackDescription = finalHookSentence
     ? `${finalHookSentence}\n\n${finalBackDescription}`
     : finalBackDescription;
 
-  emit(res, "assemble", "running", { message: "Saving Book Spec to your library…" });
+  emit(res, "assemble", "running", { message: "Saving Book Spec · Planning series arc…" });
   try {
-    const [book] = await db.insert(booksTable).values({
-      title: finalTitle,
-      subtitle: finalSubtitle,
-      author: draft.author,
-      puzzleType: market.puzzleType,
-      puzzleCount: finalPuzzleCount,
-      difficulty: market.difficulty,
-      largePrint: market.largePrint,
-      paperType: finalPaperType,
-      theme: finalTheme,
-      coverStyle: finalCoverStyle,
-      backDescription: fullBackDescription,
-      words: draft.words,
-      wordCategory: draft.wordCategory,
-      coverImageUrl: coverImageDataUrl,
-      niche: market.niche,
-      volumeNumber: draft.volumeNumber,
-      dedication: null,
-      difficultyMode: "uniform",
-      challengeDays: null,
-      keywords: finalKeywords,
-    }).returning();
+    // Run DB save and Series Arc Planner concurrently
+    const [bookRows, seriesArc] = await Promise.all([
+      db.insert(booksTable).values({
+        title: finalTitle,
+        subtitle: finalSubtitle,
+        author: draft.author,
+        puzzleType: market.puzzleType,
+        puzzleCount: finalPuzzleCount,
+        difficulty: market.difficulty,
+        largePrint: market.largePrint,
+        paperType: finalPaperType,
+        theme: finalTheme,
+        coverStyle: finalCoverStyle,
+        backDescription: fullBackDescription,
+        words: draft.words,
+        wordCategory: draft.wordCategory,
+        coverImageUrl: coverImageDataUrl,
+        niche: market.niche,
+        volumeNumber: draft.volumeNumber,
+        dedication: null,
+        difficultyMode: "uniform",
+        challengeDays: null,
+        keywords: finalKeywords,
+      }).returning(),
+      runSeriesArcPlanner(
+        market,
+        bookSpec,
+        finalTitle,
+        finalTheme,
+        draft.wordCategory ?? "General",
+      ).catch((err) => {
+        req.log.error({ err }, "Series Arc Planner failed — skipping");
+        return null;
+      }),
+    ]);
 
-    req.log.info({ bookId: book.id, title: book.title }, "Book assembled and saved");
-    emit(res, "assemble", "done", { message: "Book saved to your library!" });
+    const book = bookRows[0];
+    req.log.info({ bookId: book.id, title: book.title, hasSeriesArc: !!seriesArc }, "Book assembled and saved");
+    emit(res, "assemble", "done", {
+      message: seriesArc
+        ? `Book saved · Series arc "${seriesArc.seriesName}" planned (${seriesArc.volumes.length} more volumes)`
+        : "Book saved to your library!",
+    });
 
     const donePayload: Record<string, unknown> = {
       stage: "done",
@@ -490,6 +529,8 @@ router.post("/agents/create-book", async (req, res) => {
       qaPassed: finalQAPassed,
       qaIssues: finalQAIssues,
       descWordCount: finalBackDescription.trim().split(/\s+/).filter(Boolean).length,
+      // Series Arc from Series Arc Planner
+      seriesArc: seriesArc ?? null,
       // Book Intelligence Report
       bookIntelligence: bookSpec ? {
         councilSummary: bookSpec.councilSummary,
