@@ -7,6 +7,7 @@ import conversationsRouter from "./anthropic/conversations";
 import ideasRouter from "./anthropic/ideas";
 import geminiCoverImageRouter from "./gemini/cover-image";
 import agentCreateBookRouter from "./agents/create-book";
+import apifyMarketResearchRouter from "./apify/market-research";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(conversationsRouter);
 router.use(ideasRouter);
 router.use(geminiCoverImageRouter);
 router.use(agentCreateBookRouter);
+router.use(apifyMarketResearchRouter);
 
 export default router;

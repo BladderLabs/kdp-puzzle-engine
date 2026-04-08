@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db, booksTable } from "@workspace/db";
 import { runMarketScout, type MarketScoutResult } from "../../lib/agents/market-scout";
 import { runMarketIntelligenceCouncil } from "../../lib/agents/market-intelligence-council";
+import type { ApifyProduct } from "../apify/market-research";
 import { runContentArchitect, type ContentArchitectResult } from "../../lib/agents/content-architect";
 import { runContentExcellenceCouncil, type ContentSpec } from "../../lib/agents/content-excellence-council";
 import { runCoverDesignAnalyst } from "../../lib/agents/cover-design-analyst";
@@ -20,8 +21,21 @@ import { runQAReviewer, type QAIssue } from "../../lib/agents/qa-reviewer";
 
 const router: IRouter = Router();
 
+const ApifyProductBodySchema = z.object({
+  title: z.string(),
+  asin: z.string().optional(),
+  bsr: z.number().nullable(),
+  reviews: z.number(),
+  price: z.number().nullable(),
+  stars: z.number().nullable(),
+  demand_score: z.number(),
+  competition_level: z.enum(["Low", "Medium", "High"]),
+  url: z.string().optional(),
+});
+
 const CreateBookAgentBody = z.object({
   brief: z.string().optional(),
+  marketEvidence: z.array(ApifyProductBodySchema).optional(),
 });
 
 function emit(res: Response, stage: string, status: string, data: Record<string, unknown> = {}): void {
@@ -51,14 +65,18 @@ router.post("/agents/create-book", async (req, res) => {
 
   const parsed = CreateBookAgentBody.safeParse(req.body);
   const brief = parsed.success ? parsed.data.brief : undefined;
+  const marketEvidence = parsed.success ? (parsed.data.marketEvidence as ApifyProduct[] | undefined) : undefined;
 
   // ─── Stage 1: Market Intelligence Council ────────────────────────────────────
   let market: MarketScoutResult;
-  emit(res, "market_scout", "running", { message: "Opportunity Finder scanning KDP market data…" });
+  const evidenceNote = marketEvidence && marketEvidence.length > 0
+    ? ` · ${marketEvidence.length} live Amazon results provided`
+    : "";
+  emit(res, "market_scout", "running", { message: `Opportunity Finder scanning KDP market data…${evidenceNote}` });
   try {
     const intel = await runMarketIntelligenceCouncil(brief, (msg) => {
       emit(res, "market_scout", "running", { message: msg });
-    });
+    }, marketEvidence);
     market = intel;
     req.log.info({ niche: market.niche, puzzleType: market.puzzleType, candidates: intel.candidates.length }, "Market Intelligence Council done");
     emit(res, "market_scout", "done", {

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { listNiches } from "../niches";
 import { MarketScoutResultSchema, type MarketScoutResult } from "./market-scout";
+import type { ApifyProduct } from "../../routes/apify/market-research";
 
 const ALL_NICHES = listNiches();
 const NICHE_LIST = ALL_NICHES.map(n => `${n.key} (${n.label}, default puzzle: ${n.puzzleType})`).join("\n");
@@ -172,10 +173,33 @@ Return ONLY a JSON array with exactly 3 entries (one per candidate, same order):
   return z.array(CompetitionAssessmentSchema).parse(raw);
 }
 
+function formatMarketEvidence(evidence: ApifyProduct[]): string {
+  if (!evidence || evidence.length === 0) return "";
+  const top = evidence.slice(0, 5);
+  const lines = top.map((p, i) =>
+    `  ${i + 1}. "${p.title.slice(0, 70)}" — BSR: ${p.bsr ?? "N/A"}, Reviews: ${p.reviews}, Price: ${p.price ? `$${p.price}` : "N/A"}, Competition: ${p.competition_level}`
+  ).join("\n");
+
+  const avgReviews = Math.round(top.reduce((s, p) => s + p.reviews, 0) / top.length);
+  const lowCompCount = top.filter(p => p.competition_level === "Low").length;
+
+  return `
+LIVE AMAZON MARKET DATA (top ${top.length} results from Apify):
+${lines}
+
+Market signals:
+- Average reviews of top results: ${avgReviews} (lower = less competition = easier to rank)
+- Low-competition slots available: ${lowCompCount}/${top.length}
+- Use review-gap strategy: target keywords where top results have <100 reviews
+- BSR signal: books ranking <10000 indicate active sales volume
+Apply this data to select a keyword angle with a visible review gap (under-served demand).`;
+}
+
 async function runMarketDirector(
   candidates: NicheCandidate[],
   competition: CompetitionAssessment[],
   brief?: string,
+  marketEvidence?: ApifyProduct[],
 ): Promise<MarketScoutResult> {
   const ranked = candidates.map((c, i) => {
     const comp = competition[i];
@@ -185,6 +209,10 @@ async function runMarketDirector(
 
   const winner = ranked[0];
   const runnerUp = ranked[1];
+
+  const evidenceSection = marketEvidence && marketEvidence.length > 0
+    ? formatMarketEvidence(marketEvidence)
+    : "";
 
   const prompt = `You are the Market Intelligence Director for a KDP puzzle book publishing house.
 Two specialist agents have evaluated niche opportunities. You must select the final niche and produce the complete market configuration.
@@ -203,6 +231,7 @@ WINNING CANDIDATE:
 RUNNER-UP: ${runnerUp?.nicheLabel} (score: ${runnerUp?.combinedScore})
 
 ${brief ? `USER'S IDEA: "${brief}" — respect this if compatible with market data` : ""}
+${evidenceSection}
 
 Based on this research, produce the final market configuration. The winning candidate should be your primary choice unless the user's idea is clearly better or the runner-up is significantly superior.
 
@@ -267,6 +296,7 @@ export interface MarketIntelligenceResult extends MarketScoutResult {
 export async function runMarketIntelligenceCouncil(
   brief?: string,
   onProgress?: (msg: string) => void,
+  marketEvidence?: ApifyProduct[],
 ): Promise<MarketIntelligenceResult> {
   onProgress?.("Opportunity Finder scanning KDP market data…");
 
@@ -278,7 +308,7 @@ export async function runMarketIntelligenceCouncil(
   ]);
   onProgress?.("Competition assessed · Market Director selecting optimal niche…");
 
-  const market = await runMarketDirector(candidates, competition, brief);
+  const market = await runMarketDirector(candidates, competition, brief, marketEvidence);
 
   const winner = candidates.find(c => c.niche === market.niche) ?? candidates[0];
   const winnerRationale = winner

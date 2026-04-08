@@ -337,6 +337,257 @@ function BookIntelligenceReport({ intel }: { intel: BookIntelligence }) {
   );
 }
 
+interface ApifyProduct {
+  title: string;
+  asin?: string;
+  bsr: number | null;
+  reviews: number;
+  price: number | null;
+  stars: number | null;
+  demand_score: number;
+  competition_level: "Low" | "Medium" | "High";
+  url?: string;
+}
+
+interface MarketResearchResult {
+  keyword: string;
+  results: ApifyProduct[];
+  source: "apify" | "fallback";
+  note?: string;
+  error?: string;
+}
+
+const PUZZLE_TYPE_CHIPS = [
+  "Word Search", "Sudoku", "Crossword", "Maze", "Cryptogram", "Number Search",
+];
+
+const COMPETITION_COLORS: Record<string, { bg: string; text: string }> = {
+  Low: { bg: "rgba(34,197,94,0.12)", text: "#22c55e" },
+  Medium: { bg: "rgba(251,191,36,0.12)", text: "#fbbf24" },
+  High: { bg: "rgba(239,68,68,0.12)", text: "#ef4444" },
+};
+
+function MarketIntelligencePanel({
+  onEvidenceSelected,
+}: {
+  onEvidenceSelected: (evidence: ApifyProduct[], topicLabel: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [selectedChip, setSelectedChip] = useState<string | null>(null);
+  const [keyword, setKeyword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<MarketResearchResult | null>(null);
+  const [selectedCard, setSelectedCard] = useState<number | null>(null);
+
+  const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+
+  const fetchMarketData = async (puzzleType: string, kw?: string) => {
+    const searchKeyword = kw?.trim() || puzzleType;
+    setLoading(true);
+    setResult(null);
+    setSelectedCard(null);
+    try {
+      const res = await fetch(`${BASE}/api/apify/market-research`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keyword: searchKeyword, puzzleType }),
+      });
+      const data = await res.json() as MarketResearchResult;
+      setResult(data);
+    } catch {
+      setResult({ keyword: searchKeyword, results: [], source: "fallback", error: "Network error" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChip = (type: string) => {
+    setSelectedChip(type);
+    fetchMarketData(type, keyword);
+  };
+
+  const handleSearch = () => {
+    if (selectedChip) fetchMarketData(selectedChip, keyword);
+    else if (keyword.trim()) fetchMarketData("", keyword);
+  };
+
+  const handleUseCard = (product: ApifyProduct) => {
+    onEvidenceSelected([product], product.title);
+  };
+
+  const handleAIPicks = () => {
+    if (result && result.results.length > 0) {
+      onEvidenceSelected(result.results.slice(0, 5), `${selectedChip ?? "puzzle"} market data (AI selects best)`);
+    }
+  };
+
+  return (
+    <div
+      className="rounded-2xl overflow-hidden"
+      style={{ background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.07)" }}
+    >
+      {/* Collapsible header */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full px-5 py-4 flex items-center justify-between transition-colors"
+        style={{ background: "transparent" }}
+      >
+        <div className="flex items-center gap-3">
+          <span style={{ fontSize: 18 }}>📊</span>
+          <div className="text-left">
+            <p className="text-sm font-bold text-white/80">Market Intelligence</p>
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+              Live Amazon data — see BSR, reviews &amp; competition before running the pipeline
+            </p>
+          </div>
+        </div>
+        <span className="text-xs px-2 py-1 rounded" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.40)" }}>
+          {open ? "▲ hide" : "▼ show"}
+        </span>
+      </button>
+
+      {open && (
+        <div className="px-5 pb-5 space-y-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+          {/* Keyword input */}
+          <div className="pt-4 flex gap-2">
+            <input
+              value={keyword}
+              onChange={e => setKeyword(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleSearch()}
+              placeholder="e.g. large print seniors, christmas cats…"
+              className="flex-1 rounded-lg px-3 py-2 text-sm"
+              style={{
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                color: "rgba(255,255,255,0.80)",
+                outline: "none",
+              }}
+            />
+            <button
+              onClick={handleSearch}
+              disabled={loading || (!keyword.trim() && !selectedChip)}
+              className="px-3 py-2 rounded-lg text-xs font-bold transition-opacity disabled:opacity-40"
+              style={{ background: `${GOLD}22`, border: `1px solid ${GOLD}40`, color: GOLD }}
+            >
+              Search
+            </button>
+          </div>
+
+          {/* Puzzle type chips */}
+          <div className="flex flex-wrap gap-2">
+            {PUZZLE_TYPE_CHIPS.map(type => (
+              <button
+                key={type}
+                onClick={() => handleChip(type)}
+                disabled={loading}
+                className="text-xs px-3 py-1.5 rounded-full font-semibold transition-all disabled:opacity-40"
+                style={selectedChip === type
+                  ? { background: GOLD, color: "#000", border: `1px solid ${GOLD}` }
+                  : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.55)" }
+                }
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+
+          {/* Loading */}
+          {loading && (
+            <div className="flex items-center gap-2 py-4">
+              <div
+                className="rounded-full"
+                style={{ width: 14, height: 14, border: `2px solid ${GOLD}`, borderTopColor: "transparent", animation: "kdp-spin 0.8s linear infinite" }}
+              />
+              <p className="text-xs" style={{ color: "rgba(255,255,255,0.40)" }}>Fetching live Amazon data…</p>
+            </div>
+          )}
+
+          {/* No API key notice */}
+          {result && result.source === "fallback" && !loading && (
+            <div
+              className="rounded-lg px-4 py-3 text-xs"
+              style={{ background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.20)", color: "rgba(251,191,36,0.80)" }}
+            >
+              {result.note ?? result.error ?? "Live data unavailable — add your APIFY_API_KEY to enable real Amazon data."}
+              {" "}The pipeline runs fine without it.
+            </div>
+          )}
+
+          {/* Results cards */}
+          {result && result.results.length > 0 && !loading && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.30)" }}>
+                  Top results · click to select
+                </p>
+                <button
+                  onClick={handleAIPicks}
+                  className="text-xs px-3 py-1.5 rounded-lg font-bold transition-opacity hover:opacity-80"
+                  style={{ background: `${GOLD}15`, border: `1px solid ${GOLD}35`, color: GOLD }}
+                >
+                  AI picks best →
+                </button>
+              </div>
+              {result.results.slice(0, 8).map((product, i) => {
+                const compColor = COMPETITION_COLORS[product.competition_level];
+                const isSelected = selectedCard === i;
+                return (
+                  <div
+                    key={i}
+                    onClick={() => {
+                      setSelectedCard(i);
+                      handleUseCard(product);
+                    }}
+                    className="rounded-lg p-3 cursor-pointer transition-all"
+                    style={{
+                      background: isSelected ? `${GOLD}10` : "rgba(255,255,255,0.02)",
+                      border: `1px solid ${isSelected ? GOLD + "50" : "rgba(255,255,255,0.06)"}`,
+                    }}
+                  >
+                    <p
+                      className="text-xs font-medium leading-snug mb-1.5"
+                      style={{ color: "rgba(255,255,255,0.75)" }}
+                    >
+                      {product.title.length > 90 ? product.title.slice(0, 90) + "…" : product.title}
+                    </p>
+                    <div className="flex items-center gap-3 flex-wrap">
+                      {product.bsr !== null && (
+                        <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+                          BSR #{product.bsr.toLocaleString()}
+                        </span>
+                      )}
+                      <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+                        {product.reviews} reviews
+                      </span>
+                      {product.price !== null && (
+                        <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+                          ${product.price}
+                        </span>
+                      )}
+                      <span
+                        className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                        style={{ background: compColor.bg, color: compColor.text }}
+                      >
+                        {product.competition_level} competition
+                      </span>
+                      <span
+                        className="text-xs px-2 py-0.5 rounded-full"
+                        style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.35)" }}
+                      >
+                        Demand {product.demand_score}/10
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const THEME_COLORS: Record<string, string> = {
   midnight: "#0D1B3E", forest: "#1A3C1A", crimson: "#280808", ocean: "#1565A8",
   violet: "#180635", slate: "#252E3A", sunrise: "#D44000", teal: "#062020",
@@ -451,8 +702,11 @@ export function AgentCreateBook() {
   const [stages, setStages] = useState<Record<string, StageState>>(initStages);
   const [error, setError] = useState<string | null>(null);
   const [completion, setCompletion] = useState<CompletionInfo | null>(null);
+  const [marketEvidence, setMarketEvidence] = useState<ApifyProduct[]>([]);
+  const [evidenceLabel, setEvidenceLabel] = useState<string>("");
   const abortRef = useRef<AbortController | null>(null);
   const briefRef = useRef<string>("");
+  const evidenceRef = useRef<ApifyProduct[]>([]);
 
   const updateStage = useCallback(
     (stageId: string, patch: Partial<Omit<StageState, "data">> & { data?: Record<string, unknown> }) => {
@@ -479,10 +733,14 @@ export function AgentCreateBook() {
       abortRef.current = abort;
 
       try {
+        const evidence = evidenceRef.current;
         const res = await fetch("/api/agents/create-book", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ brief: currentBrief.trim() || undefined }),
+          body: JSON.stringify({
+            brief: currentBrief.trim() || undefined,
+            marketEvidence: evidence.length > 0 ? evidence : undefined,
+          }),
           signal: abort.signal,
         });
 
@@ -558,8 +816,15 @@ export function AgentCreateBook() {
     [updateStage],
   );
 
+  const handleEvidenceSelected = useCallback((evidence: ApifyProduct[], label: string) => {
+    setMarketEvidence(evidence);
+    setEvidenceLabel(label);
+    evidenceRef.current = evidence;
+  }, []);
+
   const handleStart = () => {
     briefRef.current = brief;
+    evidenceRef.current = marketEvidence;
     runPipeline(brief);
   };
 
@@ -575,6 +840,9 @@ export function AgentCreateBook() {
     setCompletion(null);
     setBrief("");
     briefRef.current = "";
+    setMarketEvidence([]);
+    setEvidenceLabel("");
+    evidenceRef.current = [];
   };
 
   const handleCreateVolume = (volumeBrief: string) => {
@@ -585,6 +853,9 @@ export function AgentCreateBook() {
     setCompletion(null);
     setBrief(volumeBrief);
     briefRef.current = volumeBrief;
+    setMarketEvidence([]);
+    setEvidenceLabel("");
+    evidenceRef.current = [];
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -605,12 +876,42 @@ export function AgentCreateBook() {
           </p>
         </div>
 
+        {/* Market Intelligence Panel */}
+        {!running && !isComplete && (
+          <MarketIntelligencePanel onEvidenceSelected={handleEvidenceSelected} />
+        )}
+
         {/* Input card */}
         {!running && !isComplete && (
           <div
             className="rounded-2xl p-6 space-y-4"
             style={{ background: "#0f0f0f", border: "1px solid rgba(255,255,255,0.08)" }}
           >
+            {/* Evidence selected indicator */}
+            {marketEvidence.length > 0 && (
+              <div
+                className="rounded-lg px-4 py-2.5 flex items-center justify-between"
+                style={{ background: `${GOLD}10`, border: `1px solid ${GOLD}30` }}
+              >
+                <div className="flex items-center gap-2">
+                  <span style={{ color: GOLD, fontSize: 12 }}>◉</span>
+                  <p className="text-xs font-semibold" style={{ color: GOLD }}>
+                    Market data loaded
+                  </p>
+                  <p className="text-xs truncate max-w-xs" style={{ color: "rgba(255,255,255,0.40)" }}>
+                    — {evidenceLabel || `${marketEvidence.length} Amazon result${marketEvidence.length !== 1 ? "s" : ""} will ground the Market Scout`}
+                  </p>
+                </div>
+                <button
+                  onClick={() => { setMarketEvidence([]); setEvidenceLabel(""); evidenceRef.current = []; }}
+                  className="text-xs ml-2 opacity-40 hover:opacity-70 transition-opacity"
+                  style={{ color: "rgba(255,255,255,0.60)" }}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
             <div>
               <label
                 className="block text-xs font-semibold uppercase tracking-widest mb-2"
