@@ -66,6 +66,7 @@ export const CreateBookBody = zod.object({
   dedication: zod.string().optional(),
   difficultyMode: zod.string().optional(),
   challengeDays: zod.union([zod.literal(30), zod.literal(60), zod.literal(90)]).optional(),
+  keywords: zod.array(zod.string()).optional(),
 });
 
 /**
@@ -96,6 +97,7 @@ export const GetBookResponse = zod.object({
   dedication: zod.string().optional(),
   difficultyMode: zod.string().optional(),
   challengeDays: zod.union([zod.literal(30), zod.literal(60), zod.literal(90)]).optional(),
+  keywords: zod.array(zod.string()).optional(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -127,6 +129,7 @@ export const UpdateBookBody = zod.object({
   dedication: zod.string().optional(),
   difficultyMode: zod.string().optional(),
   challengeDays: zod.union([zod.literal(30), zod.literal(60), zod.literal(90)]).optional(),
+  keywords: zod.array(zod.string()).optional(),
 });
 
 export const UpdateBookResponse = zod.object({
@@ -150,6 +153,7 @@ export const UpdateBookResponse = zod.object({
   dedication: zod.string().optional(),
   difficultyMode: zod.string().optional(),
   challengeDays: zod.union([zod.literal(30), zod.literal(60), zod.literal(90)]).optional(),
+  keywords: zod.array(zod.string()).optional(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -213,6 +217,7 @@ export const GenerateBookBody = zod.object({
   dedication: zod.string().optional(),
   difficultyMode: zod.string().optional(),
   challengeDays: zod.union([zod.literal(30), zod.literal(60), zod.literal(90)]).optional(),
+  keywords: zod.array(zod.string()).optional(),
 });
 
 export const GenerateBookResponse = zod.object({

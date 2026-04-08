@@ -19,7 +19,8 @@ export function CreateBook() {
       const book = await createBook.mutateAsync({
         data: {
           ...values,
-          words: values.words?.split("\n").map(w => w.trim()).filter(Boolean)
+          words: values.words?.split("\n").map(w => w.trim()).filter(Boolean),
+          keywords: values.keywords?.split("\n").map(k => k.trim()).filter(Boolean),
         }
       });
       toast({ title: "Project created!" });

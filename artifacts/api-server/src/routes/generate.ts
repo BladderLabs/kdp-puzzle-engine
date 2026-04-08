@@ -27,6 +27,7 @@ function toOpts(data: ReturnType<typeof GenerateBookBody.parse>): CoverBuildOpts
     dedication: data.dedication ?? undefined,
     difficultyMode: data.difficultyMode ?? "uniform",
     challengeDays: data.challengeDays ?? undefined,
+    keywords: data.keywords ?? [],
   };
 }
 
@@ -227,9 +228,38 @@ router.post("/bundle", async (req, res) => {
     ]);
 
     const slug = opts.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 40);
+
+    const enc = new TextEncoder();
+    const descTxt = enc.encode(
+      [
+        `TITLE: ${opts.title}`,
+        opts.subtitle ? `SUBTITLE: ${opts.subtitle}` : "",
+        opts.author ? `AUTHOR: ${opts.author}` : "",
+        "",
+        "=== BACK COVER DESCRIPTION (copy-paste into KDP) ===",
+        "",
+        opts.backDescription || "",
+        "",
+        "=== KDP UPLOAD NOTES ===",
+        `Interior: B&W, ${opts.paperType} paper, ${opts.largePrint ? "8.5x11in" : "6x9in"}, No bleed`,
+        `Puzzle type: ${opts.puzzleType}  |  Count: ${opts.puzzleCount}  |  Difficulty: ${opts.difficulty}`,
+        "Low-content book: Yes",
+        "AI disclosure: Yes (cover art may be AI-generated)",
+        `Recommended price: $9.99 USD / £7.99 GBP`,
+      ].filter(l => l !== undefined).join("\n")
+    );
+
+    const kwTxt = enc.encode(
+      ((opts as Record<string, unknown>).keywords as string[] | undefined ?? [])
+        .slice(0, 7)
+        .join("\n") || `${opts.puzzleType.toLowerCase()} puzzle book\nlarge print puzzles\nbrain games for adults\npuzzle book gift\nword puzzle book\nactivity book for adults\npuzzle book for seniors`
+    );
+
     const zipData = zipSync({
       [`${slug}-interior.pdf`]: [new Uint8Array(interiorPdf), { level: 0 }],
       [`${slug}-cover.pdf`]: [new Uint8Array(coverPdf), { level: 0 }],
+      "listing-description.txt": [descTxt, { level: 6 }],
+      "keywords.txt": [kwTxt, { level: 6 }],
     });
 
     res.set({

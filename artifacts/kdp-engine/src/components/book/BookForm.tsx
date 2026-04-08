@@ -71,6 +71,7 @@ const formSchema = z.object({
   coverImageUrl: z.string().optional(),
   niche: z.string().optional(),
   volumeNumber: z.coerce.number().optional(),
+  keywords: z.string().optional(),
   dedication: z.string().optional(),
   difficultyMode: z.string().default("uniform"),
   challengeDays: z.union([z.literal(30), z.literal(60), z.literal(90)]).optional(),
@@ -105,6 +106,7 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
       coverImageUrl: initialValues?.coverImageUrl || "",
       niche: initialValues?.niche || "",
       volumeNumber: initialValues?.volumeNumber ?? 0,
+      keywords: initialValues?.keywords || "",
       dedication: initialValues?.dedication || "",
       difficultyMode: initialValues?.difficultyMode || "uniform",
       challengeDays: initialValues?.challengeDays ?? undefined,
@@ -529,6 +531,22 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
                       />
                     </FormControl>
                     <p className="text-xs text-muted-foreground mt-0.5">Click the field to auto-fill a KDP-ready description template you can edit.</p>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                {/* KDP Keywords */}
+                <FormField control={form.control} name="keywords" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>KDP Keywords <span className="text-muted-foreground font-normal">(up to 7, one per line)</span></FormLabel>
+                    <FormControl>
+                      <Textarea
+                        className="h-24 font-mono text-sm"
+                        placeholder={"large print word search\nbrain games for seniors\npuzzle book for adults\n..."}
+                        {...field}
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground mt-0.5">These 7 keywords are included in the ZIP download as keywords.txt ready to paste into KDP.</p>
                     <FormMessage />
                   </FormItem>
                 )} />

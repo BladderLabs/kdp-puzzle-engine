@@ -179,7 +179,7 @@ function wordToSequence(word: string): string {
   return (digits + digits).slice(0, 5); // repeat to ensure ≥5 chars then trim
 }
 
-export function makeNumberSearch(size: number, wordBank?: string[]): NumberSearchResult {
+export function makeNumberSearch(size: number, wordBank?: string[], puzzleIndex = 0): NumberSearchResult {
   const grid: string[][] = Array.from({ length: size }, () => Array(size).fill(""));
   const DIRS: [number, number][] = [
     [0, 1], [0, -1], [1, 0], [-1, 0],
@@ -187,11 +187,26 @@ export function makeNumberSearch(size: number, wordBank?: string[]): NumberSearc
   ];
   const placed: string[] = [];
   const pSet: Record<string, boolean> = {};
-  // Use category-derived sequences when a word bank is provided
-  const seqPool = wordBank && wordBank.length >= 5
-    ? shuf([...wordBank]).slice(0, 30).map(wordToSequence)
-    : NUMBER_SEQUENCES;
-  const sequences = shuf([...seqPool]).slice(0, 20);
+  // Algorithmic sequences unique per puzzle: rotate word bank by puzzleIndex so each
+  // puzzle in the book gets a different slice of sequences, ensuring variety.
+  let seqPool: string[];
+  if (wordBank && wordBank.length >= 5) {
+    const offset = puzzleIndex % wordBank.length;
+    const rotated = [...wordBank.slice(offset), ...wordBank.slice(0, offset)];
+    seqPool = rotated.slice(0, 30).map(wordToSequence);
+    // Inject a few pure numeric sequences derived from puzzleIndex for extra variety
+    const pi = puzzleIndex;
+    seqPool.push(
+      String(((pi * 7 + 13) % 90000) + 10000),
+      String(((pi * 11 + 37) % 90000) + 10000),
+      String(((pi * 3 + 61) % 90000) + 10000),
+    );
+  } else {
+    // Rotate static pool by puzzleIndex
+    const offset = puzzleIndex % NUMBER_SEQUENCES.length;
+    seqPool = [...NUMBER_SEQUENCES.slice(offset), ...NUMBER_SEQUENCES.slice(0, offset)];
+  }
+  const sequences = seqPool.slice(0, 20);
 
   for (const seq of sequences.sort((a, b) => b.length - a.length)) {
     if (seq.length > size) continue;
@@ -392,6 +407,260 @@ export const QUOTE_BANK: QuoteEntry[] = [
   { text: "WE ARE WHAT WE REPEATEDLY DO EXCELLENCE THEN IS NOT AN ACT BUT A HABIT", author: "Will Durant" },
   { text: "IT IS THE MARK OF AN EDUCATED MIND TO BE ABLE TO ENTERTAIN A THOUGHT WITHOUT ACCEPTING IT", author: "Aristotle" },
   { text: "SCIENCE IS ORGANIZED KNOWLEDGE WISDOM IS ORGANIZED LIFE", author: "Immanuel Kant" },
+  // ─── Extended bank: inspirational ───────────────────────────────────────────
+  { text: "ACT AS IF WHAT YOU DO MAKES A DIFFERENCE IT DOES", author: "William James" },
+  { text: "SUCCESS IS NOT HOW HIGH YOU HAVE CLIMBED BUT HOW YOU MAKE A POSITIVE DIFFERENCE", author: "Roy T. Bennett" },
+  { text: "WHEN EVERYTHING SEEMS TO BE GOING AGAINST YOU REMEMBER THAT THE AIRPLANE TAKES OFF AGAINST THE WIND", author: "Henry Ford" },
+  { text: "IT IS DURING OUR DARKEST MOMENTS THAT WE MUST FOCUS TO SEE THE LIGHT", author: "Aristotle" },
+  { text: "DO NOT PRAY FOR AN EASY LIFE PRAY FOR THE STRENGTH TO ENDURE A DIFFICULT ONE", author: "Bruce Lee" },
+  { text: "THE ONLY PERSON YOU ARE DESTINED TO BECOME IS THE PERSON YOU DECIDE TO BE", author: "Ralph Waldo Emerson" },
+  { text: "GO CONFIDENTLY IN THE DIRECTION OF YOUR DREAMS LIVE THE LIFE YOU HAVE IMAGINED", author: "Henry David Thoreau" },
+  { text: "WHEN YOU HAVE A DREAM YOU HAVE GOT TO GRAB IT AND NEVER LET GO", author: "Carol Burnett" },
+  { text: "NO MATTER WHAT PEOPLE TELL YOU WORDS AND IDEAS CAN CHANGE THE WORLD", author: "Robin Williams" },
+  { text: "COURAGE IS WHAT IT TAKES TO STAND UP AND SPEAK COURAGE IS ALSO WHAT IT TAKES TO SIT DOWN AND LISTEN", author: "Winston Churchill" },
+  { text: "IT IS NOT THE STRONGEST OF THE SPECIES THAT SURVIVES NOR THE MOST INTELLIGENT BUT THE ONE MOST ADAPTABLE TO CHANGE", author: "Charles Darwin" },
+  { text: "WE NEED TO ACCEPT THAT WE WILL NOT ALWAYS MAKE THE RIGHT DECISIONS THAT WE WILL MESS UP ROYALLY SOMETIMES", author: "Brene Brown" },
+  { text: "EVERY STRIKE BRINGS ME CLOSER TO THE NEXT HOME RUN", author: "Babe Ruth" },
+  { text: "WE MAY ENCOUNTER MANY DEFEATS BUT WE MUST NOT BE DEFEATED", author: "Maya Angelou" },
+  { text: "NEVER BEND YOUR HEAD ALWAYS HOLD IT HIGH LOOK THE WORLD STRAIGHT IN THE FACE", author: "Helen Keller" },
+  { text: "GOOD BETTER BEST NEVER LET IT REST UNTIL YOUR GOOD IS BETTER AND YOUR BETTER IS YOUR BEST", author: "Tim Duncan" },
+  { text: "BE YOURSELF EVERYONE ELSE IS ALREADY TAKEN", author: "Oscar Wilde" },
+  { text: "EVERY DAY MAY NOT BE GOOD BUT THERE IS SOMETHING GOOD IN EVERY DAY", author: "Alice Morse Earle" },
+  { text: "YOU MUST BE THE CHANGE YOU WISH TO SEE IN THE WORLD", author: "Mahatma Gandhi" },
+  { text: "STRENGTH DOES NOT COME FROM PHYSICAL CAPACITY IT COMES FROM AN INDOMITABLE WILL", author: "Mahatma Gandhi" },
+  { text: "DOUBT WHOM YOU WILL BUT NEVER YOURSELF", author: "Christian Nestell Bovee" },
+  { text: "LIFE IS TEN PERCENT WHAT HAPPENS TO YOU AND NINETY PERCENT HOW YOU RESPOND TO IT", author: "Lou Holtz" },
+  { text: "WHEREVER YOU ARE AND WHATEVER YOU DO BE IN LOVE", author: "Rumi" },
+  { text: "WE KNOW WHAT WE ARE BUT KNOW NOT WHAT WE MAY BE", author: "William Shakespeare" },
+  { text: "DO NOT COUNT THE DAYS MAKE THE DAYS COUNT", author: "Muhammad Ali" },
+  { text: "THERE ARE NO SECRETS TO SUCCESS IT IS THE RESULT OF PREPARATION HARD WORK AND LEARNING FROM FAILURE", author: "Colin Powell" },
+  { text: "GREAT SPIRITS HAVE ALWAYS ENCOUNTERED VIOLENT OPPOSITION FROM MEDIOCRE MINDS", author: "Albert Einstein" },
+  { text: "ONLY THOSE WHO WILL RISK GOING TOO FAR CAN POSSIBLY FIND OUT HOW FAR ONE CAN GO", author: "T.S. Eliot" },
+  { text: "IMPOSSIBLE IS JUST AN OPINION", author: "Paulo Coelho" },
+  { text: "NEVER GIVE UP FOR THAT IS JUST THE PLACE AND TIME THAT THE TIDE WILL TURN", author: "Harriet Beecher Stowe" },
+  { text: "THE SECRET OF CHANGE IS TO FOCUS ALL OF YOUR ENERGY NOT ON FIGHTING THE OLD BUT ON BUILDING THE NEW", author: "Socrates" },
+  { text: "IF YOU HAVE GOOD THOUGHTS THEY WILL SHINE OUT OF YOUR FACE LIKE SUNBEAMS AND YOU WILL ALWAYS LOOK LOVELY", author: "Roald Dahl" },
+  { text: "THERE IS NOTHING IMPOSSIBLE TO THEY WHO WILL TRY", author: "Alexander the Great" },
+  { text: "THE BAD NEWS IS TIME FLIES THE GOOD NEWS IS YOU ARE THE PILOT", author: "Michael Altshuler" },
+  { text: "I HAVE NOT FAILED TEN THOUSAND TIMES I HAVE NOT FAILED ONCE I HAVE SUCCEEDED IN PROVING THOSE TEN THOUSAND WAYS WILL NOT WORK", author: "Thomas Edison" },
+  { text: "BE YOURSELF NO MATTER WHAT SOME PEOPLE WILL LIKE YOU AND SOME WILL NOT AND THAT IS ALL RIGHT", author: "Bill Cosby" },
+  { text: "MOTIVATION IS WHAT GETS YOU STARTED HABIT IS WHAT KEEPS YOU GOING", author: "Jim Ryun" },
+  { text: "GOOD THINGS COME TO PEOPLE WHO WAIT BUT BETTER THINGS COME TO THOSE WHO GO OUT AND GET THEM", author: "Anonymous" },
+  { text: "THE FIRST STEP IS YOU HAVE TO SAY THAT YOU CAN", author: "Will Smith" },
+  { text: "ONE WAY TO KEEP MOMENTUM GOING IS TO HAVE CONSTANTLY GREATER GOALS", author: "Michael Korda" },
+  { text: "OPTIMISM IS THE FAITH THAT LEADS TO ACHIEVEMENT NOTHING CAN BE DONE WITHOUT HOPE AND CONFIDENCE", author: "Helen Keller" },
+  { text: "TO WIN WITHOUT RISK IS TO TRIUMPH WITHOUT GLORY", author: "Pierre Corneille" },
+  { text: "WE CANNOT SOLVE PROBLEMS WITH THE KIND OF THINKING WE EMPLOYED WHEN WE CAME UP WITH THEM", author: "Albert Einstein" },
+  { text: "HAPPINESS DEPENDS UPON OURSELVES", author: "Aristotle" },
+  { text: "BE NICE TO PEOPLE ON YOUR WAY UP BECAUSE YOU MEET THEM ON YOUR WAY DOWN", author: "Jimmy Durante" },
+  { text: "A GOAL IS A DREAM WITH A DEADLINE", author: "Napoleon Hill" },
+  { text: "START WHERE YOU ARE USE WHAT YOU HAVE DO WHAT YOU CAN", author: "Arthur Ashe" },
+  { text: "DO WHAT YOU CAN WITH ALL YOU HAVE WHEREVER YOU ARE", author: "Theodore Roosevelt" },
+  { text: "I CANNOT GIVE YOU THE FORMULA FOR SUCCESS BUT I CAN GIVE YOU THE FORMULA FOR FAILURE IT IS TRY TO PLEASE EVERYBODY", author: "Herbert Bayard Swope" },
+  { text: "SUCCESS IS STUMBLING FROM FAILURE TO FAILURE WITH NO LOSS OF ENTHUSIASM", author: "Winston Churchill" },
+  { text: "PEACE BEGINS WITH A SMILE", author: "Mother Teresa" },
+  { text: "SUCCESS IS WALKING FROM FAILURE TO FAILURE WITH NO LOSS OF ENTHUSIASM", author: "Winston Churchill" },
+  { text: "EVERY MOMENT IS A FRESH BEGINNING", author: "T.S. Eliot" },
+  { text: "WHAT WE ACHIEVE INWARDLY WILL CHANGE OUTER REALITY", author: "Plutarch" },
+  { text: "HAPPY ARE THOSE WHO DREAM DREAMS AND ARE READY TO PAY THE PRICE TO MAKE THEM COME TRUE", author: "Leon J. Suenens" },
+  { text: "WHEREVER YOU GO GO WITH ALL YOUR HEART", author: "Confucius" },
+  { text: "THE WAY I SEE IT IF YOU WANT THE RAINBOW YOU HAVE TO PUT UP WITH THE RAIN", author: "Dolly Parton" },
+  { text: "CLARITY AFFORDS FOCUS", author: "Thomas Leonard" },
+  { text: "IT DOES NOT MATTER HOW MANY TIMES YOU GET KNOCKED DOWN BUT HOW MANY TIMES YOU GET UP", author: "Vince Lombardi" },
+  { text: "THE MIND IS EVERYTHING WHAT YOU THINK YOU BECOME", author: "Buddha" },
+  { text: "THE ONLY PLACE WHERE DREAMS BECOME IMPOSSIBLE IS IN YOUR OWN THINKING", author: "Robert H. Schuller" },
+  // ─── Wisdom & philosophy ────────────────────────────────────────────────────
+  { text: "THE JOURNEY OF A THOUSAND MILES BEGINS WITH ONE STEP", author: "Lao Tzu" },
+  { text: "KNOWING OTHERS IS WISDOM KNOWING YOURSELF IS ENLIGHTENMENT", author: "Lao Tzu" },
+  { text: "HEALTH IS THE GREATEST POSSESSION CONTENTMENT IS THE GREATEST TREASURE CONFIDENCE IS THE GREATEST FRIEND", author: "Lao Tzu" },
+  { text: "LIFE IS A SUCCESSION OF LESSONS WHICH MUST BE LIVED TO BE UNDERSTOOD", author: "Helen Keller" },
+  { text: "TRUTH IS EVER TO BE FOUND IN THE SIMPLICITY AND NOT IN THE MULTIPLICITY AND CONFUSION OF THINGS", author: "Isaac Newton" },
+  { text: "IT IS BETTER TO DESERVE HONORS AND NOT HAVE THEM THAN TO HAVE THEM AND NOT DESERVE THEM", author: "Mark Twain" },
+  { text: "THE AIM OF ART IS TO REPRESENT NOT THE OUTWARD APPEARANCE OF THINGS BUT THEIR INWARD SIGNIFICANCE", author: "Aristotle" },
+  { text: "TIME IS THE MOST VALUABLE THING A MAN CAN SPEND", author: "Theophrastus" },
+  { text: "BY THREE METHODS WE MAY LEARN WISDOM REFLECTION IMITATION AND EXPERIENCE", author: "Confucius" },
+  { text: "THE SUPERIOR MAN IS SATISFIED AND COMPOSED THE MEAN MAN IS ALWAYS FULL OF DISTRESS", author: "Confucius" },
+  { text: "REAL KNOWLEDGE IS TO KNOW THE EXTENT OF ONE S IGNORANCE", author: "Confucius" },
+  { text: "WHERESOEVER YOU GO GO WITH ALL YOUR HEART", author: "Confucius" },
+  { text: "THE WISEST THING WHEN FACED WITH OPPOSITION IS TO REMAIN SILENT AND LET THE TRUTH SPEAK FOR ITSELF", author: "Marcus Aurelius" },
+  { text: "YOU HAVE POWER OVER YOUR MIND NOT OUTSIDE EVENTS REALIZE THIS AND YOU WILL FIND STRENGTH", author: "Marcus Aurelius" },
+  { text: "THE HAPPINESS OF YOUR LIFE DEPENDS UPON THE QUALITY OF YOUR THOUGHTS", author: "Marcus Aurelius" },
+  { text: "VERY LITTLE IS NEEDED TO MAKE A HAPPY LIFE IT IS ALL WITHIN YOURSELF IN YOUR WAY OF THINKING", author: "Marcus Aurelius" },
+  { text: "ACCEPT THE THINGS TO WHICH FATE BINDS YOU AND LOVE THE PEOPLE WITH WHOM FATE BRINGS YOU TOGETHER", author: "Marcus Aurelius" },
+  { text: "WASTE NO MORE TIME ARGUING ABOUT WHAT A GOOD MAN SHOULD BE BE ONE", author: "Marcus Aurelius" },
+  { text: "IF IT IS NOT RIGHT DO NOT DO IT IF IT IS NOT TRUE DO NOT SAY IT", author: "Marcus Aurelius" },
+  { text: "WE SUFFER MORE IN IMAGINATION THAN IN REALITY", author: "Seneca" },
+  { text: "IT IS NOT THAT I AM SO SMART BUT THAT I STAY WITH PROBLEMS LONGER", author: "Albert Einstein" },
+  { text: "IMAGINATION IS MORE IMPORTANT THAN KNOWLEDGE KNOWLEDGE IS LIMITED IMAGINATION ENCIRCLES THE WORLD", author: "Albert Einstein" },
+  { text: "TWO THINGS ARE INFINITE THE UNIVERSE AND HUMAN STUPIDITY AND I AM NOT SURE ABOUT THE UNIVERSE", author: "Albert Einstein" },
+  { text: "LIFE IS LIKE RIDING A BICYCLE TO KEEP YOUR BALANCE YOU MUST KEEP MOVING", author: "Albert Einstein" },
+  // ─── Nature & outdoors ──────────────────────────────────────────────────────
+  { text: "IN EVERY WALK WITH NATURE ONE RECEIVES FAR MORE THAN HE SEEKS", author: "John Muir" },
+  { text: "THE MOUNTAINS ARE CALLING AND I MUST GO", author: "John Muir" },
+  { text: "LOOK DEEP INTO NATURE AND THEN YOU WILL UNDERSTAND EVERYTHING BETTER", author: "Albert Einstein" },
+  { text: "ADOPT THE PACE OF NATURE HER SECRET IS PATIENCE", author: "Ralph Waldo Emerson" },
+  { text: "NATURE DOES NOT HURRY YET EVERYTHING IS ACCOMPLISHED", author: "Lao Tzu" },
+  { text: "THE CLEAREST WAY INTO THE UNIVERSE IS THROUGH A FOREST WILDERNESS", author: "John Muir" },
+  { text: "WE DO NOT INHERIT THE EARTH FROM OUR ANCESTORS WE BORROW IT FROM OUR CHILDREN", author: "Native American Proverb" },
+  { text: "ONE TOUCH OF NATURE MAKES THE WHOLE WORLD KIN", author: "William Shakespeare" },
+  { text: "NOTHING IS LOST EVERYTHING IS TRANSFORMED", author: "Antoine Lavoisier" },
+  { text: "THE SUN DOES NOT SHINE FOR A FEW TREES AND FLOWERS BUT FOR THE WIDE WORLD S JOY", author: "Henry Ward Beecher" },
+  { text: "KEEP YOUR LOVE OF NATURE FOR THAT IS THE TRUE WAY TO UNDERSTAND ART MORE AND MORE", author: "Vincent van Gogh" },
+  { text: "SPRING IS NATURE S WAY OF SAYING LETS PARTY", author: "Robin Williams" },
+  // ─── Humor & wit ────────────────────────────────────────────────────────────
+  { text: "I CHOOSE A LAZY PERSON TO DO A HARD JOB BECAUSE A LAZY PERSON WILL FIND AN EASY WAY TO DO IT", author: "Bill Gates" },
+  { text: "I HAVE HAD A PERFECTLY WONDERFUL EVENING BUT THIS WAS NOT IT", author: "Groucho Marx" },
+  { text: "BEHIND EVERY GREAT MAN IS A WOMAN ROLLING HER EYES", author: "Jim Carrey" },
+  { text: "IF YOU THINK YOU ARE TOO SMALL TO MAKE A DIFFERENCE TRY SLEEPING WITH A MOSQUITO", author: "Dalai Lama" },
+  { text: "THE TROUBLE WITH HAVING AN OPEN MIND OF COURSE IS THAT PEOPLE WILL INSIST ON COMING ALONG AND TRYING TO PUT THINGS IN IT", author: "Terry Pratchett" },
+  { text: "AGE IS AN ISSUE OF MIND OVER MATTER IF YOU DO NOT MIND IT DOES NOT MATTER", author: "Mark Twain" },
+  { text: "WINE IS BOTTLED POETRY", author: "Robert Louis Stevenson" },
+  { text: "I ALWAYS WANTED TO BE SOMEBODY BUT NOW I REALIZE I SHOULD HAVE BEEN MORE SPECIFIC", author: "Lily Tomlin" },
+  { text: "A DAY WITHOUT SUNSHINE IS LIKE YOU KNOW NIGHT", author: "Steve Martin" },
+  { text: "CHANGE IS NOT A FOUR LETTER WORD BUT OFTEN YOUR REACTION TO IT IS", author: "Jeffrey Gitomer" },
+  { text: "THE ONLY MYSTERY IN LIFE IS WHY THE KAMIKAZE PILOTS WORE HELMETS", author: "Al McGuire" },
+  { text: "PEOPLE SAY NOTHING IS IMPOSSIBLE BUT I DO NOTHING EVERY DAY", author: "A.A. Milne" },
+  { text: "IT WOULD BE NICE TO SPEND BILLIONS ON SCHOOLS AND ROADS BUT RIGHT NOW THAT MONEY IS DESPERATELY NEEDED FOR POLITICAL ADS", author: "Andy Borowitz" },
+  // ─── Books & reading ────────────────────────────────────────────────────────
+  { text: "NOT ALL READERS ARE LEADERS BUT ALL LEADERS ARE READERS", author: "Harry S Truman" },
+  { text: "A WORD AFTER A WORD AFTER A WORD IS POWER", author: "Margaret Atwood" },
+  { text: "A GREAT BOOK SHOULD LEAVE YOU WITH MANY EXPERIENCES AND SLIGHTLY EXHAUSTED AT THE END", author: "William Styron" },
+  { text: "IF YOU ONLY READ THE BOOKS THAT EVERYONE ELSE IS READING YOU CAN ONLY THINK WHAT EVERYONE ELSE IS THINKING", author: "Haruki Murakami" },
+  { text: "IT IS WHAT YOU READ WHEN YOU DO NOT HAVE TO THAT DETERMINES WHAT YOU WILL BE WHEN YOU CANNOT HELP IT", author: "Oscar Wilde" },
+  { text: "SHOW ME A FAMILY OF READERS AND I WILL SHOW YOU THE PEOPLE WHO MOVE THE WORLD", author: "Napoleon Bonaparte" },
+  { text: "SLEEP IS GOOD HE SAID AND BOOKS ARE BETTER", author: "George R.R. Martin" },
+  { text: "I TOOK A SPEED READING COURSE AND READ WAR AND PEACE IN TWENTY MINUTES IT INVOLVES RUSSIA", author: "Woody Allen" },
+  { text: "I KEPT ALWAYS TWO BOOKS IN MY POCKET ONE TO READ ONE TO WRITE IN", author: "Robert Louis Stevenson" },
+  { text: "THERE IS NO FRIEND AS LOYAL AS A BOOK", author: "Ernest Hemingway" },
+  { text: "ONE MUST ALWAYS BE CAREFUL OF BOOKS AND WHAT IS INSIDE THEM FOR WORDS HAVE THE POWER TO CHANGE US", author: "Cassandra Clare" },
+  { text: "THE MORE THAT YOU READ THE MORE THINGS YOU WILL KNOW THE MORE YOU LEARN THE MORE PLACES YOU LL GO", author: "Dr. Seuss" },
+  // ─── Puzzles & brain games ──────────────────────────────────────────────────
+  { text: "EVERY PUZZLE HAS AN ANSWER WAITING TO BE FOUND", author: "Anonymous" },
+  { text: "A SHARP MIND AND A WILLING SPIRIT CAN SOLVE ANYTHING", author: "Anonymous" },
+  { text: "THE BEST WORKOUT FOR YOUR BRAIN IS A CHALLENGING PUZZLE", author: "Anonymous" },
+  { text: "TAKE IT ONE CLUE AT A TIME AND EVENTUALLY THE ANSWER WILL REVEAL ITSELF", author: "Anonymous" },
+  { text: "A PUZZLE A DAY KEEPS THE DOCTOR AWAY AND THE MIND IN FULL SWING", author: "Anonymous" },
+  { text: "THE MIND IS NOT A VESSEL TO BE FILLED BUT A FIRE TO BE KINDLED", author: "Plutarch" },
+  { text: "THE BRAIN IS LIKE A MUSCLE WHEN IT IS IN USE WE FEEL VERY GOOD UNDERSTANDING IS JOYOUS", author: "Carl Sagan" },
+  { text: "TO SOLVE A PROBLEM OR ACHIEVE A GOAL YOU DO NOT NEED TO KNOW ALL THE ANSWERS IN ADVANCE", author: "Jack Canfield" },
+  { text: "THINKING IS THE HARDEST WORK THERE IS WHICH IS THE PROBABLE REASON SO FEW ENGAGE IN IT", author: "Henry Ford" },
+  { text: "PROBLEMS ARE ONLY OPPORTUNITIES IN WORK CLOTHES", author: "Henry Kaiser" },
+  { text: "I LEARNED LONG AGO NEVER TO WRESTLE WITH A PIG YOU GET DIRTY AND BESIDES THE PIG LIKES IT", author: "George Bernard Shaw" },
+  { text: "ANY INTELLIGENT FOOL CAN MAKE THINGS BIGGER MORE COMPLEX AND MORE VIOLENT TO MOVE IN THE OPPOSITE DIRECTION TAKES GENIUS", author: "E.F. Schumacher" },
+  // ─── Seniors & aging ────────────────────────────────────────────────────────
+  { text: "DO NOT REGRET GROWING OLDER IT IS A PRIVILEGE DENIED TO MANY", author: "Anonymous" },
+  { text: "AGING IS NOT LOST YOUTH BUT A NEW STAGE OF OPPORTUNITY AND STRENGTH", author: "Betty Friedan" },
+  { text: "THE LONGER I LIVE THE MORE BEAUTIFUL LIFE BECOMES", author: "Frank Lloyd Wright" },
+  { text: "THERE IS A FOUNTAIN OF YOUTH IT IS YOUR MIND YOUR TALENTS THE CREATIVITY YOU BRING TO YOUR LIFE", author: "Sophia Loren" },
+  { text: "AT SEVENTY YEARS OF AGE THE ONLY REGRETS ARE THE THINGS YOU DID NOT DO", author: "Anonymous" },
+  { text: "OLD AGE IS AN EXCELLENT TIME FOR OUTRAGE YOUR FACE IS ALREADY DONE", author: "Maggie Kuhn" },
+  { text: "HOW OLD WOULD YOU BE IF YOU DID NOT KNOW HOW OLD YOU WERE", author: "Satchel Paige" },
+  { text: "THE SECRET TO STAYING YOUNG IS TO LIVE HONESTLY EAT SLOWLY AND LIE ABOUT YOUR AGE", author: "Lucille Ball" },
+  { text: "GROWING OLD IS MANDATORY GROWING UP IS OPTIONAL", author: "Chili Davis" },
+  { text: "YOU ARE NEVER TOO OLD TO SET ANOTHER GOAL OR TO DREAM A NEW DREAM", author: "Les Brown" },
+  { text: "WISDOM COMES WITH WINTERS", author: "Oscar Wilde" },
+  { text: "WRINKLES SHOULD MERELY INDICATE WHERE SMILES HAVE BEEN", author: "Mark Twain" },
+  { text: "THE GREAT ART OF LIFE IS SENSATION TO FEEL THAT WE EXIST EVEN IN PAIN", author: "Lord Byron" },
+  { text: "EVERY DAY IS A GIFT WHEN YOU ARE OVER THE HILL", author: "Anonymous" },
+  { text: "LAUGH OFTEN LONG AND LOUD LAUGH UNTIL YOU GASP FOR BREATH", author: "George Carlin" },
+  // ─── Kindness & gratitude ───────────────────────────────────────────────────
+  { text: "NO ACT OF KINDNESS NO MATTER HOW SMALL IS EVER WASTED", author: "Aesop" },
+  { text: "KINDNESS IN WORDS CREATES CONFIDENCE KINDNESS IN THINKING CREATES PROFOUNDNESS KINDNESS IN GIVING CREATES LOVE", author: "Lao Tzu" },
+  { text: "CARRY OUT A RANDOM ACT OF KINDNESS WITH NO EXPECTATION OF REWARD SAFE IN THE KNOWLEDGE THAT ONE DAY SOMEONE MIGHT DO THE SAME FOR YOU", author: "Princess Diana" },
+  { text: "CONSTANT KINDNESS CAN ACCOMPLISH MUCH AS THE SUN MAKES ICE MELT KINDNESS CAUSES MISUNDERSTANDING MISTRUST AND HOSTILITY TO EVAPORATE", author: "Albert Schweitzer" },
+  { text: "GRATITUDE IS NOT ONLY THE GREATEST OF VIRTUES BUT THE PARENT OF ALL THE OTHERS", author: "Marcus Tullius Cicero" },
+  { text: "WHEN YOU ARE GRATEFUL FEAR DISAPPEARS AND ABUNDANCE APPEARS", author: "Tony Robbins" },
+  { text: "APPRECIATION IS A WONDERFUL THING IT MAKES WHAT IS EXCELLENT IN OTHERS BELONG TO US AS WELL", author: "Voltaire" },
+  { text: "ENOUGH IS INDEED ENOUGH IF YOU ARE HAPPY WITH ENOUGH YOU CAN ALWAYS HAVE MORE", author: "Anonymous" },
+  { text: "THE ROOTS OF ALL GOODNESS LIE IN THE SOIL OF APPRECIATION FOR GOODNESS", author: "Dalai Lama" },
+  { text: "SILENT GRATITUDE IS NOT MUCH USE TO ANYONE", author: "G.B. Stern" },
+  { text: "GIVE THANKS FOR A LITTLE AND YOU WILL FIND A LOT", author: "Hausa Proverb" },
+  { text: "GRATITUDE TURNS WHAT WE HAVE INTO ENOUGH AND MORE", author: "Melody Beattie" },
+  // ─── Adventure & travel ─────────────────────────────────────────────────────
+  { text: "THE WORLD IS A BOOK AND THOSE WHO DO NOT TRAVEL READ ONLY ONE PAGE", author: "Saint Augustine" },
+  { text: "TRAVEL IS THE ONLY THING YOU BUY THAT MAKES YOU RICHER", author: "Anonymous" },
+  { text: "ADVENTURE IS WORTHWHILE IN ITSELF", author: "Amelia Earhart" },
+  { text: "LIFE IS EITHER A GREAT ADVENTURE OR NOTHING", author: "Helen Keller" },
+  { text: "THE BIGGEST ADVENTURE YOU CAN TAKE IS TO LIVE THE LIFE OF YOUR DREAMS", author: "Oprah Winfrey" },
+  { text: "IT IS GOOD TO HAVE AN END TO JOURNEY TOWARD BUT IT IS THE JOURNEY THAT MATTERS IN THE END", author: "Ursula K. Le Guin" },
+  { text: "NOT ALL THOSE WHO WANDER ARE LOST", author: "J.R.R. Tolkien" },
+  { text: "JOBS FILL YOUR POCKET ADVENTURES FILL YOUR SOUL", author: "Jaime Lyn Beatty" },
+  { text: "ONCE A YEAR GO SOMEPLACE YOU HAVE NEVER BEEN BEFORE", author: "Dalai Lama" },
+  { text: "DO NOT LISTEN TO WHAT THEY SAY GO SEE", author: "Chinese Proverb" },
+  { text: "MAN CANNOT DISCOVER NEW OCEANS UNLESS HE HAS THE COURAGE TO LOSE SIGHT OF THE SHORE", author: "Andre Gide" },
+  { text: "THE REAL VOYAGE OF DISCOVERY CONSISTS NOT IN SEEKING NEW LANDSCAPES BUT IN HAVING NEW EYES", author: "Marcel Proust" },
+  // ─── Friendship & love ──────────────────────────────────────────────────────
+  { text: "A FRIEND IS ONE WHO KNOWS YOU AS YOU ARE UNDERSTANDS WHERE YOU HAVE BEEN ACCEPTS WHAT YOU HAVE BECOME AND STILL ALLOWS YOU TO GROW", author: "William Shakespeare" },
+  { text: "FRIENDSHIP IS THE ONLY CEMENT THAT WILL EVER HOLD THE WORLD TOGETHER", author: "Woodrow Wilson" },
+  { text: "A REAL FRIEND IS ONE WHO WALKS IN WHEN THE REST OF THE WORLD WALKS OUT", author: "Walter Winchell" },
+  { text: "THE LANGUAGE OF FRIENDSHIP IS NOT WORDS BUT MEANINGS", author: "Henry David Thoreau" },
+  { text: "A FRIEND MAY WELL BE RECKONED THE MASTERPIECE OF NATURE", author: "Ralph Waldo Emerson" },
+  { text: "LOVE DOES NOT MAKE THE WORLD GO ROUND LOVE IS WHAT MAKES THE RIDE WORTHWHILE", author: "Franklin P. Jones" },
+  { text: "THE BEST THING TO HOLD ONTO IN LIFE IS EACH OTHER", author: "Audrey Hepburn" },
+  { text: "WHERE THERE IS LOVE THERE IS LIFE", author: "Mahatma Gandhi" },
+  { text: "BEING DEEPLY LOVED BY SOMEONE GIVES YOU STRENGTH WHILE LOVING SOMEONE DEEPLY GIVES YOU COURAGE", author: "Lao Tzu" },
+  { text: "IN THE END THE LOVE YOU TAKE IS EQUAL TO THE LOVE YOU MAKE", author: "Paul McCartney" },
+  // ─── Persistence & resilience ───────────────────────────────────────────────
+  { text: "THE GEM CANNOT BE POLISHED WITHOUT FRICTION NOR MAN PERFECTED WITHOUT TRIALS", author: "Chinese Proverb" },
+  { text: "WHEN YOU FEEL LIKE QUITTING THINK ABOUT WHY YOU STARTED", author: "Anonymous" },
+  { text: "TOUGH TIMES NEVER LAST BUT TOUGH PEOPLE DO", author: "Robert H. Schuller" },
+  { text: "A RIVER CUTS THROUGH ROCK NOT BECAUSE OF ITS POWER BUT BECAUSE OF ITS PERSISTENCE", author: "James N. Watkins" },
+  { text: "THE DIFFERENCE BETWEEN A STUMBLING BLOCK AND A STEPPING STONE IS HOW HIGH YOU RAISE YOUR FOOT", author: "Benny Lewis" },
+  { text: "IT IS NOT WHETHER YOU GET KNOCKED DOWN IT IS WHETHER YOU GET UP", author: "Vince Lombardi" },
+  { text: "EVERY ADVERSITY EVERY FAILURE EVERY HEARTACHE CARRIES WITH IT THE SEED OF AN EQUAL OR GREATER BENEFIT", author: "Napoleon Hill" },
+  { text: "OUR GREATEST WEAKNESS LIES IN GIVING UP THE MOST CERTAIN WAY TO SUCCEED IS ALWAYS TO TRY JUST ONE MORE TIME", author: "Thomas Edison" },
+  { text: "I AM NOT A PRODUCT OF MY CIRCUMSTANCES I AM A PRODUCT OF MY DECISIONS", author: "Stephen Covey" },
+  { text: "THE DARKEST HOUR HAS ONLY SIXTY MINUTES", author: "Morris Mandel" },
+  { text: "DO NOT WATCH THE CLOCK DO WHAT IT DOES KEEP GOING", author: "Sam Levenson" },
+  { text: "STRENGTH GROWS IN THE MOMENTS WHEN YOU THINK YOU CANNOT GO ON BUT YOU KEEP GOING ANYWAY", author: "Anonymous" },
+  { text: "YOU JUST CANNOT BEAT THE PERSON WHO NEVER GIVES UP", author: "Babe Ruth" },
+  // ─── Creativity & art ───────────────────────────────────────────────────────
+  { text: "CREATIVITY IS CONNECTING THINGS THAT HAVE NOT BEEN CONNECTED BEFORE", author: "Steve Jobs" },
+  { text: "AN ARTIST CANNOT FAIL IT IS A SUCCESS TO BE ONE", author: "Charles Horton Cooley" },
+  { text: "THE CREATIVE ADULT IS THE CHILD WHO HAS SURVIVED", author: "Ursula K. Le Guin" },
+  { text: "CREATIVITY TAKES COURAGE", author: "Henri Matisse" },
+  { text: "THE WORST ENEMY OF CREATIVITY IS SELF DOUBT", author: "Sylvia Plath" },
+  { text: "LOGIC WILL GET YOU FROM A TO Z IMAGINATION WILL GET YOU EVERYWHERE", author: "Albert Einstein" },
+  { text: "EVERY ARTIST DIPS HIS BRUSH IN HIS OWN SOUL AND PAINTS HIS OWN NATURE INTO HIS PICTURES", author: "Henry Ward Beecher" },
+  { text: "MUSIC GIVES A SOUL TO THE UNIVERSE WINGS TO THE MIND FLIGHT TO THE IMAGINATION AND LIFE TO EVERYTHING", author: "Plato" },
+  { text: "PAINTING IS POETRY THAT IS SEEN RATHER THAN FELT AND POETRY IS PAINTING THAT IS FELT RATHER THAN SEEN", author: "Leonardo da Vinci" },
+  { text: "CREATIVITY IS THE POWER TO CONNECT THE SEEMINGLY UNCONNECTED", author: "William Plomer" },
+  // ─── Health & wellbeing ─────────────────────────────────────────────────────
+  { text: "TO KEEP THE BODY IN GOOD HEALTH IS A DUTY OTHERWISE WE SHALL NOT BE ABLE TO KEEP OUR MIND STRONG AND CLEAR", author: "Buddha" },
+  { text: "TAKE CARE OF YOUR BODY IT IS THE ONLY PLACE YOU HAVE TO LIVE", author: "Jim Rohn" },
+  { text: "THE GROUNDWORK FOR ALL HAPPINESS IS GOOD HEALTH", author: "Leigh Hunt" },
+  { text: "THE FIRST WEALTH IS HEALTH", author: "Ralph Waldo Emerson" },
+  { text: "IT IS HEALTH THAT IS REAL WEALTH AND NOT PIECES OF GOLD AND SILVER", author: "Mahatma Gandhi" },
+  { text: "SLEEP IS THE BEST MEDITATION", author: "Dalai Lama" },
+  { text: "ALMOST EVERYTHING WILL WORK AGAIN IF YOU UNPLUG IT FOR A FEW MINUTES INCLUDING YOU", author: "Anne Lamott" },
+  { text: "REST WHEN YOU ARE WEARY REFRESH AND RENEW YOURSELF YOUR BODY YOUR MIND YOUR SPIRIT AND THEN GET BACK TO WORK", author: "Ralph Marston" },
+  // ─── Morning & daily life ───────────────────────────────────────────────────
+  { text: "WITH THE NEW DAY COMES NEW STRENGTH AND NEW THOUGHTS", author: "Eleanor Roosevelt" },
+  { text: "TODAY IS A GOOD DAY TO HAVE A GOOD DAY", author: "Anonymous" },
+  { text: "EACH MORNING WE ARE BORN AGAIN WHAT WE DO TODAY IS WHAT MATTERS MOST", author: "Buddha" },
+  { text: "AN EARLY MORNING WALK IS A BLESSING FOR THE WHOLE DAY", author: "Henry David Thoreau" },
+  { text: "THE SECRET OF YOUR FUTURE IS HIDDEN IN YOUR DAILY ROUTINE", author: "Mike Murdock" },
+  { text: "RISE UP START FRESH SEE THE BRIGHT OPPORTUNITY IN EACH NEW DAY", author: "Anonymous" },
+  { text: "HOW YOU START YOUR MORNING SETS THE TONE FOR YOUR ENTIRE DAY", author: "Anonymous" },
+  { text: "I GET UP EVERY MORNING DETERMINED TO BOTH CHANGE THE WORLD AND HAVE ONE HELL OF A GOOD TIME", author: "E.B. White" },
+  { text: "BEGIN EACH DAY AS IF IT WERE ON PURPOSE", author: "Anonymous" },
+  { text: "THE MORNING BREEZE HAS SECRETS TO TELL YOU DO NOT GO BACK TO SLEEP", author: "Rumi" },
+  // ─── Family & home ──────────────────────────────────────────────────────────
+  { text: "IN FAMILY LIFE LOVE IS THE OIL THAT EASES FRICTION THE CEMENT THAT BINDS CLOSER TOGETHER AND THE MUSIC THAT BRINGS HARMONY", author: "Friedrich Nietzsche" },
+  { text: "THE FAMILY IS ONE OF NATURE S MASTERPIECES", author: "George Santayana" },
+  { text: "HOME IS NOT A PLACE IT IS A FEELING", author: "Cecelia Ahern" },
+  { text: "FAMILY LIKE BRANCHES ON A TREE WE ALL GROW IN DIFFERENT DIRECTIONS YET OUR ROOTS REMAIN AS ONE", author: "Anonymous" },
+  { text: "THE BOND THAT LINKS YOUR TRUE FAMILY IS NOT ONE OF BLOOD BUT OF RESPECT AND JOY IN EACH OTHER S LIFE", author: "Richard Bach" },
+  { text: "IN TIME OF TEST FAMILY IS BEST", author: "Burmese Proverb" },
+  { text: "CALL IT A CLAN CALL IT A NETWORK CALL IT A TRIBE CALL IT A FAMILY WHATEVER YOU CALL IT WHOEVER YOU ARE YOU NEED ONE", author: "Jane Howard" },
+  // ─── Food & celebration ─────────────────────────────────────────────────────
+  { text: "FIRST WE EAT THEN WE DO EVERYTHING ELSE", author: "M.F.K. Fisher" },
+  { text: "FOOD IS SYMBOLIC OF LOVE WHEN WORDS ARE INADEQUATE", author: "Alan D. Wolfelt" },
+  { text: "ALL HAPPINESS DEPENDS ON A LEISURELY BREAKFAST", author: "John Gunther" },
+  { text: "THERE IS NO LOVE SINCERER THAN THE LOVE OF FOOD", author: "George Bernard Shaw" },
+  { text: "ONE CANNOT THINK WELL LOVE WELL SLEEP WELL IF ONE HAS NOT DINED WELL", author: "Virginia Woolf" },
+  { text: "A RECIPE HAS NO SOUL YOU AS THE COOK MUST BRING SOUL TO THE RECIPE", author: "Thomas Keller" },
+  { text: "THE SECRET INGREDIENT IS ALWAYS LOVE", author: "Anonymous" },
 ];
 
 export function makeCryptogramFromQuote(quote: QuoteEntry): CryptogramResult {
@@ -817,7 +1086,13 @@ export function makeCrossword(words: string[], size: number): CrosswordResult {
   }
 
   // Last resort: place one word both H and V centered at the grid center.
-  const anyWord = allWords[0] || "PUZZLE";
+  // Use a curated pool of diverse 5-7 letter words rather than always "PUZZLE".
+  const FALLBACK_POOL = [
+    "MASTER","CLEVER","BRIGHT","WISDOM","RIDDLE","SEARCH","FIGURE","UNLOCK",
+    "REASON","SAFARI","VOYAGE","SUMMIT","FOREST","WONDER","STELLAR","METEOR",
+    "BEACON","SIGNAL","PRESTO","COBALT",
+  ];
+  const anyWord = allWords[0] || FALLBACK_POOL[Math.floor(Math.random() * FALLBACK_POOL.length)];
   const lhCol = Math.max(0, m - Math.floor(anyWord.length / 2));
   const lvRow = Math.max(0, m - Math.floor(anyWord.length / 2));
   const lastGrid: string[][] = Array.from({ length: size }, () => Array(size).fill("#"));

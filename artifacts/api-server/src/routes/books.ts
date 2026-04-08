@@ -45,8 +45,9 @@ router.post("/books", async (req, res) => {
       dedication: data.dedication ?? null,
       difficultyMode: data.difficultyMode ?? "uniform",
       challengeDays: data.challengeDays ?? null,
+      keywords: (data.keywords as string[]) ?? [],
     }).returning();
-    res.status(201).json({ ...book, words: book.words ?? [] });
+    res.status(201).json({ ...book, words: book.words ?? [], keywords: book.keywords ?? [] });
   } catch (err) {
     req.log.error({ err }, "Failed to create book");
     res.status(400).json({ error: "Failed to create book" });
@@ -89,10 +90,11 @@ router.put("/books/:id", async (req, res) => {
       dedication: data.dedication ?? null,
       difficultyMode: data.difficultyMode ?? "uniform",
       challengeDays: data.challengeDays ?? null,
+      keywords: (data.keywords as string[]) ?? [],
       updatedAt: new Date(),
     }).where(eq(booksTable.id, id)).returning();
     if (!book) { res.status(404).json({ error: "Book not found" }); return; }
-    res.json({ ...book, words: book.words ?? [] });
+    res.json({ ...book, words: book.words ?? [], keywords: book.keywords ?? [] });
   } catch (err) {
     req.log.error({ err }, "Failed to update book");
     res.status(500).json({ error: "Failed to update book" });

@@ -58,6 +58,7 @@ export interface BuildOpts {
   dedication?: string;
   difficultyMode?: string;
   challengeDays?: number;
+  keywords?: string[];
 }
 
 export interface BuildResult {
@@ -126,7 +127,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         puzzles.push(makeMaze(LP ? 12 : 15, LP ? 12 : 15));
         break;
       case "Number Search":
-        puzzles.push(makeNumberSearch(gsz, wordBank));
+        puzzles.push(makeNumberSearch(gsz, wordBank, i));
         break;
       case "Cryptogram": {
         if (cryptoQIdx >= cryptoQuotePool.length) {

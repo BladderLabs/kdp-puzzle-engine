@@ -19,7 +19,8 @@ export function EditBook() {
         id: bookId,
         data: {
           ...values,
-          words: values.words?.split("\n").map(w => w.trim()).filter(Boolean)
+          words: values.words?.split("\n").map(w => w.trim()).filter(Boolean),
+          keywords: values.keywords?.split("\n").map(k => k.trim()).filter(Boolean),
         }
       });
       toast({ title: "Project saved!" });
@@ -34,7 +35,10 @@ export function EditBook() {
 
   const initialValues = {
     ...book,
-    words: book.words?.join("\n") || ""
+    words: book.words?.join("\n") || "",
+    keywords: Array.isArray((book as Record<string, unknown>).keywords)
+      ? ((book as Record<string, unknown>).keywords as string[]).join("\n")
+      : "",
   };
 
   return (

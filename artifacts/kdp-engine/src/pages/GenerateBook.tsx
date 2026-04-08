@@ -320,6 +320,13 @@ export function GenerateBook() {
                 pass: (book.backDescription || "").trim().split(/\s+/).filter(Boolean).length >= 80,
                 fix: "Click the description field in Book Setup to auto-fill a template",
               },
+              {
+                label: "At least 3 KDP keywords set",
+                pass: Array.isArray((book as Record<string, unknown>).keywords)
+                  ? ((book as Record<string, unknown>).keywords as string[]).length >= 3
+                  : false,
+                fix: "Add keywords in Book Setup → KDP Keywords field, or use the AI pipeline to auto-generate 7",
+              },
             ];
             const allPass = checks.every(c => c.pass);
             return (

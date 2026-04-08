@@ -222,6 +222,7 @@ router.post("/agents/create-book", async (req, res) => {
       dedication: null,
       difficultyMode: "uniform",
       challengeDays: null,
+      keywords: market.keywords ?? [],
     }).returning();
 
     req.log.info({ bookId: book.id, title: book.title }, "Book assembled and saved");
