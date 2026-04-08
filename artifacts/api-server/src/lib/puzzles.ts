@@ -1126,7 +1126,7 @@ export function makeCrossword(words: string[], size: number, _isSeedFallback = f
       ["HEART","EARTH","SHARE","HASTE","TEARS","HARES","ASTER"],
       ["POWER","LOWER","TOWER","BOWER","MOWER","SOWER","ROWEL"],
     ];
-    for (const seedSet of SEED_SETS) {
+    for (const seedSet of shuf(SEED_SETS)) {
       const r = makeCrossword(seedSet, size, true);
       // Require at least 3 words placed for a quality crossword
       if (r.across.length + r.down.length >= 3) return r;

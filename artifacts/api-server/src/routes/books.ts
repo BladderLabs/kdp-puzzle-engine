@@ -45,7 +45,7 @@ router.post("/books", async (req, res) => {
       dedication: data.dedication ?? null,
       difficultyMode: data.difficultyMode ?? "uniform",
       challengeDays: data.challengeDays ?? null,
-      keywords: (data.keywords as string[]) ?? [],
+      keywords: ((data.keywords as string[]) ?? []).slice(0, 7),
     }).returning();
     res.status(201).json({ ...book, words: book.words ?? [], keywords: book.keywords ?? [] });
   } catch (err) {
@@ -59,7 +59,7 @@ router.get("/books/:id", async (req, res) => {
     const { id } = GetBookParams.parse({ id: Number(req.params.id) });
     const [book] = await db.select().from(booksTable).where(eq(booksTable.id, id));
     if (!book) { res.status(404).json({ error: "Book not found" }); return; }
-    res.json({ ...book, words: book.words ?? [] });
+    res.json({ ...book, words: book.words ?? [], keywords: book.keywords ?? [] });
   } catch (err) {
     req.log.error({ err }, "Failed to get book");
     res.status(500).json({ error: "Failed to get book" });
@@ -90,7 +90,7 @@ router.put("/books/:id", async (req, res) => {
       dedication: data.dedication ?? null,
       difficultyMode: data.difficultyMode ?? "uniform",
       challengeDays: data.challengeDays ?? null,
-      keywords: (data.keywords as string[]) ?? [],
+      keywords: ((data.keywords as string[]) ?? []).slice(0, 7),
       updatedAt: new Date(),
     }).where(eq(booksTable.id, id)).returning();
     if (!book) { res.status(404).json({ error: "Book not found" }); return; }

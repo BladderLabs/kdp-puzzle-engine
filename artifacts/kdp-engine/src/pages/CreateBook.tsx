@@ -20,7 +20,7 @@ export function CreateBook() {
         data: {
           ...values,
           words: values.words?.split("\n").map(w => w.trim()).filter(Boolean),
-          keywords: values.keywords?.split("\n").map(k => k.trim()).filter(Boolean),
+          keywords: values.keywords?.split("\n").map(k => k.trim()).filter(Boolean).slice(0, 7),
         }
       });
       toast({ title: "Project created!" });
