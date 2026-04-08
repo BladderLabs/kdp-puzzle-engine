@@ -98,33 +98,51 @@ export async function buildInteriorHTML(opts: BuildOpts): Promise<BuildResult> {
   const categoryBank = opts.wordCategory && WORD_BANKS[opts.wordCategory] ? WORD_BANKS[opts.wordCategory] : null;
   const wordBank = customWords || categoryBank || WORD_BANKS.General;
 
-  // ── Strict per-book word deduplication (expanded banks only) ───────────────
-  // When an expanded bank (≥ 80 words, added by expandNicheWordBank in the pipeline)
-  // is available, each word is assigned to at most ONE puzzle. A Set tracks used
-  // words; once the pool is exhausted, all remaining puzzles switch back to the
-  // original per-puzzle random selection so behavior is preserved, not silently
-  // degraded. For small banks (< 80 words) or once the pool runs dry, the original
-  // shuf(wordBank).slice(n) path is used exactly as before.
+  // ── Per-book word deduplication for expanded banks ─────────────────────────
+  // For books with an expanded bank (≥ 80 words from expandNicheWordBank), we track
+  // which words have actually been PLACED in prior puzzles (not just drawn). Only
+  // placed words are consumed from the unique pool, so unplaced words remain
+  // available for future puzzles. This maximises the unique phase of the book.
+  //
+  // When the unique pool is insufficient for a puzzle:
+  //   - All remaining unique words are included first
+  //   - Shortfall slots are filled from the bank in its original index order
+  //     (deterministic — not per-puzzle random — so shortfall words appear in a
+  //     consistent, predictable pattern rather than arbitrary repeats)
+  //
+  // For small banks (< 80 words), the original shuf(wordBank).slice() behavior is
+  // preserved exactly — zero regression.
   const hasExpandedBank = wordBank.length >= 80;
   const usedWords = new Set<string>();
-  let dedupePoolExhausted = false;
+  let shortfallIdx = 0; // deterministic index into wordBank for shortfall fills
 
-  function drawWordSet(n: number): string[] {
+  /**
+   * Draws `n` candidate words for a puzzle.
+   * - Expanded bank: unique words first; shortfall filled deterministically.
+   * - Small bank: original shuf().slice() behavior.
+   * Must call markPlaced() after puzzle generation to update usedWords.
+   */
+  function drawCandidates(n: number): string[] {
     const cap = Math.min(n, wordBank.length);
-    // Fallback path: original per-puzzle random selection (preserves prior behavior)
-    if (!hasExpandedBank || dedupePoolExhausted) {
-      return shuf(wordBank).slice(0, cap);
-    }
-    // Strict dedup: only words not yet used across this book
+    if (!hasExpandedBank) return shuf(wordBank).slice(0, cap);
+
     const available = wordBank.filter(w => !usedWords.has(w));
-    if (available.length < cap) {
-      // Pool exhausted — switch all remaining puzzles to original behavior
-      dedupePoolExhausted = true;
-      return shuf(wordBank).slice(0, cap);
+    const uniqueDrawn = shuf(available).slice(0, cap);
+    if (uniqueDrawn.length === cap) return uniqueDrawn;
+
+    // Shortfall: append words from bank in original index order (deterministic)
+    const shortfall = cap - uniqueDrawn.length;
+    const fills: string[] = [];
+    for (let f = 0; f < shortfall; f++) {
+      fills.push(wordBank[shortfallIdx % wordBank.length]);
+      shortfallIdx++;
     }
-    const drawn = shuf(available).slice(0, cap);
-    drawn.forEach(w => usedWords.add(w));
-    return drawn;
+    return [...uniqueDrawn, ...fills];
+  }
+
+  /** Marks placed words as used so they are not re-drawn in future puzzles. */
+  function markPlaced(words: string[]): void {
+    if (hasExpandedBank) words.forEach(w => usedWords.add(w));
   }
 
   // Cryptogram: deterministic quote index seeded by bookSeed + puzzleIndex (no random shuffle)
@@ -149,9 +167,13 @@ export async function buildInteriorHTML(opts: BuildOpts): Promise<BuildResult> {
   for (let i = 0; i < PC; i++) {
     const pDiff = getPuzzleDiff(i);
     switch (PT) {
-      case "Word Search":
-        puzzles.push(makeWordSearch(drawWordSet(wpp), gsz));
+      case "Word Search": {
+        const candidates = drawCandidates(wpp);
+        const ws = makeWordSearch(candidates, gsz);
+        markPlaced(ws.placed); // only placed words consumed from unique pool
+        puzzles.push(ws);
         break;
+      }
       case "Sudoku":
         puzzles.push(makeSudoku(pDiff));
         break;
@@ -165,11 +187,22 @@ export async function buildInteriorHTML(opts: BuildOpts): Promise<BuildResult> {
         puzzles.push(makeCryptogram(cryptoQIdx++, bookSeed));
         break;
       }
-      case "Crossword":
-        puzzles.push(makeCrossword(drawWordSet(20), LP ? 11 : 13));
+      case "Crossword": {
+        const cxCandidates = drawCandidates(20);
+        const cx = makeCrossword(cxCandidates, LP ? 11 : 13);
+        if (cx) {
+          // Track placed words from crossword across/down entries
+          markPlaced([...cx.across.map(c => c.answer), ...cx.down.map(c => c.answer)]);
+        }
+        puzzles.push(cx);
         break;
-      default:
-        puzzles.push(makeWordSearch(drawWordSet(wpp), gsz));
+      }
+      default: {
+        const defCandidates = drawCandidates(wpp);
+        const defWs = makeWordSearch(defCandidates, gsz);
+        markPlaced(defWs.placed);
+        puzzles.push(defWs);
+      }
     }
   }
 
