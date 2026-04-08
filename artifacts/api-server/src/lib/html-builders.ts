@@ -130,7 +130,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         puzzles.push(makeMaze(LP ? 12 : 15, LP ? 12 : 15));
         break;
       case "Number Search":
-        puzzles.push(makeNumberSearch(gsz, wordBank, i));
+        puzzles.push(makeNumberSearch(gsz, wordBank, i, bookSeed));
         break;
       case "Cryptogram": {
         puzzles.push(makeCryptogram(cryptoQIdx++, bookSeed));

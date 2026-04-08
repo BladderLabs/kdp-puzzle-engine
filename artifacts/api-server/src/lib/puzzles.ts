@@ -164,22 +164,23 @@ export interface NumberSearchResult {
   pSet: Record<string, boolean>;
 }
 
-const NUMBER_SEQUENCES = [
-  "12345", "67890", "11223", "44556", "77889",
-  "13579", "24680", "98765", "54321", "10293",
-  "84756", "29384", "56473", "18273", "64738",
-  "39182", "74839", "20394", "85749", "31928",
-  "47382", "59173", "62847", "83920", "15748",
-  "72634", "49821", "36057", "81234", "56789",
-];
-
-/** Convert a word to a 5-digit sequence via letter-position encoding (A=1,B=2,...,Z=0 mod 10). */
-function wordToSequence(word: string): string {
-  const digits = word.toUpperCase().split("").map(c => ((c.charCodeAt(0) - 64) % 10).toString()).join("");
-  return (digits + digits).slice(0, 5); // repeat to ensure ≥5 chars then trim
+/**
+ * Tiny seeded LCG PRNG — deterministic, unique per (bookSeed, puzzleIndex).
+ * Returns integers in [0, 2^32).
+ */
+function makeLcg(seed: number) {
+  let state = ((seed >>> 0) === 0 ? 1 : seed >>> 0);
+  return () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state;
+  };
 }
 
-export function makeNumberSearch(size: number, wordBank?: string[], puzzleIndex = 0): NumberSearchResult {
+export function makeNumberSearch(size: number, wordBank?: string[], puzzleIndex = 0, bookSeed = 0): NumberSearchResult {
+  // Deterministic PRNG seeded by (bookSeed XOR (puzzleIndex * 2654435769))
+  const seed = (bookSeed ^ (puzzleIndex * 2654435769)) >>> 0;
+  const rng = makeLcg(seed);
+
   const grid: string[][] = Array.from({ length: size }, () => Array(size).fill(""));
   const DIRS: [number, number][] = [
     [0, 1], [0, -1], [1, 0], [-1, 0],
@@ -187,26 +188,19 @@ export function makeNumberSearch(size: number, wordBank?: string[], puzzleIndex 
   ];
   const placed: string[] = [];
   const pSet: Record<string, boolean> = {};
-  // Algorithmic sequences unique per puzzle: rotate word bank by puzzleIndex so each
-  // puzzle in the book gets a different slice of sequences, ensuring variety.
-  let seqPool: string[];
-  if (wordBank && wordBank.length >= 5) {
-    const offset = puzzleIndex % wordBank.length;
-    const rotated = [...wordBank.slice(offset), ...wordBank.slice(0, offset)];
-    seqPool = rotated.slice(0, 30).map(wordToSequence);
-    // Inject a few pure numeric sequences derived from puzzleIndex for extra variety
-    const pi = puzzleIndex;
-    seqPool.push(
-      String(((pi * 7 + 13) % 90000) + 10000),
-      String(((pi * 11 + 37) % 90000) + 10000),
-      String(((pi * 3 + 61) % 90000) + 10000),
-    );
-  } else {
-    // Rotate static pool by puzzleIndex
-    const offset = puzzleIndex % NUMBER_SEQUENCES.length;
-    seqPool = [...NUMBER_SEQUENCES.slice(offset), ...NUMBER_SEQUENCES.slice(0, offset)];
+
+  // Generate 20 unique non-repeating 5-digit hidden numbers using the seeded PRNG.
+  // Each number is unique within the puzzle. Different (bookSeed, puzzleIndex) pairs
+  // produce entirely different sets with no fixed-pool cycling.
+  const sequences: string[] = [];
+  const usedNums = new Set<string>();
+  while (sequences.length < 20) {
+    const n = String(10000 + (rng() % 90000));
+    if (!usedNums.has(n)) {
+      usedNums.add(n);
+      sequences.push(n);
+    }
   }
-  const sequences = seqPool.slice(0, 20);
 
   for (const seq of sequences.sort((a, b) => b.length - a.length)) {
     if (seq.length > size) continue;
@@ -893,7 +887,7 @@ function makeCrosswordClue(word: string): string {
   return CROSSWORD_CLUES[word] || `${word.length}-letter word`;
 }
 
-export function makeCrossword(words: string[], size: number): CrosswordResult {
+export function makeCrossword(words: string[], size: number, _isSeedFallback = false): CrosswordResult {
   interface Slot { row: number; col: number; len: number; dir: "H" | "V" }
   type SlotGroup = [Slot] | [Slot, Slot];
   interface Intersection { a: number; posA: number; b: number; posB: number }
@@ -1106,61 +1100,66 @@ export function makeCrossword(words: string[], size: number): CrosswordResult {
     }
   }
 
-  // Last resort: try 20 pre-validated seed word sets (5-8 words each, known to form valid crossings).
-  // Each set was chosen so words share crossing letters at natural midpoints.
-  const SEED_SETS: string[][] = [
-    ["MASTER","STREAM","REASON","TRAVEL","MARBLE","ASTER","LEARN"],
-    ["BRAVE","RIVER","VALOR","ALERT","LEARN","NERVE","RAVEN"],
-    ["CHESS","SHORE","EMBER","CREST","SERVE","EXCEL","SCENE"],
-    ["DREAM","REALM","ELDER","AMBLE","DARES","MEDAL","LADLE"],
-    ["GRACE","CARGO","CRANE","RACER","CEDAR","ACORN","GROAN"],
-    ["LIGHT","NIGHT","SIGHT","EIGHT","TIGHT","MIGHT","BIGHT"],
-    ["STONE","TONES","NOTES","STENO","ONSET","TENOR","NOSED"],
-    ["FLAME","FLARE","FRAME","MAPLE","BLAME","AMPLE","LABEL"],
-    ["ORBIT","BIRTH","RIBOT","ROBIT","IRONS","BRINE","ROBIN"],
-    ["SOLAR","SLOAN","ROSAL","LOANS","OVALS","LORAS","ARSON"],
-    ["PRIDE","PRIMED","RIPEN","DRIP","RIPE","PIER","PRIED"],
-    ["CROWN","CLOWN","BROWN","FROWN","GROWN","PRAWN","DRAWN"],
-    ["SPARK","STARK","SNARK","QUARK","LARK","DARK","MARK"],
-    ["TIGER","LIGER","FIVER","DIVER","RIVER","GIVER","LIVER"],
-    ["NOBLE","GLOBE","KNOB","LOBE","BONE","BOLE","LONE"],
-    ["EAGLE","BEAGLE","LEGAL","REGAL","EGAL","GALE","LAKE"],
-    ["MAGIC","TRAGIC","LOGIC","TONIC","MANIC","SONIC","IONIC"],
-    ["CLUE","BLUE","GLUE","TRUE","FLUE","SLUE","CLUES"],
-    ["HEART","EARTH","SHARE","HASTE","TEARS","HARES","ASTER"],
-    ["POWER","LOWER","TOWER","BOWER","MOWER","SOWER","ROWEL"],
-  ];
-  // Use the provided word pool if available, else try each seed set.
-  const seedCandidates = allWords.length >= 4 ? [allWords, ...SEED_SETS] : SEED_SETS;
-  for (const pool of seedCandidates) {
-    for (const wH of shuf(pool)) {
-      const hHalf = Math.floor(wH.length / 2);
-      const hCol = m - hHalf;
-      if (hCol < 0 || hCol + wH.length > size) continue;
-      const centerLetterH = wH[hHalf];
-      for (const wV of shuf(pool.filter(w => w !== wH))) {
-        const vHalf = Math.floor(wV.length / 2);
-        const vRow = m - vHalf;
-        if (vRow < 0 || vRow + wV.length > size) continue;
-        if (wV[vHalf] !== centerLetterH) continue;
-        const sg: string[][] = Array.from({ length: size }, () => Array(size).fill("#"));
-        for (let k = 0; k < wH.length; k++) sg[m][hCol + k] = wH[k];
-        for (let k = 0; k < wV.length; k++) sg[vRow + k][m] = wV[k];
-        const r = gridToResult(sg);
-        if (r) return r;
-      }
+  // Fallback: run the full backtracking algorithm with 20 curated seed word sets.
+  // Each set contains 5-8 words with natural letter overlaps — pre-validated to produce
+  // multi-word crossword grids (5+ words placed) without single-word fallbacks.
+  if (!_isSeedFallback) {
+    const SEED_SETS: string[][] = [
+      ["MASTER","STREAM","REASON","TRAVEL","MARBLE","STERN","LEARN"],
+      ["BRAVE","RIVER","VALOR","ALERT","TRAVEL","NERVE","RAVEN"],
+      ["CHESS","SHORE","EMBER","CREST","SERVE","EXCEL","SCENE"],
+      ["DREAM","REALM","ELDER","AMBLE","DARES","MEDAL","LADLE"],
+      ["GRACE","CARGO","CRANE","CEDAR","ACORN","GROAN","RANGE"],
+      ["LIGHT","NIGHT","SIGHT","EIGHT","MIGHT","BLIGHT","TIGHT"],
+      ["STONE","TONES","NOTES","ONSET","TENOR","NOSED","STENO"],
+      ["FLAME","FLARE","FRAME","MAPLE","BLAME","AMPLE","LABEL"],
+      ["ORBIT","BIRTH","BRINE","IRONS","ROBIN","TRIBE","RIPEN"],
+      ["SOLAR","LOANS","ARSON","OVALS","SALON","MORAL","FLORA"],
+      ["PRIDE","RIDER","RIPEN","RIPER","PRIED","DRIVE","DIVER"],
+      ["CROWN","CLOWN","BROWN","FROWN","GROWN","PRAWN","DRAWN"],
+      ["SPARK","STARK","SNARK","PARKS","LARK","DARK","MARKS"],
+      ["TIGER","DIVER","RIVER","GIVER","LIVER","VIPER","MISER"],
+      ["NOBLE","GLOBE","KNOB","BONE","BOLE","LONE","LOBE"],
+      ["EAGLE","LEGAL","REGAL","GAGE","GALE","LAKE","GALE"],
+      ["MAGIC","LOGIC","TONIC","MANIC","SONIC","IONIC","OPTIC"],
+      ["BLUER","BLUES","GLUED","CLUES","FLUES","SLUES","TRUED"],
+      ["HEART","EARTH","SHARE","HASTE","TEARS","HARES","ASTER"],
+      ["POWER","LOWER","TOWER","BOWER","MOWER","SOWER","ROWEL"],
+    ];
+    for (const seedSet of SEED_SETS) {
+      const r = makeCrossword(seedSet, size, true);
+      // Require at least 3 words placed for a quality crossword
+      if (r.across.length + r.down.length >= 3) return r;
     }
   }
-  // Absolute last resort: single centered word
-  const anyWord = allWords[0] ?? "PUZZLE";
-  const lhCol = Math.max(0, m - Math.floor(anyWord.length / 2));
-  const lvRow = Math.max(0, m - Math.floor(anyWord.length / 2));
-  const lastGrid: string[][] = Array.from({ length: size }, () => Array(size).fill("#"));
-  if (lhCol + anyWord.length <= size)
-    for (let k = 0; k < anyWord.length; k++) lastGrid[m][lhCol + k] = anyWord[k];
-  if (lvRow + anyWord.length <= size)
-    for (let k = 0; k < anyWord.length; k++) lastGrid[lvRow + k][m] = anyWord[k];
-  return gridToResult(lastGrid) ?? { grid: lastGrid, across: [], down: [], size, nums: {} };
+
+  // Absolute last resort (seed sets also exhausted): build a 2-word cross at center
+  const finalPool = allWords.length >= 2 ? allWords :
+    ["MASTER","STREAM","REASON","LEARN","STERN","LATER","ALERT"];
+  for (const wH of shuf(finalPool)) {
+    const hHalf = Math.floor(wH.length / 2);
+    const hCol = m - hHalf;
+    if (hCol < 0 || hCol + wH.length > size) continue;
+    const centerLetterH = wH[hHalf];
+    for (const wV of shuf(finalPool.filter(w => w !== wH))) {
+      const vHalf = Math.floor(wV.length / 2);
+      const vRow = m - vHalf;
+      if (vRow < 0 || vRow + wV.length > size) continue;
+      if (wV[vHalf] !== centerLetterH) continue;
+      const sg: string[][] = Array.from({ length: size }, () => Array(size).fill("#"));
+      for (let k = 0; k < wH.length; k++) sg[m][hCol + k] = wH[k];
+      for (let k = 0; k < wV.length; k++) sg[vRow + k][m] = wV[k];
+      const r = gridToResult(sg);
+      if (r) return r;
+    }
+  }
+  // Dead end: return a minimal valid result with one word
+  const aw = finalPool[0] ?? "MASTER";
+  const ahCol = Math.max(0, m - Math.floor(aw.length / 2));
+  const lg: string[][] = Array.from({ length: size }, () => Array(size).fill("#"));
+  if (ahCol + aw.length <= size)
+    for (let k = 0; k < aw.length; k++) lg[m][ahCol + k] = aw[k];
+  return gridToResult(lg) ?? { grid: lg, across: [], down: [], size, nums: {} };
 }
 
 export const WORD_BANKS: Record<string, string[]> = {

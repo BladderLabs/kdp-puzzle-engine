@@ -452,6 +452,11 @@ export function GenerateBook() {
                     const zip = new JSZip();
                     zip.file(`${bookSlug}-interior.pdf`, interiorBlobRef.current);
                     zip.file(`${bookSlug}-cover.pdf`, coverBlobRef.current);
+                    // Add KDP listing companion files
+                    const desc = (book as Record<string, unknown>).backDescription as string | undefined;
+                    const kws = (book as Record<string, unknown>).keywords as string[] | undefined;
+                    if (desc) zip.file("listing-description.txt", desc);
+                    if (Array.isArray(kws) && kws.length > 0) zip.file("keywords.txt", kws.join("\n"));
                     const zipBlob = await zip.generateAsync({ type: "blob" });
                     downloadBlob(zipBlob, `${bookSlug}-kdp-bundle.zip`);
                   }}
