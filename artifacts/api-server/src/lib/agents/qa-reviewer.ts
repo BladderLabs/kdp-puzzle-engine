@@ -46,8 +46,13 @@ const QAResultSchema = z.object({
   needs_revision: z.boolean(),
 });
 
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]+>/g, " ").replace(/&[a-z]+;/gi, " ").replace(/\s+/g, " ").trim();
+}
+
 export async function runQAReviewer(spec: QASpec): Promise<QAResult> {
-  const descWordCount = spec.backDescription.trim().split(/\s+/).filter(Boolean).length;
+  const plainDesc = stripHtml(spec.backDescription);
+  const descWordCount = plainDesc.trim().split(/\s+/).filter(Boolean).length;
   const titleWordCount = spec.title.trim().split(/\s+/).filter(Boolean).length;
 
   const PLACEHOLDER_PATTERNS = ["lorem ipsum", "placeholder", "tbd", "your title here", "insert", "example text"];
@@ -132,7 +137,7 @@ Book specification:
 - Title (${titleWordCount} words): "${spec.title}"
 - Subtitle: "${spec.subtitle}"
 - Author: "${spec.author}"
-- Back description (${descWordCount} words): "${spec.backDescription}"
+- Back description (${descWordCount} words, HTML stripped): "${plainDesc}"
 - Puzzle count: ${spec.puzzleCount}
 - Keywords (${spec.keywords.length}): ${spec.keywords.join(", ")}
 - Has cover image: ${spec.hasImage}

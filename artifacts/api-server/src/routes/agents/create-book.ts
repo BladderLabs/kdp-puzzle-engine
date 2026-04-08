@@ -768,7 +768,7 @@ router.post("/agents/create-book", async (req, res) => {
       qaFailed,
       qaPassed: finalQAPassed,
       qaIssues: finalQAIssues,
-      descWordCount: finalBackDescription.trim().split(/\s+/).filter(Boolean).length,
+      descWordCount: finalBackDescription.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().split(/\s+/).filter(Boolean).length,
       // Series Arc from Series Arc Planner
       seriesArc: seriesArc ?? null,
       // Book Intelligence Report

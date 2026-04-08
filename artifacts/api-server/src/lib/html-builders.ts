@@ -1369,7 +1369,17 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       bodyText = remainder;
     }
   }
-  const backDesc = escapeHtml(bodyText);
+  // bodyText may contain KDP HTML tags (<p>, <b>, <ul>, <li>) intended for the Amazon product page.
+  // For the print PDF back cover we strip all HTML and render plain text — the HTML version is stored
+  // in the DB and used directly when the seller pastes into KDP's description field.
+  const plainBodyText = bodyText
+    .replace(/<li>/gi, "• ")
+    .replace(/<\/li>/gi, " ")
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&[a-z]+;/gi, " ")
+    .replace(/\s+/g, " ").trim();
+  const backDesc = escapeHtml(plainBodyText);
 
   const lpMeta = opts.largePrint !== false ? " | Large Print" : "";
   const meta = `${PC} ${opts.puzzleType || "Word Search"} Puzzles | ${opts.difficulty || "Medium"}${lpMeta}`;
