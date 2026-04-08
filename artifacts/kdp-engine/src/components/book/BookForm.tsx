@@ -111,6 +111,7 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
       dedication: initialValues?.dedication || "",
       difficultyMode: initialValues?.difficultyMode || "uniform",
       challengeDays: initialValues?.challengeDays ?? undefined,
+      seriesName: initialValues?.seriesName || "",
     }
   });
 
