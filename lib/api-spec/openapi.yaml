@@ -494,7 +494,7 @@ components:
           type: string
         puzzleType:
           type: string
-          enum: [Word Search, Sudoku, Maze, Number Search, Cryptogram]
+          enum: [Word Search, Sudoku, Maze, Number Search, Cryptogram, Crossword]
         puzzleCount:
           type: integer
         difficulty:
