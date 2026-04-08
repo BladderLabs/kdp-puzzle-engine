@@ -99,17 +99,29 @@ export async function runQAReviewer(spec: QASpec): Promise<QAResult> {
     }
   }
 
-  // Check 10: Title keyword position — puzzle-type keyword must appear in the first 4 words
-  if (spec.keywords.length > 0) {
-    const titleWords = spec.title.trim().split(/\s+/);
-    const first4 = titleWords.slice(0, 4).join(" ").toLowerCase();
-    const puzzleTypeWords = (spec.keywords[0] || "").toLowerCase().split(/\s+/).filter(w => w.length > 2);
-    const keywordInFirst4 = puzzleTypeWords.some(kw => first4.includes(kw));
-    if (!keywordInFirst4) {
+  // Check 10: Title keyword position — a recognizable puzzle-type term must appear in the first 4 words
+  // Checks against a canonical puzzle-type dictionary, not spec.keywords[0], to avoid false positives
+  {
+    const PUZZLE_TYPES = [
+      "word search", "word-search", "wordsearch",
+      "sudoku", "crossword", "maze", "mazes",
+      "cryptogram", "cryptograms", "kakuro",
+      "fill-in", "fill in", "word scramble",
+      "logic puzzle", "logic puzzles", "brain teaser", "brain teasers",
+      "find-a-word", "search-a-word", "number puzzle", "number puzzles",
+      "word puzzle", "word puzzles", "activity book", "activity pages",
+      "trivia", "riddles", "riddle",
+    ];
+    const titleLower = spec.title.trim().toLowerCase();
+    const first4 = spec.title.trim().split(/\s+/).slice(0, 4).join(" ").toLowerCase();
+    const matchedType = PUZZLE_TYPES.find(pt => first4.includes(pt));
+    const anyTypeInTitle = PUZZLE_TYPES.some(pt => titleLower.includes(pt));
+    if (!matchedType && anyTypeInTitle) {
+      const foundType = PUZZLE_TYPES.find(pt => titleLower.includes(pt));
       deterministicIssues.push({
         field: "title_keyword",
-        problem: `Primary keyword "${spec.keywords[0]}" does not appear in the first 4 words of the title — Amazon weights early keyword position heavily for search ranking`,
-        fix: `Move the primary keyword to the beginning of the title (first 3-4 words) for maximum SEO impact`,
+        problem: `Puzzle type "${foundType}" appears later in the title but not in the first 4 words — Amazon weights early keyword position heavily for search ranking`,
+        fix: `Move the puzzle type to the beginning of the title (first 3-4 words) for maximum SEO impact`,
       });
     }
   }
