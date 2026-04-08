@@ -20,7 +20,7 @@ import { runSeriesArcPlanner, type SeriesArc } from "../../lib/agents/series-arc
 import { runCoverArtDirector } from "../../lib/agents/cover-art-director";
 import { runQAReviewer, type QAIssue } from "../../lib/agents/qa-reviewer";
 import { runBuyerPsychologyProfiler, type BuyerProfile } from "../../lib/agents/buyer-psychology-profiler";
-import { expandNicheWordBank } from "../../lib/niches";
+import { expandNicheWordBank, getNicheByKey } from "../../lib/niches";
 import { roundTwoDesignCompatibility } from "../../lib/agents/cover-design-analyst";
 import { roundTwoColorCompatibility } from "../../lib/agents/cover-color-strategist";
 import { roundTwoTypographyCompatibility } from "../../lib/agents/cover-typography-director";
@@ -377,17 +377,25 @@ router.post("/agents/create-book", async (req, res) => {
           return null;
         }),
 
-      // Word bank expansion — runs in parallel with councils, zero extra latency
+      // Word bank expansion — runs in parallel with councils, zero extra latency.
+      // Seed uses the STATIC niche bank (guaranteed vocabulary baseline); draft.words
+      // (content-architect LLM output) is merged only if the static bank is absent.
+      // On failure or <80 AI words returned, expandNicheWordBank falls back to the
+      // static seed — never to draft.words — preserving niche-authentic vocabulary.
       isWordBased
-        ? expandNicheWordBank(market.niche, market.puzzleType, market.difficulty, market.audienceProfile, draft.words)
-            .then(expanded => {
-              req.log.info({ original: draft.words.length, expanded: expanded.length }, "Word bank expanded");
-              return expanded;
-            })
-            .catch(err => {
-              req.log.warn({ err }, "Word bank expansion failed — using draft words");
-              return draft.words;
-            })
+        ? ((): Promise<string[]> => {
+            const nicheData = getNicheByKey(market.niche);
+            const staticSeed = nicheData?.words ?? draft.words; // static niche bank is the seed
+            return expandNicheWordBank(market.niche, market.puzzleType, market.difficulty, market.audienceProfile, staticSeed)
+              .then(expanded => {
+                req.log.info({ niche: market.niche, staticSeed: staticSeed.length, expanded: expanded.length }, "Word bank expanded");
+                return expanded;
+              })
+              .catch(err => {
+                req.log.warn({ err, niche: market.niche }, "Word bank expansion failed — using static niche seed");
+                return staticSeed; // fallback to static niche bank, not draft.words
+              });
+          })()
         : Promise.resolve(draft.words),
     ]);
 
