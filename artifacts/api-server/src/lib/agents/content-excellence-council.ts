@@ -48,7 +48,17 @@ KEYWORD STRATEGY (7 backend keywords):
 async function runTitleKeywordSpecialist(
   market: MarketScoutResult,
   draft: ContentArchitectResult,
+  buyerProfile?: BuyerProfile,
 ): Promise<{ optimizedTitle: string; optimizedSubtitle: string; keywords: string[]; titleRationale: string }> {
+  const buyerCtx = buyerProfile
+    ? `\nBUYER PSYCHOLOGY (use to sharpen title emotional appeal):
+- Primary emotion: ${buyerProfile.primaryEmotion}
+- Buyer moment: ${buyerProfile.buyerMoment}
+- Copy angle: ${buyerProfile.copyAngle}
+- Mood adjectives: ${buyerProfile.moodAdjectives.join(", ")}
+Use one mood adjective in the title if it naturally fits and improves CTR.`
+    : "";
+
   const prompt = `${TITLE_EXPERT_KNOWLEDGE}
 
 Evaluate and improve this KDP puzzle book title and keywords:
@@ -62,7 +72,7 @@ BOOK DETAILS:
 - Puzzle type: ${market.puzzleType}
 - Audience: ${market.audienceProfile}
 - Large print: ${market.largePrint}
-- Current keywords: ${market.keywords.join(", ")}
+- Current keywords: ${market.keywords.join(", ")}${buyerCtx}
 
 Apply the Amazon SEO rules above. If the draft title already follows the formula well, keep it. Only change what demonstrably improves SEO or CTR. Generate the 7 backend keywords.
 
@@ -242,7 +252,7 @@ export async function runContentExcellenceCouncil(
   buyerProfile?: BuyerProfile,
 ): Promise<ContentSpec> {
   const [titleResult, copyResult] = await Promise.all([
-    runTitleKeywordSpecialist(market, draft),
+    runTitleKeywordSpecialist(market, draft, buyerProfile),
     runSalesCopyExpert(market, draft, buyerProfile),
   ]);
   return runContentDirector(market, draft, titleResult, copyResult);
