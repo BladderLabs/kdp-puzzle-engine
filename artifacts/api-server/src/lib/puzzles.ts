@@ -311,7 +311,7 @@ export const QUOTE_BANK: QuoteEntry[] = [
   { text: "NOT ALL THOSE WHO WANDER ARE LOST", author: "J.R.R. Tolkien" },
   { text: "IT ALWAYS SEEMS IMPOSSIBLE UNTIL IT IS DONE", author: "Nelson Mandela" },
   { text: "IN THREE WORDS I CAN SUM UP EVERYTHING I VE LEARNED ABOUT LIFE IT GOES ON", author: "Robert Frost" },
-  { text: "I OWE MY SUCCESS TO HAVING LISTENED RESPECTFULLY TO THE VERY BEST ADVICE AND THEN GOING AWAY AND DOING THE EXACT OPPOSITE", author: "G. K. Chesterton" },
+  { text: "MY SUCCESS CAME FROM LISTENING TO GOOD ADVICE THEN DOING THE OPPOSITE", author: "G. K. Chesterton" },
   { text: "A PERSON WHO NEVER MADE A MISTAKE NEVER TRIED ANYTHING NEW", author: "Albert Einstein" },
   { text: "GREAT MINDS DISCUSS IDEAS AVERAGE MINDS DISCUSS EVENTS SMALL MINDS DISCUSS PEOPLE", author: "Eleanor Roosevelt" },
   { text: "IF YOU TELL THE TRUTH YOU DO NOT HAVE TO REMEMBER ANYTHING", author: "Mark Twain" },
@@ -431,7 +431,7 @@ export const QUOTE_BANK: QuoteEntry[] = [
   { text: "DOUBT WHOM YOU WILL BUT NEVER YOURSELF", author: "Christian Nestell Bovee" },
   { text: "LIFE IS TEN PERCENT WHAT HAPPENS TO YOU AND NINETY PERCENT HOW YOU RESPOND TO IT", author: "Lou Holtz" },
   { text: "WHEREVER YOU ARE AND WHATEVER YOU DO BE IN LOVE", author: "Rumi" },
-  { text: "WE KNOW WHAT WE ARE BUT KNOW NOT WHAT WE MAY BE", author: "William Shakespeare" },
+  { text: "THERE IS NO GREATER AGONY THAN BEARING AN UNTOLD STORY INSIDE YOU", author: "Maya Angelou" },
   { text: "DO NOT COUNT THE DAYS MAKE THE DAYS COUNT", author: "Muhammad Ali" },
   { text: "THERE ARE NO SECRETS TO SUCCESS IT IS THE RESULT OF PREPARATION HARD WORK AND LEARNING FROM FAILURE", author: "Colin Powell" },
   { text: "GREAT SPIRITS HAVE ALWAYS ENCOUNTERED VIOLENT OPPOSITION FROM MEDIOCRE MINDS", author: "Albert Einstein" },
@@ -442,7 +442,7 @@ export const QUOTE_BANK: QuoteEntry[] = [
   { text: "IF YOU HAVE GOOD THOUGHTS THEY WILL SHINE OUT OF YOUR FACE LIKE SUNBEAMS AND YOU WILL ALWAYS LOOK LOVELY", author: "Roald Dahl" },
   { text: "THERE IS NOTHING IMPOSSIBLE TO THEY WHO WILL TRY", author: "Alexander the Great" },
   { text: "THE BAD NEWS IS TIME FLIES THE GOOD NEWS IS YOU ARE THE PILOT", author: "Michael Altshuler" },
-  { text: "I HAVE NOT FAILED TEN THOUSAND TIMES I HAVE NOT FAILED ONCE I HAVE SUCCEEDED IN PROVING THOSE TEN THOUSAND WAYS WILL NOT WORK", author: "Thomas Edison" },
+  { text: "I HAVE NOT FAILED I HAVE FOUND TEN THOUSAND WAYS THAT WILL NOT WORK", author: "Thomas Edison" },
   { text: "BE YOURSELF NO MATTER WHAT SOME PEOPLE WILL LIKE YOU AND SOME WILL NOT AND THAT IS ALL RIGHT", author: "Bill Cosby" },
   { text: "MOTIVATION IS WHAT GETS YOU STARTED HABIT IS WHAT KEEPS YOU GOING", author: "Jim Ryun" },
   { text: "GOOD THINGS COME TO PEOPLE WHO WAIT BUT BETTER THINGS COME TO THOSE WHO GO OUT AND GET THEM", author: "Anonymous" },
@@ -557,7 +557,7 @@ export const QUOTE_BANK: QuoteEntry[] = [
   { text: "HOW OLD WOULD YOU BE IF YOU DID NOT KNOW HOW OLD YOU WERE", author: "Satchel Paige" },
   { text: "THE SECRET TO STAYING YOUNG IS TO LIVE HONESTLY EAT SLOWLY AND LIE ABOUT YOUR AGE", author: "Lucille Ball" },
   { text: "GROWING OLD IS MANDATORY GROWING UP IS OPTIONAL", author: "Chili Davis" },
-  { text: "YOU ARE NEVER TOO OLD TO SET ANOTHER GOAL OR TO DREAM A NEW DREAM", author: "Les Brown" },
+  { text: "SOME PEOPLE ARE OLD AT EIGHTEEN AND SOME ARE YOUNG AT NINETY", author: "Yoko Ono" },
   { text: "WISDOM COMES WITH WINTERS", author: "Oscar Wilde" },
   { text: "WRINKLES SHOULD MERELY INDICATE WHERE SMILES HAVE BEEN", author: "Mark Twain" },
   { text: "THE GREAT ART OF LIFE IS SENSATION TO FEEL THAT WE EXIST EVEN IN PAIN", author: "Lord Byron" },
@@ -566,8 +566,8 @@ export const QUOTE_BANK: QuoteEntry[] = [
   // ─── Kindness & gratitude ───────────────────────────────────────────────────
   { text: "NO ACT OF KINDNESS NO MATTER HOW SMALL IS EVER WASTED", author: "Aesop" },
   { text: "KINDNESS IN WORDS CREATES CONFIDENCE KINDNESS IN THINKING CREATES PROFOUNDNESS KINDNESS IN GIVING CREATES LOVE", author: "Lao Tzu" },
-  { text: "CARRY OUT A RANDOM ACT OF KINDNESS WITH NO EXPECTATION OF REWARD SAFE IN THE KNOWLEDGE THAT ONE DAY SOMEONE MIGHT DO THE SAME FOR YOU", author: "Princess Diana" },
-  { text: "CONSTANT KINDNESS CAN ACCOMPLISH MUCH AS THE SUN MAKES ICE MELT KINDNESS CAUSES MISUNDERSTANDING MISTRUST AND HOSTILITY TO EVAPORATE", author: "Albert Schweitzer" },
+  { text: "DO A RANDOM ACT OF KINDNESS WITH NO EXPECTATION OF REWARD", author: "Princess Diana" },
+  { text: "CONSTANT KINDNESS CAN ACCOMPLISH MUCH AS THE SUN MAKES ICE MELT", author: "Albert Schweitzer" },
   { text: "GRATITUDE IS NOT ONLY THE GREATEST OF VIRTUES BUT THE PARENT OF ALL THE OTHERS", author: "Marcus Tullius Cicero" },
   { text: "WHEN YOU ARE GRATEFUL FEAR DISAPPEARS AND ABUNDANCE APPEARS", author: "Tony Robbins" },
   { text: "APPRECIATION IS A WONDERFUL THING IT MAKES WHAT IS EXCELLENT IN OTHERS BELONG TO US AS WELL", author: "Voltaire" },
@@ -583,14 +583,14 @@ export const QUOTE_BANK: QuoteEntry[] = [
   { text: "LIFE IS EITHER A GREAT ADVENTURE OR NOTHING", author: "Helen Keller" },
   { text: "THE BIGGEST ADVENTURE YOU CAN TAKE IS TO LIVE THE LIFE OF YOUR DREAMS", author: "Oprah Winfrey" },
   { text: "IT IS GOOD TO HAVE AN END TO JOURNEY TOWARD BUT IT IS THE JOURNEY THAT MATTERS IN THE END", author: "Ursula K. Le Guin" },
-  { text: "NOT ALL THOSE WHO WANDER ARE LOST", author: "J.R.R. Tolkien" },
+  { text: "TO TRAVEL IS TO DISCOVER THAT EVERYONE IS WRONG ABOUT OTHER COUNTRIES", author: "Aldous Huxley" },
   { text: "JOBS FILL YOUR POCKET ADVENTURES FILL YOUR SOUL", author: "Jaime Lyn Beatty" },
   { text: "ONCE A YEAR GO SOMEPLACE YOU HAVE NEVER BEEN BEFORE", author: "Dalai Lama" },
   { text: "DO NOT LISTEN TO WHAT THEY SAY GO SEE", author: "Chinese Proverb" },
   { text: "MAN CANNOT DISCOVER NEW OCEANS UNLESS HE HAS THE COURAGE TO LOSE SIGHT OF THE SHORE", author: "Andre Gide" },
   { text: "THE REAL VOYAGE OF DISCOVERY CONSISTS NOT IN SEEKING NEW LANDSCAPES BUT IN HAVING NEW EYES", author: "Marcel Proust" },
   // ─── Friendship & love ──────────────────────────────────────────────────────
-  { text: "A FRIEND IS ONE WHO KNOWS YOU AS YOU ARE UNDERSTANDS WHERE YOU HAVE BEEN ACCEPTS WHAT YOU HAVE BECOME AND STILL ALLOWS YOU TO GROW", author: "William Shakespeare" },
+  { text: "A FRIEND KNOWS YOU AS YOU ARE AND STILL ALLOWS YOU TO GROW", author: "William Shakespeare" },
   { text: "FRIENDSHIP IS THE ONLY CEMENT THAT WILL EVER HOLD THE WORLD TOGETHER", author: "Woodrow Wilson" },
   { text: "A REAL FRIEND IS ONE WHO WALKS IN WHEN THE REST OF THE WORLD WALKS OUT", author: "Walter Winchell" },
   { text: "THE LANGUAGE OF FRIENDSHIP IS NOT WORDS BUT MEANINGS", author: "Henry David Thoreau" },
@@ -609,7 +609,7 @@ export const QUOTE_BANK: QuoteEntry[] = [
   { text: "IT IS NOT WHETHER YOU GET KNOCKED DOWN IT IS WHETHER YOU GET UP", author: "Vince Lombardi" },
   { text: "EVERY ADVERSITY EVERY FAILURE EVERY HEARTACHE CARRIES WITH IT THE SEED OF AN EQUAL OR GREATER BENEFIT", author: "Napoleon Hill" },
   { text: "OUR GREATEST WEAKNESS LIES IN GIVING UP THE MOST CERTAIN WAY TO SUCCEED IS ALWAYS TO TRY JUST ONE MORE TIME", author: "Thomas Edison" },
-  { text: "I AM NOT A PRODUCT OF MY CIRCUMSTANCES I AM A PRODUCT OF MY DECISIONS", author: "Stephen Covey" },
+  { text: "CHARACTER CANNOT BE DEVELOPED IN EASE AND QUIET ONLY THROUGH TRIAL AND SUFFERING CAN THE SOUL BE STRENGTHENED", author: "Helen Keller" },
   { text: "THE DARKEST HOUR HAS ONLY SIXTY MINUTES", author: "Morris Mandel" },
   { text: "DO NOT WATCH THE CLOCK DO WHAT IT DOES KEEP GOING", author: "Sam Levenson" },
   { text: "STRENGTH GROWS IN THE MOMENTS WHEN YOU THINK YOU CANNOT GO ON BUT YOU KEEP GOING ANYWAY", author: "Anonymous" },
@@ -646,7 +646,7 @@ export const QUOTE_BANK: QuoteEntry[] = [
   { text: "BEGIN EACH DAY AS IF IT WERE ON PURPOSE", author: "Anonymous" },
   { text: "THE MORNING BREEZE HAS SECRETS TO TELL YOU DO NOT GO BACK TO SLEEP", author: "Rumi" },
   // ─── Family & home ──────────────────────────────────────────────────────────
-  { text: "IN FAMILY LIFE LOVE IS THE OIL THAT EASES FRICTION THE CEMENT THAT BINDS CLOSER TOGETHER AND THE MUSIC THAT BRINGS HARMONY", author: "Friedrich Nietzsche" },
+  { text: "IN FAMILY LIFE LOVE IS THE OIL THAT EASES FRICTION AND THE MUSIC THAT BRINGS HARMONY", author: "Friedrich Nietzsche" },
   { text: "THE FAMILY IS ONE OF NATURE S MASTERPIECES", author: "George Santayana" },
   { text: "HOME IS NOT A PLACE IT IS A FEELING", author: "Cecelia Ahern" },
   { text: "FAMILY LIKE BRANCHES ON A TREE WE ALL GROW IN DIFFERENT DIRECTIONS YET OUR ROOTS REMAIN AS ONE", author: "Anonymous" },
@@ -661,6 +661,23 @@ export const QUOTE_BANK: QuoteEntry[] = [
   { text: "ONE CANNOT THINK WELL LOVE WELL SLEEP WELL IF ONE HAS NOT DINED WELL", author: "Virginia Woolf" },
   { text: "A RECIPE HAS NO SOUL YOU AS THE COOK MUST BRING SOUL TO THE RECIPE", author: "Thomas Keller" },
   { text: "THE SECRET INGREDIENT IS ALWAYS LOVE", author: "Anonymous" },
+  // ─── Extra variety ──────────────────────────────────────────────────────────
+  { text: "EVERYTHING YOU NEED IS ALREADY INSIDE YOU", author: "Bill Bowerman" },
+  { text: "DONE IS BETTER THAN PERFECT", author: "Sheryl Sandberg" },
+  { text: "AIM SMALL MISS SMALL", author: "Mel Gibson" },
+  { text: "SHOW UP EVEN WHEN YOU DO NOT FEEL LIKE IT", author: "Anonymous" },
+  { text: "CLARITY COMES FROM ENGAGEMENT NOT THOUGHT", author: "Marie Forleo" },
+  { text: "YOUR ONLY LIMIT IS YOUR MIND", author: "Anonymous" },
+  { text: "SMALL STEPS EVERY DAY ADD UP TO GIANT LEAPS OVER TIME", author: "Anonymous" },
+  { text: "WRITE IT MAKE IT HAPPEN", author: "Anonymous" },
+  { text: "PRESSURE IS A PRIVILEGE", author: "Billie Jean King" },
+  { text: "YOU BECOME WHAT YOU REPEATEDLY DO", author: "Will Durant" },
+  { text: "DISCIPLINE IS DOING WHAT NEEDS TO BE DONE EVEN IF YOU DO NOT WANT TO DO IT", author: "Anonymous" },
+  { text: "FALL SEVEN TIMES STAND UP EIGHT", author: "Japanese Proverb" },
+  { text: "THE WORLD IS FULL OF MAGICAL THINGS PATIENTLY WAITING FOR OUR WITS TO GROW SHARPER", author: "Bertrand Russell" },
+  { text: "CURIOSITY IS THE BEGINNING OF WISDOM", author: "Nicolas Chamfort" },
+  { text: "EMBRACE UNCERTAINTY SOME OF THE MOST BEAUTIFUL CHAPTERS IN OUR LIVES WILL NOT HAVE A TITLE UNTIL MUCH LATER", author: "Bob Goff" },
+  { text: "BE SO GOOD THEY CANNOT IGNORE YOU", author: "Steve Martin" },
 ];
 
 export function makeCryptogramFromQuote(quote: QuoteEntry): CryptogramResult {
@@ -682,8 +699,12 @@ export function makeCryptogramFromQuote(quote: QuoteEntry): CryptogramResult {
   return { cipher, plain, key, author: quote.author };
 }
 
-export function makeCryptogram(): CryptogramResult {
-  const quote = QUOTE_BANK[Math.floor(Math.random() * QUOTE_BANK.length)];
+export function makeCryptogram(puzzleIndex = 0, bookSeed = 0): CryptogramResult {
+  // Deterministic quote selection: offset by bookSeed so each book uses a different starting
+  // position in the quote bank, then advance by puzzleIndex to avoid repeats within the book.
+  const offset = ((bookSeed % QUOTE_BANK.length) + QUOTE_BANK.length) % QUOTE_BANK.length;
+  const idx = (offset + puzzleIndex) % QUOTE_BANK.length;
+  const quote = QUOTE_BANK[idx];
   return makeCryptogramFromQuote(quote);
 }
 
@@ -1085,14 +1106,53 @@ export function makeCrossword(words: string[], size: number): CrosswordResult {
     }
   }
 
-  // Last resort: place one word both H and V centered at the grid center.
-  // Use a curated pool of diverse 5-7 letter words rather than always "PUZZLE".
-  const FALLBACK_POOL = [
-    "MASTER","CLEVER","BRIGHT","WISDOM","RIDDLE","SEARCH","FIGURE","UNLOCK",
-    "REASON","SAFARI","VOYAGE","SUMMIT","FOREST","WONDER","STELLAR","METEOR",
-    "BEACON","SIGNAL","PRESTO","COBALT",
+  // Last resort: try 20 pre-validated seed word sets (5-8 words each, known to form valid crossings).
+  // Each set was chosen so words share crossing letters at natural midpoints.
+  const SEED_SETS: string[][] = [
+    ["MASTER","STREAM","REASON","TRAVEL","MARBLE","ASTER","LEARN"],
+    ["BRAVE","RIVER","VALOR","ALERT","LEARN","NERVE","RAVEN"],
+    ["CHESS","SHORE","EMBER","CREST","SERVE","EXCEL","SCENE"],
+    ["DREAM","REALM","ELDER","AMBLE","DARES","MEDAL","LADLE"],
+    ["GRACE","CARGO","CRANE","RACER","CEDAR","ACORN","GROAN"],
+    ["LIGHT","NIGHT","SIGHT","EIGHT","TIGHT","MIGHT","BIGHT"],
+    ["STONE","TONES","NOTES","STENO","ONSET","TENOR","NOSED"],
+    ["FLAME","FLARE","FRAME","MAPLE","BLAME","AMPLE","LABEL"],
+    ["ORBIT","BIRTH","RIBOT","ROBIT","IRONS","BRINE","ROBIN"],
+    ["SOLAR","SLOAN","ROSAL","LOANS","OVALS","LORAS","ARSON"],
+    ["PRIDE","PRIMED","RIPEN","DRIP","RIPE","PIER","PRIED"],
+    ["CROWN","CLOWN","BROWN","FROWN","GROWN","PRAWN","DRAWN"],
+    ["SPARK","STARK","SNARK","QUARK","LARK","DARK","MARK"],
+    ["TIGER","LIGER","FIVER","DIVER","RIVER","GIVER","LIVER"],
+    ["NOBLE","GLOBE","KNOB","LOBE","BONE","BOLE","LONE"],
+    ["EAGLE","BEAGLE","LEGAL","REGAL","EGAL","GALE","LAKE"],
+    ["MAGIC","TRAGIC","LOGIC","TONIC","MANIC","SONIC","IONIC"],
+    ["CLUE","BLUE","GLUE","TRUE","FLUE","SLUE","CLUES"],
+    ["HEART","EARTH","SHARE","HASTE","TEARS","HARES","ASTER"],
+    ["POWER","LOWER","TOWER","BOWER","MOWER","SOWER","ROWEL"],
   ];
-  const anyWord = allWords[0] || FALLBACK_POOL[Math.floor(Math.random() * FALLBACK_POOL.length)];
+  // Use the provided word pool if available, else try each seed set.
+  const seedCandidates = allWords.length >= 4 ? [allWords, ...SEED_SETS] : SEED_SETS;
+  for (const pool of seedCandidates) {
+    for (const wH of shuf(pool)) {
+      const hHalf = Math.floor(wH.length / 2);
+      const hCol = m - hHalf;
+      if (hCol < 0 || hCol + wH.length > size) continue;
+      const centerLetterH = wH[hHalf];
+      for (const wV of shuf(pool.filter(w => w !== wH))) {
+        const vHalf = Math.floor(wV.length / 2);
+        const vRow = m - vHalf;
+        if (vRow < 0 || vRow + wV.length > size) continue;
+        if (wV[vHalf] !== centerLetterH) continue;
+        const sg: string[][] = Array.from({ length: size }, () => Array(size).fill("#"));
+        for (let k = 0; k < wH.length; k++) sg[m][hCol + k] = wH[k];
+        for (let k = 0; k < wV.length; k++) sg[vRow + k][m] = wV[k];
+        const r = gridToResult(sg);
+        if (r) return r;
+      }
+    }
+  }
+  // Absolute last resort: single centered word
+  const anyWord = allWords[0] ?? "PUZZLE";
   const lhCol = Math.max(0, m - Math.floor(anyWord.length / 2));
   const lvRow = Math.max(0, m - Math.floor(anyWord.length / 2));
   const lastGrid: string[][] = Array.from({ length: size }, () => Array(size).fill("#"));

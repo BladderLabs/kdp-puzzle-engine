@@ -1,6 +1,6 @@
 import {
   shuf, makeWordSearch, makeSudoku, makeMaze, makeNumberSearch,
-  makeCryptogramFromQuote, makeCrossword, WORD_BANKS, QUOTE_BANK,
+  makeCryptogram, makeCrossword, WORD_BANKS,
 } from "./puzzles";
 import type { CrosswordResult, CrosswordClue } from "./puzzles";
 
@@ -87,15 +87,18 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
   // LP: 9×64=576px < 730px content (8.5in - 0.5in - 0.4in = 7.6in = 730px) ✓
   const sC = LP ? 64 : 54, sF = LP ? 26 : 20;
 
+  // Deterministic book seed from title: each title gets a unique starting offset in the
+  // quote bank so different books don't repeat the same quote sequence.
+  const bookSeed = opts.title
+    ? opts.title.split("").reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) | 0, 0)
+    : 0;
+
   // Word bank priority: custom words (≥10) > wordCategory bank > General bank
   const customWords = opts.words && opts.words.length >= 10 ? opts.words : null;
   const categoryBank = opts.wordCategory && WORD_BANKS[opts.wordCategory] ? WORD_BANKS[opts.wordCategory] : null;
   const wordBank = customWords || categoryBank || WORD_BANKS.General;
 
-  // Cryptogram: build a shuffled pool of quote indices for no-repeat sampling across the book
-  let cryptoQuotePool = PT === "Cryptogram"
-    ? shuf(Array.from({ length: QUOTE_BANK.length }, (_, i) => i))
-    : [];
+  // Cryptogram: deterministic quote index seeded by bookSeed + puzzleIndex (no random shuffle)
   let cryptoQIdx = 0;
 
   const puzzles: unknown[] = [];
@@ -130,11 +133,7 @@ export function buildInteriorHTML(opts: BuildOpts): BuildResult {
         puzzles.push(makeNumberSearch(gsz, wordBank, i));
         break;
       case "Cryptogram": {
-        if (cryptoQIdx >= cryptoQuotePool.length) {
-          cryptoQuotePool = shuf(Array.from({ length: QUOTE_BANK.length }, (_, k) => k));
-          cryptoQIdx = 0;
-        }
-        puzzles.push(makeCryptogramFromQuote(QUOTE_BANK[cryptoQuotePool[cryptoQIdx++]]));
+        puzzles.push(makeCryptogram(cryptoQIdx++, bookSeed));
         break;
       }
       case "Crossword":

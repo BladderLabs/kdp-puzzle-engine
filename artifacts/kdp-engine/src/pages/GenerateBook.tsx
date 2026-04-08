@@ -321,11 +321,11 @@ export function GenerateBook() {
                 fix: "Click the description field in Book Setup to auto-fill a template",
               },
               {
-                label: "At least 3 KDP keywords set",
+                label: "All 7 KDP keywords set",
                 pass: Array.isArray((book as Record<string, unknown>).keywords)
-                  ? ((book as Record<string, unknown>).keywords as string[]).length >= 3
+                  ? ((book as Record<string, unknown>).keywords as string[]).length >= 7
                   : false,
-                fix: "Add keywords in Book Setup → KDP Keywords field, or use the AI pipeline to auto-generate 7",
+                fix: "Add all 7 keywords in Book Setup → KDP Keywords field (max 7 per KDP guidelines)",
               },
             ];
             const allPass = checks.every(c => c.pass);
