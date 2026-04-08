@@ -886,7 +886,9 @@ const CROSSWORD_CLUES: Record<string, string> = {
 };
 
 function makeCrosswordClue(word: string): string {
-  return CROSSWORD_CLUES[word] || `${word.length}-letter word`;
+  // Static dict first; AI enrichment (via generateCrosswordClues) replaces this
+  // with a real clue. The interim fallback is never the rejected "N-letter word".
+  return CROSSWORD_CLUES[word] || `${word.slice(0, 1)}${word.slice(1).toLowerCase()}`;
 }
 
 /**
@@ -943,10 +945,11 @@ Words: ${unknown.join(", ")}`;
       // AI call failed — use a readable fallback (never "N-letter word")
     }
 
-    // Final fallback for any word the AI didn't return
+    // Final fallback for any word the AI didn't return —
+    // gives a genuine positional hint, never "N-letter word".
     for (const w of unknown) {
       if (!clueMap[w]) {
-        clueMap[w] = `${w.slice(0, 1)}${w.slice(1).toLowerCase()} (${w.length} letters)`;
+        clueMap[w] = `Begins with '${w[0].toUpperCase()}' — ${w.length}-letter answer`;
       }
     }
   }
@@ -964,6 +967,28 @@ export function applyCluesToCrossword(result: CrosswordResult, clueMap: Record<s
     across: result.across.map(c => ({ ...c, clue: clueMap[c.answer] ?? c.clue })),
     down: result.down.map(c => ({ ...c, clue: clueMap[c.answer] ?? c.clue })),
   };
+}
+
+/**
+ * Canonical async crossword builder — generates the grid then immediately
+ * enriches every clue with AI via generateCrosswordClues.
+ * This is the preferred entry point; callers that need per-book batching
+ * can use makeCrossword + generateCrosswordClues + applyCluesToCrossword directly.
+ */
+export async function makeCrosswordAsync(
+  words: string[],
+  size: number,
+  difficulty: string = "Medium",
+  niche: string = "General",
+): Promise<CrosswordResult | null> {
+  const result = makeCrossword(words, size);
+  if (!result) return null;
+  const allAnswers = [
+    ...result.across.map(c => c.answer),
+    ...result.down.map(c => c.answer),
+  ];
+  const clueMap = await generateCrosswordClues(allAnswers, difficulty, niche);
+  return applyCluesToCrossword(result, clueMap);
 }
 
 export function makeCrossword(words: string[], size: number, _isSeedFallback = false): CrosswordResult {

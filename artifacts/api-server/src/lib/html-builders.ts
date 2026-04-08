@@ -1,6 +1,6 @@
 import {
   shuf, makeWordSearch, makeSudoku, makeMaze, makeNumberSearch,
-  makeCryptogram, makeCrossword, generateCrosswordClues, applyCluesToCrossword, WORD_BANKS,
+  makeCryptogram, makeCrossword, makeCrosswordAsync, generateCrosswordClues, applyCluesToCrossword, WORD_BANKS,
 } from "./puzzles";
 import type { CrosswordResult, CrosswordClue } from "./puzzles";
 
@@ -145,22 +145,34 @@ export async function buildInteriorHTML(opts: BuildOpts): Promise<BuildResult> {
   }
 
   // ── AI Crossword Clue Enrichment ────────────────────────────────────────
-  // Batch-generate real clues for all crossword puzzles in one Haiku call.
-  // Collects every unique answer word, sends unknowns to Claude Haiku,
-  // then applies the returned clues back to each CrosswordResult.
+  // Groups puzzles by difficulty tier, makes one parallel Haiku call per tier
+  // (max 3 for progressive mode: Easy / Medium / Hard), then applies the
+  // tier-appropriate clue map back to each puzzle. This ensures clue style
+  // matches difficulty and uses per-tier context for the AI prompt.
   if (PT === "Crossword") {
-    const allAnswers: string[] = [];
-    for (const pz of puzzles) {
-      const cx = pz as CrosswordResult | null;
-      if (cx) {
-        cx.across.forEach(c => allAnswers.push(c.answer));
-        cx.down.forEach(c => allAnswers.push(c.answer));
-      }
+    type TierData = { indices: number[]; answers: string[] };
+    const tierMap: Record<string, TierData> = {};
+
+    for (let i = 0; i < puzzles.length; i++) {
+      const cx = puzzles[i] as CrosswordResult | null;
+      if (!cx) continue;
+      const tier = opts.difficultyMode === "progressive" ? progressiveDiffs[i] : DF;
+      if (!tierMap[tier]) tierMap[tier] = { indices: [], answers: [] };
+      tierMap[tier].indices.push(i);
+      cx.across.forEach(c => tierMap[tier].answers.push(c.answer));
+      cx.down.forEach(c => tierMap[tier].answers.push(c.answer));
     }
-    if (allAnswers.length > 0) {
-      const nicheLabel = opts.wordCategory || "General";
-      const clueMap = await generateCrosswordClues(allAnswers, DF, nicheLabel);
-      for (let i = 0; i < puzzles.length; i++) {
+
+    const nicheLabel = opts.wordCategory || "General";
+    const tierEntries = Object.entries(tierMap);
+    const tierClues = await Promise.all(
+      tierEntries.map(([diff, { answers }]) => generateCrosswordClues(answers, diff, nicheLabel)),
+    );
+
+    for (let t = 0; t < tierEntries.length; t++) {
+      const [, { indices }] = tierEntries[t];
+      const clueMap = tierClues[t];
+      for (const i of indices) {
         const cx = puzzles[i] as CrosswordResult | null;
         if (cx) puzzles[i] = applyCluesToCrossword(cx, clueMap);
       }

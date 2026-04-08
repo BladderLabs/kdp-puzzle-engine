@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { zipSync } from "fflate";
 import { GenerateBookBody, PreviewPuzzlesBody, CoverPreviewBody } from "@workspace/api-zod";
 import { buildInteriorHTML, buildCoverHTML, computeTotalPages, type BuildOpts, type CoverBuildOpts } from "../lib/html-builders";
-import { makeWordSearch, makeSudoku, makeMaze, makeNumberSearch, makeCryptogram, makeCrossword, generateCrosswordClues, applyCluesToCrossword, shuf, DEFWORDS } from "../lib/puzzles";
+import { makeWordSearch, makeSudoku, makeMaze, makeNumberSearch, makeCryptogram, makeCrossword, makeCrosswordAsync, generateCrosswordClues, applyCluesToCrossword, shuf, DEFWORDS } from "../lib/puzzles";
 import { htmlToPdf } from "../lib/pdf";
 
 const router: IRouter = Router();
@@ -191,7 +191,6 @@ router.post("/puzzles/preview", async (req, res) => {
     const gsz = lp ? 13 : 15;
 
     const puzzles = [];
-    const crosswordResults = [];
     for (let i = 0; i < count; i++) {
       if (pt === "Word Search") {
         const bank = words.length >= 5 ? shuf(words).slice(0, Math.min(words.length, lp ? 16 : 20)) : DEFWORDS.slice(0, 16);
@@ -205,31 +204,10 @@ router.post("/puzzles/preview", async (req, res) => {
       } else if (pt === "Cryptogram") {
         puzzles.push({ type: "Cryptogram", cryptogram: makeCryptogram() });
       } else if (pt === "Crossword") {
+        // Use canonical async builder so clues are AI-enriched from the start
         const bank = words.length >= 5 ? shuf(words).slice(0, 20) : DEFWORDS.slice(0, 20);
-        const cx = makeCrossword(bank, lp ? 11 : 13);
-        crosswordResults.push({ idx: puzzles.length, cx });
+        const cx = await makeCrosswordAsync(bank, lp ? 11 : 13, diff, "General");
         puzzles.push({ type: "Crossword", crossword: cx });
-      }
-    }
-
-    // Enrich crossword clues with AI if there are any crossword puzzles
-    if (crosswordResults.length > 0) {
-      const allAnswers: string[] = [];
-      for (const { cx } of crosswordResults) {
-        if (cx) {
-          cx.across.forEach(c => allAnswers.push(c.answer));
-          cx.down.forEach(c => allAnswers.push(c.answer));
-        }
-      }
-      if (allAnswers.length > 0) {
-        try {
-          const clueMap = await generateCrosswordClues(allAnswers, diff, "General");
-          for (const { idx, cx } of crosswordResults) {
-            if (cx) (puzzles[idx] as { crossword: typeof cx }).crossword = applyCluesToCrossword(cx, clueMap);
-          }
-        } catch {
-          // Non-fatal: preview still works with static clues
-        }
       }
     }
 
