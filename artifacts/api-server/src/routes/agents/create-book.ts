@@ -88,12 +88,15 @@ router.post("/agents/create-book", async (req, res) => {
     return;
   }
 
+  // Compute finalTheme early so cover art generation uses the conversion-optimized theme
+  const finalTheme = market.recommendedTheme ?? market.theme;
+
   // ─── Stage 3: Cover Art Director (before QA so QA gets real hasImage) ───
-  emit(res, "cover_art", "running", { message: `Generating AI cover illustration for ${market.theme} theme…` });
+  emit(res, "cover_art", "running", { message: `Generating AI cover illustration for ${finalTheme} theme…` });
   let coverImageDataUrl: string | null = null;
   let hasCoverImage = false;
   try {
-    const result = await runCoverArtDirector(market.theme, market.puzzleType, market.coverStyle, content.title, market.audienceProfile);
+    const result = await runCoverArtDirector(finalTheme, market.puzzleType, market.coverStyle, content.title, market.audienceProfile);
     if (result) {
       coverImageDataUrl = `data:${result.mimeType};base64,${result.b64_json}`;
       hasCoverImage = true;
@@ -199,8 +202,6 @@ router.post("/agents/create-book", async (req, res) => {
   // ─── Stage 5: Assemble & Save ───
   // Auto-select "photo" cover style when AI image was generated — highest quality output
   const finalCoverStyle = hasCoverImage ? "photo" : market.coverStyle;
-  // Use conversion-optimized niche-matched theme (overrides LLM's generic theme choice)
-  const finalTheme = market.recommendedTheme ?? market.theme;
   // Prepend hook sentence to back description with separator so the cover builder
   // can detect and render it in larger bold text separately from the body copy.
   const finalBackDescription = content.hookSentence
