@@ -83,12 +83,15 @@ export async function runCoverArtDirector(
     const { generateImage } = await import("@workspace/integrations-gemini-ai/image");
 
     const themeDesc = THEME_DESCRIPTIONS[theme] || THEME_DESCRIPTIONS.midnight;
-    const styleDesc = STYLE_MODIFIERS[coverStyle] || STYLE_MODIFIERS[theme === "photo" ? "photo" : "classic"];
+    const styleDesc = STYLE_MODIFIERS[coverStyle] || STYLE_MODIFIERS.classic;
 
     const nicheHint = niche ? buildNicheHint(niche) : "";
+    // Always include raw audience context in subject line, even when no keyword matches
     const subjectLine = nicheHint
       ? `Subject matter: ${nicheHint}.`
-      : `Scene: ${themeDesc}.`;
+      : niche
+        ? `Target audience: ${niche}. Scene: ${themeDesc}.`
+        : `Scene: ${themeDesc}.`;
 
     const prompt = [
       `Create a stunning ${styleDesc} book cover background illustration for a "${puzzleType}" puzzle book titled "${title}".`,
