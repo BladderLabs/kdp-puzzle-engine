@@ -596,7 +596,9 @@ router.post("/agents/create-book", async (req, res) => {
   }
 
   // ─── Stage 11: Assemble & Save (+ Series Arc Planner in parallel) ───────────
-  const finalCoverStyle = hasCoverImage ? "photo" : finalStyle;
+  // Always persist actual finalStyle (not "photo") so theme+style+niche uniqueness is stable across runs.
+  // AI cover presence is indicated by coverImageUrl being non-null.
+  const finalCoverStyle = finalStyle;
   const fullBackDescription = finalHookSentence
     ? `${finalHookSentence}\n\n${finalBackDescription}`
     : finalBackDescription;
