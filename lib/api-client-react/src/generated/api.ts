@@ -870,6 +870,92 @@ export const useRenderCoverPdf = <
 };
 
 /**
+ * @summary Generate cover HTML for live browser preview (no puzzle generation)
+ */
+export const getCoverPreviewUrl = () => {
+  return `/api/cover-preview`;
+};
+
+export const coverPreview = async (
+  coverPreviewRequest: CoverPreviewRequest,
+  options?: RequestInit,
+): Promise<CoverPreviewResult> => {
+  return customFetch<CoverPreviewResult>(getCoverPreviewUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(coverPreviewRequest),
+  });
+};
+
+export const getCoverPreviewMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof coverPreview>>,
+    TError,
+    { data: BodyType<CoverPreviewRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof coverPreview>>,
+  TError,
+  { data: BodyType<CoverPreviewRequest> },
+  TContext
+> => {
+  const mutationKey = ["coverPreview"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof coverPreview>>,
+    { data: BodyType<CoverPreviewRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return coverPreview(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CoverPreviewMutationResult = NonNullable<
+  Awaited<ReturnType<typeof coverPreview>>
+>;
+export type CoverPreviewMutationBody = BodyType<CoverPreviewRequest>;
+export type CoverPreviewMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Generate cover HTML for live browser preview (no puzzle generation)
+ */
+export const useCoverPreview = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof coverPreview>>,
+    TError,
+    { data: BodyType<CoverPreviewRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof coverPreview>>,
+  TError,
+  { data: BodyType<CoverPreviewRequest> },
+  TContext
+> => {
+  return useMutation(getCoverPreviewMutationOptions(options));
+};
+
+/**
  * @summary Generate 2-3 sample puzzles as JSON for live browser preview
  */
 export const getPreviewPuzzlesUrl = () => {
@@ -1894,90 +1980,4 @@ export const useGetNicheIdeas = <
   TContext
 > => {
   return useMutation(getGetNicheIdeasMutationOptions(options));
-};
-
-/**
- * @summary Generate cover HTML for live browser preview (no puzzle generation)
- */
-export const getCoverPreviewUrl = () => {
-  return `/api/cover-preview`;
-};
-
-export const coverPreview = async (
-  coverPreviewRequest: CoverPreviewRequest,
-  options?: RequestInit,
-): Promise<CoverPreviewResult> => {
-  return customFetch<CoverPreviewResult>(getCoverPreviewUrl(), {
-    ...options,
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(coverPreviewRequest),
-  });
-};
-
-export const getGetCoverPreviewMutationOptions = <
-  TError = ErrorType<unknown>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof coverPreview>>,
-    TError,
-    { data: BodyType<CoverPreviewRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof coverPreview>>,
-  TError,
-  { data: BodyType<CoverPreviewRequest> },
-  TContext
-> => {
-  const mutationKey = ["coverPreview"];
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof coverPreview>>,
-    { data: BodyType<CoverPreviewRequest> }
-  > = (props) => {
-    const { data } = props ?? {};
-
-    return coverPreview(data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type GetCoverPreviewMutationResult = NonNullable<
-  Awaited<ReturnType<typeof coverPreview>>
->;
-export type GetCoverPreviewMutationBody = BodyType<CoverPreviewRequest>;
-export type GetCoverPreviewMutationError = ErrorType<unknown>;
-
-/**
- * @summary Generate cover HTML for live browser preview (no puzzle generation)
- */
-export const useGetCoverPreview = <
-  TError = ErrorType<unknown>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof coverPreview>>,
-    TError,
-    { data: BodyType<CoverPreviewRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationResult<
-  Awaited<ReturnType<typeof coverPreview>>,
-  TError,
-  { data: BodyType<CoverPreviewRequest> },
-  TContext
-> => {
-  return useMutation(getGetCoverPreviewMutationOptions(options));
 };

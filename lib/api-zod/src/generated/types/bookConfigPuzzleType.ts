@@ -15,5 +15,4 @@ export const BookConfigPuzzleType = {
   Maze: "Maze",
   Number_Search: "Number Search",
   Cryptogram: "Cryptogram",
-  Crossword: "Crossword",
 } as const;

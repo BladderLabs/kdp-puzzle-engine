@@ -73,6 +73,12 @@ Puppeteer-based `htmlToPdf()` — ported from original v5. Shared browser instan
 
 PostgreSQL with Drizzle ORM. Schema: `books` table with all book config fields.
 
+Fields include: `series_name` (nullable text) — the series a book belongs to. Used to group books in the Series Library view. The clone route (`POST /books/:id/clone`) auto-derives a series name from the source book title if none is set, and writes it back to the source.
+
+## Series Library
+
+Books can be organized into named series. Users set a "Series Name" on the book creation/edit form. The dashboard home page has a "Series Library" tab that groups books by series in collapsible accordion panels. Standalone books (no series name) are listed under "Standalone Books".
+
 ## Key Dependencies
 
 - **puppeteer** — Headless Chromium PDF rendering

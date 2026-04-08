@@ -15,7 +15,7 @@ const router: IRouter = Router();
 router.get("/books", async (req, res) => {
   try {
     const books = await db.select().from(booksTable).orderBy(desc(booksTable.updatedAt));
-    res.json(books.map(b => ({ ...b, words: b.words ?? [] })));
+    res.json(books.map(b => ({ ...b, words: b.words ?? [], keywords: b.keywords ?? [] })));
   } catch (err) {
     req.log.error({ err }, "Failed to list books");
     res.status(500).json({ error: "Failed to list books" });
@@ -46,6 +46,7 @@ router.post("/books", async (req, res) => {
       difficultyMode: data.difficultyMode ?? "uniform",
       challengeDays: data.challengeDays ?? null,
       keywords: ((data.keywords as string[]) ?? []).slice(0, 7),
+      seriesName: data.seriesName ?? null,
     }).returning();
     res.status(201).json({ ...book, words: book.words ?? [], keywords: book.keywords ?? [] });
   } catch (err) {
@@ -91,6 +92,7 @@ router.put("/books/:id", async (req, res) => {
       difficultyMode: data.difficultyMode ?? "uniform",
       challengeDays: data.challengeDays ?? null,
       keywords: ((data.keywords as string[]) ?? []).slice(0, 7),
+      seriesName: data.seriesName ?? null,
       updatedAt: new Date(),
     }).where(eq(booksTable.id, id)).returning();
     if (!book) { res.status(404).json({ error: "Book not found" }); return; }
@@ -118,6 +120,18 @@ router.post("/books/:id/clone", async (req, res) => {
     const [source] = await db.select().from(booksTable).where(eq(booksTable.id, id));
     if (!source) { res.status(404).json({ error: "Book not found" }); return; }
     const nextVol = (source.volumeNumber ?? 1) + 1;
+
+    // Auto-derive seriesName: use existing one, or derive from title and write back to source
+    let seriesName = source.seriesName;
+    if (!seriesName) {
+      // Strip trailing "Vol N" / "Volume N" / "Book N" suffixes from title to get the series root
+      seriesName = source.title.replace(/\s+(vol\.?\s*\d+|volume\s*\d+|book\s*\d+)$/i, "").trim() + " Series";
+      // Write seriesName back to source so it shows up in the library grouped correctly
+      await db.update(booksTable)
+        .set({ seriesName, updatedAt: new Date() })
+        .where(eq(booksTable.id, id));
+    }
+
     const [clone] = await db.insert(booksTable).values({
       title: source.title,
       subtitle: source.subtitle,
@@ -138,8 +152,10 @@ router.post("/books/:id/clone", async (req, res) => {
       dedication: source.dedication,
       difficultyMode: source.difficultyMode ?? "uniform",
       challengeDays: source.challengeDays,
+      keywords: source.keywords ?? [],
+      seriesName,
     }).returning();
-    res.status(201).json({ ...clone, words: clone.words ?? [] });
+    res.status(201).json({ ...clone, words: clone.words ?? [], keywords: clone.keywords ?? [] });
   } catch (err) {
     req.log.error({ err }, "Failed to clone book");
     res.status(500).json({ error: "Failed to clone book" });

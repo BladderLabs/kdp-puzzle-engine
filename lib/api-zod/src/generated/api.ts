@@ -17,6 +17,9 @@ export const HealthCheckResponse = zod.object({
 /**
  * @summary List all saved book projects
  */
+export const listBooksResponseDifficultyModeDefault = `uniform`;
+export const listBooksResponseKeywordsMax = 7;
+
 export const ListBooksResponseItem = zod.object({
   id: zod.number(),
   title: zod.string(),
@@ -35,9 +38,25 @@ export const ListBooksResponseItem = zod.object({
   coverImageUrl: zod.string().optional(),
   niche: zod.string().optional(),
   volumeNumber: zod.number().optional(),
-  dedication: zod.string().optional(),
-  difficultyMode: zod.string().optional(),
-  challengeDays: zod.union([zod.literal(30), zod.literal(60), zod.literal(90)]).optional(),
+  dedication: zod
+    .string()
+    .optional()
+    .describe("Optional dedication text added as a front-matter page"),
+  difficultyMode: zod
+    .enum(["uniform", "progressive"])
+    .default(listBooksResponseDifficultyModeDefault),
+  challengeDays: zod
+    .union([zod.literal(30), zod.literal(60), zod.literal(90)])
+    .optional()
+    .describe("Adds a Solve-a-Day tracker page for 30, 60, or 90 days"),
+  seriesName: zod
+    .string()
+    .optional()
+    .describe("Name of the series this book belongs to"),
+  keywords: zod
+    .array(zod.string())
+    .max(listBooksResponseKeywordsMax)
+    .optional(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -46,6 +65,9 @@ export const ListBooksResponse = zod.array(ListBooksResponseItem);
 /**
  * @summary Save a new book project
  */
+export const createBookBodyDifficultyModeDefault = `uniform`;
+export const createBookBodyKeywordsMax = 7;
+
 export const CreateBookBody = zod.object({
   title: zod.string(),
   subtitle: zod.string().optional(),
@@ -63,10 +85,24 @@ export const CreateBookBody = zod.object({
   coverImageUrl: zod.string().optional(),
   niche: zod.string().optional(),
   volumeNumber: zod.number().optional(),
-  dedication: zod.string().optional(),
-  difficultyMode: zod.string().optional(),
-  challengeDays: zod.union([zod.literal(30), zod.literal(60), zod.literal(90)]).optional(),
-  keywords: zod.array(zod.string()).optional(),
+  dedication: zod
+    .string()
+    .optional()
+    .describe("Optional dedication text added as a front-matter page"),
+  difficultyMode: zod
+    .enum(["uniform", "progressive"])
+    .default(createBookBodyDifficultyModeDefault),
+  challengeDays: zod
+    .union([zod.literal(30), zod.literal(60), zod.literal(90)])
+    .optional()
+    .describe("Adds a Solve-a-Day tracker page for 30, 60, or 90 days"),
+  seriesName: zod
+    .string()
+    .optional()
+    .describe(
+      'Name of the series this book belongs to (e.g. \"Brain Boost Series\")',
+    ),
+  keywords: zod.array(zod.string()).max(createBookBodyKeywordsMax).optional(),
 });
 
 /**
@@ -75,6 +111,9 @@ export const CreateBookBody = zod.object({
 export const GetBookParams = zod.object({
   id: zod.coerce.number(),
 });
+
+export const getBookResponseDifficultyModeDefault = `uniform`;
+export const getBookResponseKeywordsMax = 7;
 
 export const GetBookResponse = zod.object({
   id: zod.number(),
@@ -94,10 +133,22 @@ export const GetBookResponse = zod.object({
   coverImageUrl: zod.string().optional(),
   niche: zod.string().optional(),
   volumeNumber: zod.number().optional(),
-  dedication: zod.string().optional(),
-  difficultyMode: zod.string().optional(),
-  challengeDays: zod.union([zod.literal(30), zod.literal(60), zod.literal(90)]).optional(),
-  keywords: zod.array(zod.string()).optional(),
+  dedication: zod
+    .string()
+    .optional()
+    .describe("Optional dedication text added as a front-matter page"),
+  difficultyMode: zod
+    .enum(["uniform", "progressive"])
+    .default(getBookResponseDifficultyModeDefault),
+  challengeDays: zod
+    .union([zod.literal(30), zod.literal(60), zod.literal(90)])
+    .optional()
+    .describe("Adds a Solve-a-Day tracker page for 30, 60, or 90 days"),
+  seriesName: zod
+    .string()
+    .optional()
+    .describe("Name of the series this book belongs to"),
+  keywords: zod.array(zod.string()).max(getBookResponseKeywordsMax).optional(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -108,6 +159,9 @@ export const GetBookResponse = zod.object({
 export const UpdateBookParams = zod.object({
   id: zod.coerce.number(),
 });
+
+export const updateBookBodyDifficultyModeDefault = `uniform`;
+export const updateBookBodyKeywordsMax = 7;
 
 export const UpdateBookBody = zod.object({
   title: zod.string(),
@@ -126,11 +180,28 @@ export const UpdateBookBody = zod.object({
   coverImageUrl: zod.string().optional(),
   niche: zod.string().optional(),
   volumeNumber: zod.number().optional(),
-  dedication: zod.string().optional(),
-  difficultyMode: zod.string().optional(),
-  challengeDays: zod.union([zod.literal(30), zod.literal(60), zod.literal(90)]).optional(),
-  keywords: zod.array(zod.string()).optional(),
+  dedication: zod
+    .string()
+    .optional()
+    .describe("Optional dedication text added as a front-matter page"),
+  difficultyMode: zod
+    .enum(["uniform", "progressive"])
+    .default(updateBookBodyDifficultyModeDefault),
+  challengeDays: zod
+    .union([zod.literal(30), zod.literal(60), zod.literal(90)])
+    .optional()
+    .describe("Adds a Solve-a-Day tracker page for 30, 60, or 90 days"),
+  seriesName: zod
+    .string()
+    .optional()
+    .describe(
+      'Name of the series this book belongs to (e.g. \"Brain Boost Series\")',
+    ),
+  keywords: zod.array(zod.string()).max(updateBookBodyKeywordsMax).optional(),
 });
+
+export const updateBookResponseDifficultyModeDefault = `uniform`;
+export const updateBookResponseKeywordsMax = 7;
 
 export const UpdateBookResponse = zod.object({
   id: zod.number(),
@@ -150,10 +221,25 @@ export const UpdateBookResponse = zod.object({
   coverImageUrl: zod.string().optional(),
   niche: zod.string().optional(),
   volumeNumber: zod.number().optional(),
-  dedication: zod.string().optional(),
-  difficultyMode: zod.string().optional(),
-  challengeDays: zod.union([zod.literal(30), zod.literal(60), zod.literal(90)]).optional(),
-  keywords: zod.array(zod.string()).optional(),
+  dedication: zod
+    .string()
+    .optional()
+    .describe("Optional dedication text added as a front-matter page"),
+  difficultyMode: zod
+    .enum(["uniform", "progressive"])
+    .default(updateBookResponseDifficultyModeDefault),
+  challengeDays: zod
+    .union([zod.literal(30), zod.literal(60), zod.literal(90)])
+    .optional()
+    .describe("Adds a Solve-a-Day tracker page for 30, 60, or 90 days"),
+  seriesName: zod
+    .string()
+    .optional()
+    .describe("Name of the series this book belongs to"),
+  keywords: zod
+    .array(zod.string())
+    .max(updateBookResponseKeywordsMax)
+    .optional(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -175,6 +261,8 @@ export const CloneBookParams = zod.object({
 /**
  * @summary Generate interior and cover HTML for a book
  */
+export const generateBookBodyDifficultyModeDefault = `uniform`;
+
 export const GenerateBookBody = zod.object({
   title: zod.string(),
   subtitle: zod.string().optional(),
@@ -185,7 +273,6 @@ export const GenerateBookBody = zod.object({
     "Maze",
     "Number Search",
     "Cryptogram",
-    "Crossword",
   ]),
   puzzleCount: zod.number().optional(),
   difficulty: zod.enum(["Easy", "Medium", "Hard"]).optional(),
@@ -206,7 +293,16 @@ export const GenerateBookBody = zod.object({
     ])
     .optional(),
   coverStyle: zod
-    .enum(["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth", "photo"])
+    .enum([
+      "classic",
+      "geometric",
+      "luxury",
+      "bold",
+      "minimal",
+      "retro",
+      "warmth",
+      "photo",
+    ])
     .optional(),
   backDescription: zod.string().optional(),
   words: zod.array(zod.string()).optional(),
@@ -214,10 +310,20 @@ export const GenerateBookBody = zod.object({
   coverImageUrl: zod.string().optional(),
   series: zod.string().optional(),
   volumeNumber: zod.number().optional(),
-  dedication: zod.string().optional(),
-  difficultyMode: zod.string().optional(),
-  challengeDays: zod.union([zod.literal(30), zod.literal(60), zod.literal(90)]).optional(),
-  keywords: zod.array(zod.string()).optional(),
+  dedication: zod
+    .string()
+    .optional()
+    .describe("Optional dedication text added as a front-matter page"),
+  difficultyMode: zod
+    .enum(["uniform", "progressive"])
+    .default(generateBookBodyDifficultyModeDefault)
+    .describe(
+      "uniform = all puzzles same difficulty; progressive = Easy → Medium → Hard sections",
+    ),
+  challengeDays: zod
+    .union([zod.literal(30), zod.literal(60), zod.literal(90)])
+    .optional()
+    .describe("Adds a Solve-a-Day tracker page for 30, 60, or 90 days"),
 });
 
 export const GenerateBookResponse = zod.object({
@@ -234,6 +340,8 @@ export const GenerateBookResponse = zod.object({
 /**
  * @summary Render interior HTML to PDF via Puppeteer
  */
+export const renderInteriorPdfBodyDifficultyModeDefault = `uniform`;
+
 export const RenderInteriorPdfBody = zod.object({
   title: zod.string(),
   subtitle: zod.string().optional(),
@@ -244,7 +352,6 @@ export const RenderInteriorPdfBody = zod.object({
     "Maze",
     "Number Search",
     "Cryptogram",
-    "Crossword",
   ]),
   puzzleCount: zod.number().optional(),
   difficulty: zod.enum(["Easy", "Medium", "Hard"]).optional(),
@@ -265,18 +372,44 @@ export const RenderInteriorPdfBody = zod.object({
     ])
     .optional(),
   coverStyle: zod
-    .enum(["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth", "photo"])
+    .enum([
+      "classic",
+      "geometric",
+      "luxury",
+      "bold",
+      "minimal",
+      "retro",
+      "warmth",
+      "photo",
+    ])
     .optional(),
   backDescription: zod.string().optional(),
   words: zod.array(zod.string()).optional(),
   wordCategory: zod.string().optional(),
+  coverImageUrl: zod.string().optional(),
   series: zod.string().optional(),
   volumeNumber: zod.number().optional(),
+  dedication: zod
+    .string()
+    .optional()
+    .describe("Optional dedication text added as a front-matter page"),
+  difficultyMode: zod
+    .enum(["uniform", "progressive"])
+    .default(renderInteriorPdfBodyDifficultyModeDefault)
+    .describe(
+      "uniform = all puzzles same difficulty; progressive = Easy → Medium → Hard sections",
+    ),
+  challengeDays: zod
+    .union([zod.literal(30), zod.literal(60), zod.literal(90)])
+    .optional()
+    .describe("Adds a Solve-a-Day tracker page for 30, 60, or 90 days"),
 });
 
 /**
  * @summary Render full-wrap cover HTML to PDF via Puppeteer
  */
+export const renderCoverPdfBodyDifficultyModeDefault = `uniform`;
+
 export const RenderCoverPdfBody = zod.object({
   title: zod.string(),
   subtitle: zod.string().optional(),
@@ -287,7 +420,6 @@ export const RenderCoverPdfBody = zod.object({
     "Maze",
     "Number Search",
     "Cryptogram",
-    "Crossword",
   ]),
   puzzleCount: zod.number().optional(),
   difficulty: zod.enum(["Easy", "Medium", "Hard"]).optional(),
@@ -308,13 +440,66 @@ export const RenderCoverPdfBody = zod.object({
     ])
     .optional(),
   coverStyle: zod
-    .enum(["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth", "photo"])
+    .enum([
+      "classic",
+      "geometric",
+      "luxury",
+      "bold",
+      "minimal",
+      "retro",
+      "warmth",
+      "photo",
+    ])
     .optional(),
   backDescription: zod.string().optional(),
   words: zod.array(zod.string()).optional(),
   wordCategory: zod.string().optional(),
+  coverImageUrl: zod.string().optional(),
   series: zod.string().optional(),
   volumeNumber: zod.number().optional(),
+  dedication: zod
+    .string()
+    .optional()
+    .describe("Optional dedication text added as a front-matter page"),
+  difficultyMode: zod
+    .enum(["uniform", "progressive"])
+    .default(renderCoverPdfBodyDifficultyModeDefault)
+    .describe(
+      "uniform = all puzzles same difficulty; progressive = Easy → Medium → Hard sections",
+    ),
+  challengeDays: zod
+    .union([zod.literal(30), zod.literal(60), zod.literal(90)])
+    .optional()
+    .describe("Adds a Solve-a-Day tracker page for 30, 60, or 90 days"),
+});
+
+/**
+ * @summary Generate cover HTML for live browser preview (no puzzle generation)
+ */
+export const CoverPreviewBody = zod.object({
+  title: zod.string(),
+  subtitle: zod.string().optional(),
+  author: zod.string().optional(),
+  theme: zod.string().optional(),
+  coverStyle: zod.string().optional(),
+  volumeNumber: zod.number().optional(),
+  series: zod.string().optional(),
+  backDescription: zod.string().optional(),
+  largePrint: zod.boolean().optional(),
+  puzzleCount: zod.number().optional(),
+  puzzleType: zod.string().optional(),
+  difficulty: zod.string().optional(),
+  paperType: zod.string().optional(),
+  coverImageUrl: zod.string().optional(),
+});
+
+export const CoverPreviewResponse = zod.object({
+  html: zod.string(),
+  coverDims: zod.object({
+    fullW: zod.number(),
+    fullH: zod.number(),
+    spineW: zod.number(),
+  }),
 });
 
 /**
@@ -364,33 +549,6 @@ export const PreviewPuzzlesResponse = zod.object({
           cipher: zod.string(),
           plain: zod.string(),
           key: zod.record(zod.string(), zod.string()),
-        })
-        .optional(),
-      crossword: zod
-        .object({
-          grid: zod.array(zod.array(zod.string())),
-          across: zod.array(
-            zod.object({
-              num: zod.number(),
-              clue: zod.string(),
-              answer: zod.string(),
-              row: zod.number(),
-              col: zod.number(),
-              len: zod.number(),
-            })
-          ),
-          down: zod.array(
-            zod.object({
-              num: zod.number(),
-              clue: zod.string(),
-              answer: zod.string(),
-              row: zod.number(),
-              col: zod.number(),
-              len: zod.number(),
-            })
-          ),
-          size: zod.number(),
-          nums: zod.record(zod.string(), zod.number()),
         })
         .optional(),
     }),
@@ -560,33 +718,4 @@ export const GetNicheIdeasResponse = zod.object({
       whySells: zod.string(),
     }),
   ),
-});
-
-/**
- * @summary Generate cover HTML for live browser preview (no puzzle generation)
- */
-export const CoverPreviewBody = zod.object({
-  title: zod.string(),
-  subtitle: zod.string().optional(),
-  author: zod.string().optional(),
-  theme: zod.string().optional(),
-  coverStyle: zod.string().optional(),
-  volumeNumber: zod.number().optional(),
-  series: zod.string().optional(),
-  backDescription: zod.string().optional(),
-  largePrint: zod.boolean().optional(),
-  puzzleCount: zod.number().optional(),
-  puzzleType: zod.string().optional(),
-  difficulty: zod.string().optional(),
-  paperType: zod.string().optional(),
-  coverImageUrl: zod.string().optional(),
-});
-
-export const CoverPreviewResponse = zod.object({
-  html: zod.string(),
-  coverDims: zod.object({
-    fullW: zod.number(),
-    fullH: zod.number(),
-    spineW: zod.number(),
-  }),
 });

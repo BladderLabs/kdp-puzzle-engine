@@ -254,6 +254,8 @@ function SuggestionCard({ card, onQuickCreate }: { card: OpportunityCard; onQuic
   );
 }
 
+type LibraryTab = "projects" | "series";
+
 export function Home() {
   const { data: books, isLoading, refetch } = useListBooks();
   const deleteBook = useDeleteBook();
@@ -266,6 +268,8 @@ export function Home() {
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [quickCreateCard, setQuickCreateCard] = useState<OpportunityCard | null>(null);
+  const [libraryTab, setLibraryTab] = useState<LibraryTab>("projects");
+  const [expandedSeries, setExpandedSeries] = useState<Set<string>>(new Set());
 
   const fetchSuggestions = useCallback(async (type: PuzzleTypeFilter) => {
     setLoadingSuggestions(true);
@@ -320,6 +324,34 @@ export function Home() {
     "Cryptogram": "border-rose-500/40 text-rose-300",
   };
 
+  // Group books by seriesName for Series Library view
+  const seriesGroups: { name: string; books: typeof books }[] = [];
+  const unseriedBooks: typeof books = [];
+  if (books) {
+    const groupMap = new Map<string, typeof books>();
+    for (const book of books) {
+      const sn = (book as Record<string, unknown>).seriesName as string | undefined;
+      if (sn) {
+        if (!groupMap.has(sn)) groupMap.set(sn, []);
+        groupMap.get(sn)!.push(book);
+      } else {
+        unseriedBooks.push(book);
+      }
+    }
+    for (const [name, grpBooks] of groupMap) {
+      seriesGroups.push({ name, books: grpBooks });
+    }
+  }
+  const hasSeries = seriesGroups.length > 0;
+
+  const toggleSeries = (name: string) => {
+    setExpandedSeries(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name); else next.add(name);
+      return next;
+    });
+  };
+
   return (
     <div className="min-h-screen">
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-10">
@@ -330,9 +362,6 @@ export function Home() {
             <h1 className="text-3xl font-extrabold tracking-tight text-white">
               KDP Puzzle Dashboard
             </h1>
-            <p className="text-white/40 text-sm mt-1">
-              {books?.length ?? 0} project{(books?.length ?? 0) !== 1 ? "s" : ""} saved
-            </p>
           </div>
           <div className="flex items-center gap-2">
             <Link href="/agent-create">
@@ -440,9 +469,33 @@ export function Home() {
           )}
         </div>
 
-        {/* ─── YOUR PROJECTS ─── */}
+        {/* ─── LIBRARY ─── */}
         <div className="space-y-4">
-          <h2 className="text-lg font-bold text-white/80">Your Projects</h2>
+          {/* Tab header */}
+          <div className="flex items-center justify-between">
+            <div className="flex gap-1 bg-white/5 rounded-xl p-1">
+              <button
+                onClick={() => setLibraryTab("projects")}
+                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150 ${libraryTab === "projects" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"}`}
+              >
+                All Projects
+              </button>
+              <button
+                onClick={() => setLibraryTab("series")}
+                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150 flex items-center gap-1.5 ${libraryTab === "series" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"}`}
+              >
+                Series Library
+                {hasSeries && (
+                  <span className="text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full px-1.5 py-0.5 leading-none">
+                    {seriesGroups.length}
+                  </span>
+                )}
+              </button>
+            </div>
+            <p className="text-white/30 text-xs">
+              {books?.length ?? 0} book{(books?.length ?? 0) !== 1 ? "s" : ""}
+            </p>
+          </div>
 
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -461,10 +514,154 @@ export function Home() {
                 </button>
               </Link>
             </div>
+          ) : libraryTab === "series" ? (
+            /* ── SERIES VIEW ── */
+            <div className="space-y-4">
+              {!hasSeries && unseriedBooks!.length === 0 && (
+                <div className="text-center py-10 border border-dashed border-white/10 rounded-2xl text-white/30 text-sm">
+                  No series yet. Add a "Series Name" when creating or editing a book.
+                </div>
+              )}
+
+              {/* Named series groups */}
+              {seriesGroups.map(({ name, books: grpBooks }) => {
+                const isOpen = expandedSeries.has(name);
+                return (
+                  <div key={name} className="bg-[#0d0d0d] border border-white/8 rounded-2xl overflow-hidden">
+                    {/* Series header */}
+                    <button
+                      onClick={() => toggleSeries(name)}
+                      className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/3 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg">📚</span>
+                        <div>
+                          <h3 className="font-bold text-white text-sm">{name}</h3>
+                          <p className="text-xs text-white/30 mt-0.5">
+                            {grpBooks!.length} book{grpBooks!.length !== 1 ? "s" : ""}
+                            {grpBooks!.length > 0 && ` · ${grpBooks![0].puzzleType}`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex gap-1">
+                          {grpBooks!.slice(0, 5).map((_, i) => (
+                            <div key={i} className="w-5 h-7 rounded bg-amber-500/20 border border-amber-500/30" style={{ opacity: 1 - i * 0.15 }} />
+                          ))}
+                          {grpBooks!.length > 5 && (
+                            <span className="text-xs text-white/30 self-center ml-1">+{grpBooks!.length - 5}</span>
+                          )}
+                        </div>
+                        <span className="text-white/30 text-xs">{isOpen ? "▲" : "▼"}</span>
+                      </div>
+                    </button>
+
+                    {/* Expanded book grid */}
+                    {isOpen && (
+                      <div className="border-t border-white/5 px-4 pb-4 pt-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {grpBooks!.map(book => {
+                            const typeColor = PUZZLE_TYPE_COLORS[book.puzzleType] || "border-white/10 text-white/50";
+                            return (
+                              <div key={book.id} className="bg-[#111] border border-white/8 hover:border-white/15 rounded-xl flex flex-col transition-all duration-200">
+                                <div className="p-4 flex-1">
+                                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                                    <h4 className="font-bold text-white text-sm leading-snug line-clamp-2 flex-1">
+                                      {book.title || "Untitled"}
+                                    </h4>
+                                    <span className={`shrink-0 text-xs px-1.5 py-0.5 rounded-full border font-medium ${typeColor}`}>
+                                      Vol {(book as Record<string, unknown>).volumeNumber as number ?? 1}
+                                    </span>
+                                  </div>
+                                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-white/35">
+                                    <span>{book.puzzleCount ?? 100} puzzles</span>
+                                    <span>{book.difficulty || "Mixed"}</span>
+                                  </div>
+                                </div>
+                                <div className="px-4 pb-3 flex gap-1.5 border-t border-white/5 pt-2.5">
+                                  <Link href={`/generate/${book.id}`} className="flex-1">
+                                    <button className="w-full py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-black border border-amber-500/20 hover:border-amber-500 text-xs font-bold transition-all duration-150">
+                                      Generate
+                                    </button>
+                                  </Link>
+                                  <Link href={`/books/${book.id}`}>
+                                    <button className="px-2.5 py-1.5 rounded-lg border border-white/10 text-white/40 hover:text-white hover:border-white/30 text-xs transition-colors">Edit</button>
+                                  </Link>
+                                  <button onClick={() => handleClone(book.id)} className="px-2.5 py-1.5 rounded-lg border border-white/10 text-white/40 hover:text-white hover:border-white/30 text-xs transition-colors">Clone</button>
+                                  <button onClick={() => handleDelete(book.id)} className="px-2.5 py-1.5 rounded-lg border border-red-500/10 text-red-400/40 hover:text-red-400 hover:border-red-500/30 text-xs transition-colors">Del</button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Unseries books */}
+              {unseriedBooks!.length > 0 && (
+                <div className="bg-[#0d0d0d] border border-white/8 rounded-2xl overflow-hidden">
+                  <button
+                    onClick={() => toggleSeries("__unseries__")}
+                    className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/3 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">📄</span>
+                      <div>
+                        <h3 className="font-semibold text-white/60 text-sm">Standalone Books</h3>
+                        <p className="text-xs text-white/30 mt-0.5">{unseriedBooks!.length} book{unseriedBooks!.length !== 1 ? "s" : ""} — not in a series</p>
+                      </div>
+                    </div>
+                    <span className="text-white/30 text-xs">{expandedSeries.has("__unseries__") ? "▲" : "▼"}</span>
+                  </button>
+                  {expandedSeries.has("__unseries__") && (
+                    <div className="border-t border-white/5 px-4 pb-4 pt-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {unseriedBooks!.map(book => {
+                          const typeColor = PUZZLE_TYPE_COLORS[book.puzzleType] || "border-white/10 text-white/50";
+                          return (
+                            <div key={book.id} className="bg-[#111] border border-white/8 hover:border-white/15 rounded-xl flex flex-col transition-all duration-200">
+                              <div className="p-4 flex-1">
+                                <div className="flex items-start justify-between gap-2 mb-1.5">
+                                  <h4 className="font-bold text-white text-sm leading-snug line-clamp-2 flex-1">{book.title || "Untitled"}</h4>
+                                  <span className={`shrink-0 text-xs px-1.5 py-0.5 rounded-full border font-medium ${typeColor}`}>
+                                    {PUZZLE_ICONS[book.puzzleType] || "📖"}
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-white/35">
+                                  <span>{book.puzzleCount ?? 100} puzzles</span>
+                                  <span>{book.difficulty || "Mixed"}</span>
+                                </div>
+                              </div>
+                              <div className="px-4 pb-3 flex gap-1.5 border-t border-white/5 pt-2.5">
+                                <Link href={`/generate/${book.id}`} className="flex-1">
+                                  <button className="w-full py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-black border border-amber-500/20 hover:border-amber-500 text-xs font-bold transition-all duration-150">
+                                    Generate
+                                  </button>
+                                </Link>
+                                <Link href={`/books/${book.id}`}>
+                                  <button className="px-2.5 py-1.5 rounded-lg border border-white/10 text-white/40 hover:text-white hover:border-white/30 text-xs transition-colors">Edit</button>
+                                </Link>
+                                <button onClick={() => handleClone(book.id)} className="px-2.5 py-1.5 rounded-lg border border-white/10 text-white/40 hover:text-white hover:border-white/30 text-xs transition-colors">Clone</button>
+                                <button onClick={() => handleDelete(book.id)} className="px-2.5 py-1.5 rounded-lg border border-red-500/10 text-red-400/40 hover:text-red-400 hover:border-red-500/30 text-xs transition-colors">Del</button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           ) : (
+            /* ── ALL PROJECTS (flat) ── */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {books.map(book => {
                 const typeColor = PUZZLE_TYPE_COLORS[book.puzzleType] || "border-white/10 text-white/50";
+                const sn = (book as Record<string, unknown>).seriesName as string | undefined;
                 return (
                   <div
                     key={book.id}
@@ -481,7 +678,13 @@ export function Home() {
                       </div>
 
                       {book.subtitle && (
-                        <p className="text-xs text-white/35 line-clamp-1 mb-3">{book.subtitle}</p>
+                        <p className="text-xs text-white/35 line-clamp-1 mb-2">{book.subtitle}</p>
+                      )}
+
+                      {sn && (
+                        <p className="text-xs text-amber-400/70 mb-2 flex items-center gap-1">
+                          <span>📚</span> {sn}
+                        </p>
                       )}
 
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/40">

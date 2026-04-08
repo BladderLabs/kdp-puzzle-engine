@@ -589,6 +589,14 @@ components:
           type: integer
           enum: [30, 60, 90]
           description: Adds a Solve-a-Day tracker page for 30, 60, or 90 days
+        seriesName:
+          type: string
+          description: Name of the series this book belongs to (e.g. "Brain Boost Series")
+        keywords:
+          type: array
+          items:
+            type: string
+          maxItems: 7
       required:
         - title
         - puzzleType
@@ -643,6 +651,14 @@ components:
           type: integer
           enum: [30, 60, 90]
           description: Adds a Solve-a-Day tracker page for 30, 60, or 90 days
+        seriesName:
+          type: string
+          description: Name of the series this book belongs to
+        keywords:
+          type: array
+          items:
+            type: string
+          maxItems: 7
         createdAt:
           type: string
           format: date-time
@@ -738,20 +754,6 @@ components:
           type: string
       required:
         - title
-
-    CoverDims:
-      type: object
-      properties:
-        fullW:
-          type: number
-        fullH:
-          type: number
-        spineW:
-          type: number
-      required:
-        - fullW
-        - fullH
-        - spineW
 
     CoverPreviewResult:
       type: object

@@ -5,8 +5,10 @@
  * KDP Puzzle Engine API
  * OpenAPI spec version: 0.1.0
  */
+import type { BookConfigChallengeDays } from "./bookConfigChallengeDays";
 import type { BookConfigCoverStyle } from "./bookConfigCoverStyle";
 import type { BookConfigDifficulty } from "./bookConfigDifficulty";
+import type { BookConfigDifficultyMode } from "./bookConfigDifficultyMode";
 import type { BookConfigPaperType } from "./bookConfigPaperType";
 import type { BookConfigPuzzleType } from "./bookConfigPuzzleType";
 import type { BookConfigTheme } from "./bookConfigTheme";
@@ -28,7 +30,10 @@ export interface BookConfig {
   coverImageUrl?: string;
   series?: string;
   volumeNumber?: number;
+  /** Optional dedication text added as a front-matter page */
   dedication?: string;
-  difficultyMode?: 'uniform' | 'progressive';
-  challengeDays?: 30 | 60 | 90;
+  /** uniform = all puzzles same difficulty; progressive = Easy → Medium → Hard sections */
+  difficultyMode?: BookConfigDifficultyMode;
+  /** Adds a Solve-a-Day tracker page for 30, 60, or 90 days */
+  challengeDays?: BookConfigChallengeDays;
 }

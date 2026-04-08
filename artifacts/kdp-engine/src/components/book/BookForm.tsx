@@ -75,6 +75,7 @@ const formSchema = z.object({
   dedication: z.string().optional(),
   difficultyMode: z.string().default("uniform"),
   challengeDays: z.union([z.literal(30), z.literal(60), z.literal(90)]).optional(),
+  seriesName: z.string().optional(),
 });
 
 export type BookFormValues = z.infer<typeof formSchema>;
@@ -257,14 +258,23 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
                   )} />
                 </div>
 
-                {/* Row 2 — Author */}
-                <FormField control={form.control} name="author" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Author</FormLabel>
-                    <FormControl><Input placeholder="Eleanor Bennett" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                {/* Row 2 — Author + Series Name */}
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="author" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Author</FormLabel>
+                      <FormControl><Input placeholder="Eleanor Bennett" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="seriesName" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Series Name <span className="text-muted-foreground font-normal">(optional)</span></FormLabel>
+                      <FormControl><Input placeholder="e.g. Brain Boost Series" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
 
                 <div className="border-t" />
 

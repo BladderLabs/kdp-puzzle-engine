@@ -5,6 +5,8 @@
  * KDP Puzzle Engine API
  * OpenAPI spec version: 0.1.0
  */
+import type { BookChallengeDays } from "./bookChallengeDays";
+import type { BookDifficultyMode } from "./bookDifficultyMode";
 
 export interface Book {
   id: number;
@@ -24,9 +26,15 @@ export interface Book {
   coverImageUrl?: string;
   niche?: string;
   volumeNumber?: number;
+  /** Optional dedication text added as a front-matter page */
   dedication?: string;
-  difficultyMode?: 'uniform' | 'progressive';
-  challengeDays?: 30 | 60 | 90;
+  difficultyMode?: BookDifficultyMode;
+  /** Adds a Solve-a-Day tracker page for 30, 60, or 90 days */
+  challengeDays?: BookChallengeDays;
+  /** Name of the series this book belongs to */
+  seriesName?: string;
+  /** @maxItems 7 */
+  keywords?: string[];
   createdAt: Date;
   updatedAt: Date;
 }

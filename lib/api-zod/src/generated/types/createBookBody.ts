@@ -5,6 +5,8 @@
  * KDP Puzzle Engine API
  * OpenAPI spec version: 0.1.0
  */
+import type { CreateBookBodyChallengeDays } from "./createBookBodyChallengeDays";
+import type { CreateBookBodyDifficultyMode } from "./createBookBodyDifficultyMode";
 
 export interface CreateBookBody {
   title: string;
@@ -23,7 +25,13 @@ export interface CreateBookBody {
   coverImageUrl?: string;
   niche?: string;
   volumeNumber?: number;
+  /** Optional dedication text added as a front-matter page */
   dedication?: string;
-  difficultyMode?: 'uniform' | 'progressive';
-  challengeDays?: 30 | 60 | 90;
+  difficultyMode?: CreateBookBodyDifficultyMode;
+  /** Adds a Solve-a-Day tracker page for 30, 60, or 90 days */
+  challengeDays?: CreateBookBodyChallengeDays;
+  /** Name of the series this book belongs to (e.g. "Brain Boost Series") */
+  seriesName?: string;
+  /** @maxItems 7 */
+  keywords?: string[];
 }

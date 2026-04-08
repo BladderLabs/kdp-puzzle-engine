@@ -24,6 +24,7 @@ export const booksTable = pgTable("books", {
   difficultyMode: text("difficulty_mode").notNull().default("uniform"),
   challengeDays: integer("challenge_days"),
   keywords: jsonb("keywords").$type<string[]>(),
+  seriesName: text("series_name"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

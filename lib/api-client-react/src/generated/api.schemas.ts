@@ -68,6 +68,30 @@ export const BookConfigCoverStyle = {
   minimal: "minimal",
   retro: "retro",
   warmth: "warmth",
+  photo: "photo",
+} as const;
+
+/**
+ * uniform = all puzzles same difficulty; progressive = Easy → Medium → Hard sections
+ */
+export type BookConfigDifficultyMode =
+  (typeof BookConfigDifficultyMode)[keyof typeof BookConfigDifficultyMode];
+
+export const BookConfigDifficultyMode = {
+  uniform: "uniform",
+  progressive: "progressive",
+} as const;
+
+/**
+ * Adds a Solve-a-Day tracker page for 30, 60, or 90 days
+ */
+export type BookConfigChallengeDays =
+  (typeof BookConfigChallengeDays)[keyof typeof BookConfigChallengeDays];
+
+export const BookConfigChallengeDays = {
+  NUMBER_30: 30,
+  NUMBER_60: 60,
+  NUMBER_90: 90,
 } as const;
 
 export interface BookConfig {
@@ -87,7 +111,33 @@ export interface BookConfig {
   coverImageUrl?: string;
   series?: string;
   volumeNumber?: number;
+  /** Optional dedication text added as a front-matter page */
+  dedication?: string;
+  /** uniform = all puzzles same difficulty; progressive = Easy → Medium → Hard sections */
+  difficultyMode?: BookConfigDifficultyMode;
+  /** Adds a Solve-a-Day tracker page for 30, 60, or 90 days */
+  challengeDays?: BookConfigChallengeDays;
 }
+
+export type CreateBookBodyDifficultyMode =
+  (typeof CreateBookBodyDifficultyMode)[keyof typeof CreateBookBodyDifficultyMode];
+
+export const CreateBookBodyDifficultyMode = {
+  uniform: "uniform",
+  progressive: "progressive",
+} as const;
+
+/**
+ * Adds a Solve-a-Day tracker page for 30, 60, or 90 days
+ */
+export type CreateBookBodyChallengeDays =
+  (typeof CreateBookBodyChallengeDays)[keyof typeof CreateBookBodyChallengeDays];
+
+export const CreateBookBodyChallengeDays = {
+  NUMBER_30: 30,
+  NUMBER_60: 60,
+  NUMBER_90: 90,
+} as const;
 
 export interface CreateBookBody {
   title: string;
@@ -106,10 +156,36 @@ export interface CreateBookBody {
   coverImageUrl?: string;
   niche?: string;
   volumeNumber?: number;
+  /** Optional dedication text added as a front-matter page */
   dedication?: string;
-  difficultyMode?: string;
-  challengeDays?: 30 | 60 | 90;
+  difficultyMode?: CreateBookBodyDifficultyMode;
+  /** Adds a Solve-a-Day tracker page for 30, 60, or 90 days */
+  challengeDays?: CreateBookBodyChallengeDays;
+  /** Name of the series this book belongs to (e.g. "Brain Boost Series") */
+  seriesName?: string;
+  /** @maxItems 7 */
+  keywords?: string[];
 }
+
+export type BookDifficultyMode =
+  (typeof BookDifficultyMode)[keyof typeof BookDifficultyMode];
+
+export const BookDifficultyMode = {
+  uniform: "uniform",
+  progressive: "progressive",
+} as const;
+
+/**
+ * Adds a Solve-a-Day tracker page for 30, 60, or 90 days
+ */
+export type BookChallengeDays =
+  (typeof BookChallengeDays)[keyof typeof BookChallengeDays];
+
+export const BookChallengeDays = {
+  NUMBER_30: 30,
+  NUMBER_60: 60,
+  NUMBER_90: 90,
+} as const;
 
 export interface Book {
   id: number;
@@ -129,9 +205,15 @@ export interface Book {
   coverImageUrl?: string;
   niche?: string;
   volumeNumber?: number;
+  /** Optional dedication text added as a front-matter page */
   dedication?: string;
-  difficultyMode?: string;
-  challengeDays?: 30 | 60 | 90;
+  difficultyMode?: BookDifficultyMode;
+  /** Adds a Solve-a-Day tracker page for 30, 60, or 90 days */
+  challengeDays?: BookChallengeDays;
+  /** Name of the series this book belongs to */
+  seriesName?: string;
+  /** @maxItems 7 */
+  keywords?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -155,6 +237,28 @@ export interface PreviewRequest {
   largePrint?: boolean;
   words?: string[];
   count?: number;
+}
+
+export interface CoverPreviewRequest {
+  title: string;
+  subtitle?: string;
+  author?: string;
+  theme?: string;
+  coverStyle?: string;
+  volumeNumber?: number;
+  series?: string;
+  backDescription?: string;
+  largePrint?: boolean;
+  puzzleCount?: number;
+  puzzleType?: string;
+  difficulty?: string;
+  paperType?: string;
+  coverImageUrl?: string;
+}
+
+export interface CoverPreviewResult {
+  html: string;
+  coverDims: CoverDims;
 }
 
 export type WordSearchDataPSet = { [key: string]: boolean };
@@ -192,23 +296,6 @@ export interface CryptogramData {
   key: CryptogramDataKey;
 }
 
-export interface CrosswordClueData {
-  num: number;
-  clue: string;
-  answer: string;
-  row: number;
-  col: number;
-  len: number;
-}
-
-export interface CrosswordData {
-  grid: string[][];
-  across: CrosswordClueData[];
-  down: CrosswordClueData[];
-  size: number;
-  nums: Record<string, number>;
-}
-
 export interface PuzzleData {
   type?: string;
   wordSearch?: WordSearchData;
@@ -216,7 +303,6 @@ export interface PuzzleData {
   maze?: MazeData;
   numberSearch?: NumberSearchData;
   cryptogram?: CryptogramData;
-  crossword?: CrosswordData;
 }
 
 export interface PreviewResult {
@@ -335,32 +421,4 @@ export interface NicheIdea {
 
 export interface NicheIdeasResult {
   ideas: NicheIdea[];
-}
-
-export interface CoverPreviewRequest {
-  title: string;
-  subtitle?: string;
-  author?: string;
-  theme?: string;
-  coverStyle?: string;
-  volumeNumber?: number;
-  series?: string;
-  backDescription?: string;
-  largePrint?: boolean;
-  puzzleCount?: number;
-  puzzleType?: string;
-  difficulty?: string;
-  paperType?: string;
-  coverImageUrl?: string;
-}
-
-export interface CoverDims {
-  fullW: number;
-  fullH: number;
-  spineW: number;
-}
-
-export interface CoverPreviewResult {
-  html: string;
-  coverDims: CoverDims;
 }
