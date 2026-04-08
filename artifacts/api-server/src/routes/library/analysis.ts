@@ -187,32 +187,37 @@ Return ONLY a JSON array of 4 objects. No markdown, no explanation.`;
           .map((item: unknown) => LibrarySuggestionSchema.safeParse(item))
           .filter(r => r.success)
           .map(r => (r as z.SafeParseSuccess<LibrarySuggestion>).data)
+          // Server-side uniqueness filter: drop suggestions whose combo is already in usedCombos
+          .filter(s => !usedCombos.includes(comboKey(s.theme, s.coverStyle, s.niche)))
           .slice(0, 5);
       }
     } catch (err) {
       req.log.warn({ err }, "Library analysis LLM failed — returning structural data only");
     }
 
-    // Fallback suggestions if LLM fails or library empty — de-duplicated against usedCombos
-    if (suggestions.length === 0) {
-      const FALLBACK_THEMES = ["midnight", "forest", "crimson", "ocean", "violet", "slate", "sunrise", "teal", "parchment", "sky"];
-      const FALLBACK_STYLES = ["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth"];
-      const allNiches = listNiches();
-      const topMissing = allNiches.filter(n => !usedNiches.has(n.key)).slice(0, 3);
-      suggestions = topMissing.map(n => {
-        // Pick first theme+style combo not already in usedCombos for this niche
-        let theme = "midnight";
-        let coverStyle = "classic";
-        outer: for (const t of FALLBACK_THEMES) {
-          for (const s of FALLBACK_STYLES) {
-            if (!usedCombos.includes(`${t}+${s}+${n.key}`)) {
-              theme = t;
-              coverStyle = s;
-              break outer;
-            }
-          }
+    // Helper: find first unused theme+style combo for a niche
+    const FALLBACK_THEMES = ["midnight", "forest", "crimson", "ocean", "violet", "slate", "sunrise", "teal", "parchment", "sky"];
+    const FALLBACK_STYLES = ["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth"];
+    const findUnusedCombo = (niche: string): { theme: string; coverStyle: string } => {
+      for (const t of FALLBACK_THEMES) {
+        for (const s of FALLBACK_STYLES) {
+          if (!usedCombos.includes(`${t}+${s}+${niche}`)) return { theme: t, coverStyle: s };
         }
-        return {
+      }
+      return { theme: "midnight", coverStyle: "classic" };
+    };
+
+    // Build fallback/padding suggestions if LLM fails or returns fewer than 3 valid cards
+    if (suggestions.length < 3) {
+      const existing = new Set(suggestions.map(s => s.niche));
+      const allNiches = listNiches();
+
+      // 1. Fill from missing niches
+      const missingNiches = allNiches.filter(n => !usedNiches.has(n.key) && !existing.has(n.key));
+      for (const n of missingNiches) {
+        if (suggestions.length >= 5) break;
+        const { theme, coverStyle } = findUnusedCombo(n.key);
+        suggestions.push({
           type: "niche_gap" as const,
           brief: `${n.label} ${n.puzzleType} book — large print, 100 puzzles`,
           niche: n.key,
@@ -221,8 +226,30 @@ Return ONLY a JSON array of 4 objects. No markdown, no explanation.`;
           theme,
           coverStyle,
           rationale: `The ${n.label} niche has no books in your library yet — a clear gap with proven demand.`,
-        };
-      });
+        });
+        existing.add(n.key);
+      }
+
+      // 2. If still short, add cover_diversity cards for existing niches with unused combos
+      if (suggestions.length < 3) {
+        const usedNichesList = allNiches.filter(n => usedNiches.has(n.key));
+        for (const n of usedNichesList) {
+          if (suggestions.length >= 5) break;
+          const { theme, coverStyle } = findUnusedCombo(n.key);
+          // Only add if there is actually an unused combo for that niche
+          if (usedCombos.includes(`${theme}+${coverStyle}+${n.key}`)) continue;
+          suggestions.push({
+            type: "cover_diversity" as const,
+            brief: `${n.label} ${n.puzzleType} book with a fresh ${theme} look — 80 puzzles, large print`,
+            niche: n.key,
+            nicheLabel: n.label,
+            puzzleType: n.puzzleType,
+            theme,
+            coverStyle,
+            rationale: `Your library has ${n.label} books but could benefit from a fresh ${theme}/${coverStyle} visual to attract different buyers.`,
+          });
+        }
+      }
     }
 
     const analysis: LibraryAnalysis = {
