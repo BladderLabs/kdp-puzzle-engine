@@ -98,6 +98,26 @@ export async function buildInteriorHTML(opts: BuildOpts): Promise<BuildResult> {
   const categoryBank = opts.wordCategory && WORD_BANKS[opts.wordCategory] ? WORD_BANKS[opts.wordCategory] : null;
   const wordBank = customWords || categoryBank || WORD_BANKS.General;
 
+  // ── Rotating word pool for cross-puzzle deduplication ───────────────────────
+  // Words are drawn sequentially from a shuffled pool. When the pool is exhausted
+  // it reshuffles and restarts — this ensures each word appears as infrequently
+  // as possible across the book (with an expanded 200-word bank, each word only
+  // appears once per 10-16 puzzles instead of in every puzzle).
+  let wordPool = shuf(wordBank.slice());
+  let poolIdx = 0;
+  function drawWordSet(n: number): string[] {
+    const cap = Math.min(n, wordBank.length);
+    const drawn: string[] = [];
+    while (drawn.length < cap) {
+      if (poolIdx >= wordPool.length) {
+        wordPool = shuf(wordBank.slice());
+        poolIdx = 0;
+      }
+      drawn.push(wordPool[poolIdx++]);
+    }
+    return drawn;
+  }
+
   // Cryptogram: deterministic quote index seeded by bookSeed + puzzleIndex (no random shuffle)
   let cryptoQIdx = 0;
 
@@ -121,7 +141,7 @@ export async function buildInteriorHTML(opts: BuildOpts): Promise<BuildResult> {
     const pDiff = getPuzzleDiff(i);
     switch (PT) {
       case "Word Search":
-        puzzles.push(makeWordSearch(shuf(wordBank).slice(0, Math.min(wordBank.length, wpp)), gsz));
+        puzzles.push(makeWordSearch(drawWordSet(wpp), gsz));
         break;
       case "Sudoku":
         puzzles.push(makeSudoku(pDiff));
@@ -137,10 +157,10 @@ export async function buildInteriorHTML(opts: BuildOpts): Promise<BuildResult> {
         break;
       }
       case "Crossword":
-        puzzles.push(makeCrossword(shuf(wordBank).slice(0, Math.min(wordBank.length, 20)), LP ? 11 : 13));
+        puzzles.push(makeCrossword(drawWordSet(20), LP ? 11 : 13));
         break;
       default:
-        puzzles.push(makeWordSearch(shuf(wordBank).slice(0, Math.min(wordBank.length, wpp)), gsz));
+        puzzles.push(makeWordSearch(drawWordSet(wpp), gsz));
     }
   }
 

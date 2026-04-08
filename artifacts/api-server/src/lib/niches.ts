@@ -361,3 +361,71 @@ export function getNicheByKey(key: string): NicheData | undefined {
 export function listNiches() {
   return NICHES.map(n => ({ key: n.key, label: n.label, puzzleType: n.puzzleType }));
 }
+
+/**
+ * Expands a niche word bank from ~50 seed words to 200+ unique thematic words
+ * using a single Claude Haiku call. Results are merged and deduplicated with the
+ * existing seed list. Falls back to the seed if AI returns fewer than 80 words.
+ *
+ * Only relevant for word-based puzzle types (Word Search, Crossword).
+ */
+export async function expandNicheWordBank(
+  niche: string,
+  puzzleType: string,
+  difficulty: string,
+  audience: string,
+  existingSeed: string[],
+): Promise<string[]> {
+  const seedSet = new Set(
+    existingSeed.map(w => w.toUpperCase().trim()).filter(w => w.length >= 3 && /^[A-Z]+$/.test(w)),
+  );
+
+  const prompt = `You are a professional KDP puzzle book editor. Generate 200 additional thematic words for a word search or crossword puzzle book.
+
+Niche: ${niche}
+Puzzle type: ${puzzleType}
+Difficulty: ${difficulty}
+Target audience: ${audience}
+
+Rules:
+- UPPERCASE only, single words with letters only (no spaces, hyphens, or punctuation)
+- 3–15 characters each
+- Thematically relevant — every word should feel at home in a "${niche}" puzzle book
+- Audience-appropriate (avoid obscure jargon for Easy/Senior niches; technical terms welcome for expert niches)
+- Mix of short words (3–5 letters) and longer words (8–12 letters)
+- Proper nouns allowed only if the niche is about people, places, or proper names (e.g. biblical names for a bible niche)
+- DO NOT include any of these already-used seed words: ${[...seedSet].join(", ")}
+
+Return ONLY a JSON array of strings, no markdown, no explanation.
+Example: ["WORD1","WORD2","WORD3"]`;
+
+  try {
+    const { anthropic } = await import("@workspace/integrations-anthropic-ai");
+    const message = await anthropic.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 2048,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const text = message.content[0].type === "text" ? message.content[0].text : "[]";
+    const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    const start = cleaned.indexOf("[");
+    const end = cleaned.lastIndexOf("]");
+    const rawWords: unknown = JSON.parse(start !== -1 && end !== -1 ? cleaned.slice(start, end + 1) : cleaned);
+
+    if (!Array.isArray(rawWords)) return [...seedSet];
+
+    const newWords: string[] = (rawWords as unknown[])
+      .filter(w => typeof w === "string")
+      .map(w => (w as string).toUpperCase().trim())
+      .filter(w => w.length >= 3 && w.length <= 15 && /^[A-Z]+$/.test(w))
+      .filter(w => !seedSet.has(w));
+
+    const merged = [...seedSet, ...new Set(newWords)];
+    if (merged.length < 80) return [...seedSet];
+
+    return merged;
+  } catch {
+    return [...seedSet];
+  }
+}

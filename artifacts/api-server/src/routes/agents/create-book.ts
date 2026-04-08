@@ -20,6 +20,7 @@ import { runSeriesArcPlanner, type SeriesArc } from "../../lib/agents/series-arc
 import { runCoverArtDirector } from "../../lib/agents/cover-art-director";
 import { runQAReviewer, type QAIssue } from "../../lib/agents/qa-reviewer";
 import { runBuyerPsychologyProfiler, type BuyerProfile } from "../../lib/agents/buyer-psychology-profiler";
+import { expandNicheWordBank } from "../../lib/niches";
 import { roundTwoDesignCompatibility } from "../../lib/agents/cover-design-analyst";
 import { roundTwoColorCompatibility } from "../../lib/agents/cover-color-strategist";
 import { roundTwoTypographyCompatibility } from "../../lib/agents/cover-typography-director";
@@ -311,10 +312,13 @@ router.post("/agents/create-book", async (req, res) => {
     req.log.error({ err }, "Council group A failed");
   }
 
-  // ─── Stages 5, 6, 7: Puzzle + Interior + Production (parallel) ────────────────
+  // ─── Stages 5, 6, 7: Puzzle + Interior + Production + Word Bank Expansion (parallel) ─
   let puzzleSpec: PuzzleSpec | null = null;
   let layoutSpec: LayoutSpec | null = null;
   let productionSpec: ProductionSpec | null = null;
+  // Expanded word bank: 200+ unique niche-specific words, used for Word Search and Crossword puzzles.
+  // Runs concurrently with the councils; falls back to draft.words if AI call fails.
+  let expandedWords: string[] = draft.words;
 
   emit(res, "puzzle_council", "running", { message: "Difficulty Calibrator + Layout Engineer researching…" });
   emit(res, "interior_council", "running", { message: "Typography Expert + Page Layout Architect researching…" });
@@ -322,7 +326,8 @@ router.post("/agents/create-book", async (req, res) => {
 
   try {
     const estimatedPageCount = Math.ceil((market.puzzleCount ?? 100) * 1.15) + 20;
-    const [puzzle, layout, production] = await Promise.all([
+    const isWordBased = ["Word Search", "Crossword"].includes(market.puzzleType);
+    const [puzzle, layout, production, wordBankResult] = await Promise.all([
       runPuzzleProductionCouncil(market)
         .then(r => {
           req.log.info({ puzzleCount: r.recommendedPuzzleCount }, "Puzzle Council done");
@@ -371,11 +376,25 @@ router.post("/agents/create-book", async (req, res) => {
           emit(res, "production_council", "done", { message: "Production Council degraded — using defaults" });
           return null;
         }),
+
+      // Word bank expansion — runs in parallel with councils, zero extra latency
+      isWordBased
+        ? expandNicheWordBank(market.niche, market.puzzleType, market.difficulty, market.audienceProfile, draft.words)
+            .then(expanded => {
+              req.log.info({ original: draft.words.length, expanded: expanded.length }, "Word bank expanded");
+              return expanded;
+            })
+            .catch(err => {
+              req.log.warn({ err }, "Word bank expansion failed — using draft words");
+              return draft.words;
+            })
+        : Promise.resolve(draft.words),
     ]);
 
     puzzleSpec = puzzle;
     layoutSpec = layout;
     productionSpec = production;
+    expandedWords = wordBankResult;
   } catch (err) {
     req.log.error({ err }, "Council group B failed");
   }
@@ -677,7 +696,7 @@ router.post("/agents/create-book", async (req, res) => {
         theme: finalTheme,
         coverStyle: finalCoverStyle,
         backDescription: fullBackDescription,
-        words: draft.words,
+        words: expandedWords,
         wordCategory: draft.wordCategory,
         coverImageUrl: coverImageDataUrl,
         niche: market.niche,
