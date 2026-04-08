@@ -202,22 +202,21 @@ function StageRow({ stage, state }: { stage: StageConfig; state: StageState }) {
   );
 }
 
-const QA_CHECKS = [
-  "Title has 6+ words and is keyword-rich",
-  "Subtitle is a compelling benefit statement (8+ words)",
-  "Back description has 80+ words of sales copy",
-  "Puzzle count is 50 or more",
-  "Exactly 7 keywords provided",
-  "No placeholder or generic text detected",
+const QA_CHECKS: Array<{ label: string; field: string }> = [
+  { label: "Title has 6+ words and is keyword-rich", field: "title" },
+  { label: "Subtitle is a compelling benefit statement (8+ words)", field: "subtitle" },
+  { label: "Back description has 80+ words of sales copy", field: "backDescription" },
+  { label: "Puzzle count is 50 or more", field: "puzzleCount" },
+  { label: "Exactly 7 keywords provided", field: "keywords" },
+  { label: "No placeholder or generic text detected", field: "placeholder" },
+  { label: "Cover combination is unique in your library", field: "cover_combination" },
 ];
 
 function QAChecklist({ issues, passed }: { issues: QAIssue[]; passed: boolean }) {
   const failedFields = new Set(issues.map(i => i.field));
-  const checkResults = QA_CHECKS.map((label, idx) => {
-    const fieldMap = ["title", "subtitle", "backDescription", "puzzleCount", "keywords", "placeholder"];
-    const field = fieldMap[idx];
-    const isFailed = failedFields.has(field ?? "");
-    const issue = issues.find(i => i.field === (field ?? ""));
+  const checkResults = QA_CHECKS.map(({ label, field }) => {
+    const isFailed = failedFields.has(field);
+    const issue = issues.find(i => i.field === field);
     return { label, isFailed, issue };
   });
 

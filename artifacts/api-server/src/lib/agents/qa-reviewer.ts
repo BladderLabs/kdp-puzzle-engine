@@ -80,7 +80,7 @@ Book specification:
 - Has cover image: ${spec.hasImage}
 - Has placeholder text detected: ${hasPlaceholder}
 
-Run these 6 quality checks:
+Run these 6 quality checks (check 7 — cover combination uniqueness — is evaluated deterministically, not by LLM):
 1. Title has 6+ words AND is keyword-rich and appealing to the target audience
 2. Subtitle is present AND is a compelling benefit statement (8+ words)
 3. Back description has 80+ words AND is compelling sales copy (no placeholder text)
