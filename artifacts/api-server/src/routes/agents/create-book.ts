@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import type { Response } from "express";
 import { z } from "zod";
 import { db, booksTable } from "@workspace/db";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { runMarketScout, type MarketScoutResult } from "../../lib/agents/market-scout";
 import { runMarketIntelligenceCouncil } from "../../lib/agents/market-intelligence-council";
 import type { ApifyProduct } from "../apify/market-research";

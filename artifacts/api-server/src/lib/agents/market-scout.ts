@@ -138,5 +138,20 @@ keywords array must have exactly 7 strings, ordered from highest to lowest searc
     }
   }
 
+  // ── Post-parse uniqueness enforcement (2-field key: theme+niche) ──────────────
+  if (usedCombos && usedCombos.length > 0) {
+    const ALL_THEMES = ["midnight", "forest", "crimson", "ocean", "violet", "slate", "sunrise", "teal", "parchment", "sky"];
+    const currentCombo = `${result.theme}+${result.niche}`;
+    if (usedCombos.includes(currentCombo)) {
+      const altTheme = ALL_THEMES.find(t => !usedCombos.includes(`${t}+${result.niche}`));
+      if (altTheme) {
+        result.theme = altTheme;
+        if (result.recommendedTheme && usedCombos.includes(`${result.recommendedTheme}+${result.niche}`)) {
+          result.recommendedTheme = altTheme;
+        }
+      }
+    }
+  }
+
   return result;
 }

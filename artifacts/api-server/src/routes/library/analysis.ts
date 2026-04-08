@@ -39,8 +39,8 @@ export interface LibraryAnalysis {
   suggestions: LibrarySuggestion[];
 }
 
-function comboKey(theme: string, coverStyle: string, niche: string | null): string {
-  return `${theme}+${coverStyle}+${niche ?? "general"}`;
+function comboKey(theme: string, niche: string | null): string {
+  return `${theme}+${niche ?? "general"}`;
 }
 
 function parseModelJson(text: string): unknown {
@@ -58,8 +58,8 @@ router.get("/library/analysis", async (req, res) => {
   try {
     const books = await db.select().from(booksTable);
 
-    // ── 1. Compute used combos ─────────────────────────────────────────────────
-    const usedCombos = [...new Set(books.map(b => comboKey(b.theme, b.coverStyle, b.niche)))];
+    // ── 1. Compute used combos (theme+niche; coverStyle excluded — unreliable when AI cover = "photo") ──
+    const usedCombos = [...new Set(books.map(b => comboKey(b.theme, b.niche)))];
 
     // ── 2. Series analysis ────────────────────────────────────────────────────
     const seriesMap = new Map<string, typeof books>();
@@ -75,8 +75,8 @@ router.get("/library/analysis", async (req, res) => {
     for (const [name, vols] of seriesMap) {
       const volNums = vols.map(v => v.volumeNumber).sort((a, b) => a - b);
       const maxVol = Math.max(...volNums);
-      // Series with < 5 volumes can still grow
-      if (maxVol < 5) {
+      // Series with < 3 volumes still have clear growth runway
+      if (maxVol < 3) {
         const latest = vols.find(v => v.volumeNumber === maxVol) ?? vols[0];
         seriesGaps.push({
           seriesName: name,
@@ -115,8 +115,8 @@ router.get("/library/analysis", async (req, res) => {
         (books.length > 10 ? `\n... and ${books.length - 10} more` : "");
 
     const usedComboContext = usedCombos.length > 0
-      ? `\nCover combos already in use (theme+style+niche): ${usedCombos.join(", ")}`
-      : "\nNo cover combos in use yet.";
+      ? `\nTheme+niche combos already in use (MUST pick different theme for same niche): ${usedCombos.join(", ")}`
+      : "\nNo theme+niche combos in use yet.";
 
     const seriesContext = seriesGaps.length > 0
       ? `\nSeries that can grow: ${seriesGaps.map(s => `"${s.seriesName}" (vol ${s.existingVolumes.join(",")}, next: ${s.nextVolume})`).join("; ")}`
@@ -138,7 +138,7 @@ Available cover styles: ${ALL_STYLES.join(", ")}
 Generate exactly 4 specific "next book" opportunity cards ranked by revenue potential. Mix types:
 - 1-2 series continuation opportunities (if series exist)
 - 1-2 niche gap opportunities (untapped niches)
-- 1 cover diversity opportunity (different visual combo)
+- 1 cover diversity opportunity (different visual theme)
 
 For each card return:
 {
@@ -151,10 +151,10 @@ For each card return:
   "coverStyle": "exact style key",
   "rationale": "1-2 sentences: why this opportunity, what differentiation",
   "seriesName": "series name if type=series_gap else omit",
-  "volumeNumber": 2 // next volume number if type=series_gap else omit
+  "volumeNumber": 2
 }
 
-CRITICAL: theme+coverStyle+niche combination must NOT already be in the used combos list.
+CRITICAL: the theme+niche combination must NOT already be in the used combos list above.
 Return ONLY a JSON array of 4 objects. No markdown, no explanation.`;
 
     let suggestions: LibrarySuggestion[] = [];
