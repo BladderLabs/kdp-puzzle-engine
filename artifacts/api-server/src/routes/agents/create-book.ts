@@ -75,14 +75,16 @@ router.post("/agents/create-book", async (req, res) => {
     ? [...rawEvidence].sort((a, b) => b.demand_score - a.demand_score).slice(0, 3)
     : undefined;
 
-  // ── Fetch library usedCombos (supplement or replace caller-provided list) ────
-  let usedCombos: string[] = parsed.success && parsed.data.usedCombos ? parsed.data.usedCombos : [];
-  if (usedCombos.length === 0) {
-    try {
-      const existingBooks = await db.select().from(booksTable).orderBy(desc(booksTable.id));
-      usedCombos = [...new Set(existingBooks.map(b => `${b.theme}+${b.coverStyle}+${b.niche ?? "general"}`))];
-    } catch (_) { /* non-critical — proceed without constraint */ }
-  }
+  // ── Always query DB for usedCombos (server-side authoritative) ───────────────
+  // DB-derived list is the authoritative source; merge with any client-provided combos
+  // to account for combos from the current session not yet committed to DB.
+  let usedCombos: string[] = [];
+  try {
+    const existingBooks = await db.select().from(booksTable).orderBy(desc(booksTable.id));
+    const dbCombos = [...new Set(existingBooks.map(b => `${b.theme}+${b.coverStyle}+${b.niche ?? "general"}`))];
+    const clientCombos = parsed.success && parsed.data.usedCombos ? parsed.data.usedCombos : [];
+    usedCombos = [...new Set([...dbCombos, ...clientCombos])];
+  } catch (_) { /* non-critical — proceed without uniqueness constraint */ }
 
   // Augment brief with series name constraint if provided
   const brief = requestedSeriesName && rawBrief

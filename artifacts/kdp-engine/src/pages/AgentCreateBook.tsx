@@ -857,8 +857,8 @@ function VolumeBuilderPanel({
   const [analysis, setAnalysis] = useState<LibraryAnalysis | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const load = async () => {
-    if (analysis) return;
+  const load = async (force = false) => {
+    if (!force && analysis) return;
     setLoading(true);
     setFetchError(null);
     try {
@@ -995,7 +995,7 @@ function VolumeBuilderPanel({
               </div>
 
               <button
-                onClick={() => { setAnalysis(null); load(); }}
+                onClick={() => { setAnalysis(null); load(true); }}
                 className="text-xs opacity-40 hover:opacity-70 transition-opacity"
                 style={{ color: "rgba(255,255,255,0.60)" }}
               >

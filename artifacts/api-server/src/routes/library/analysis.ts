@@ -193,20 +193,36 @@ Return ONLY a JSON array of 4 objects. No markdown, no explanation.`;
       req.log.warn({ err }, "Library analysis LLM failed — returning structural data only");
     }
 
-    // Fallback suggestions if LLM fails or library empty
+    // Fallback suggestions if LLM fails or library empty — de-duplicated against usedCombos
     if (suggestions.length === 0) {
+      const FALLBACK_THEMES = ["midnight", "forest", "crimson", "ocean", "violet", "slate", "sunrise", "teal", "parchment", "sky"];
+      const FALLBACK_STYLES = ["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth"];
       const allNiches = listNiches();
       const topMissing = allNiches.filter(n => !usedNiches.has(n.key)).slice(0, 3);
-      suggestions = topMissing.map(n => ({
-        type: "niche_gap" as const,
-        brief: `${n.label} ${n.puzzleType} book — large print, 100 puzzles`,
-        niche: n.key,
-        nicheLabel: n.label,
-        puzzleType: n.puzzleType,
-        theme: "midnight",
-        coverStyle: "classic",
-        rationale: `The ${n.label} niche has no books in your library yet — a clear gap with proven demand.`,
-      }));
+      suggestions = topMissing.map(n => {
+        // Pick first theme+style combo not already in usedCombos for this niche
+        let theme = "midnight";
+        let coverStyle = "classic";
+        outer: for (const t of FALLBACK_THEMES) {
+          for (const s of FALLBACK_STYLES) {
+            if (!usedCombos.includes(`${t}+${s}+${n.key}`)) {
+              theme = t;
+              coverStyle = s;
+              break outer;
+            }
+          }
+        }
+        return {
+          type: "niche_gap" as const,
+          brief: `${n.label} ${n.puzzleType} book — large print, 100 puzzles`,
+          niche: n.key,
+          nicheLabel: n.label,
+          puzzleType: n.puzzleType,
+          theme,
+          coverStyle,
+          rationale: `The ${n.label} niche has no books in your library yet — a clear gap with proven demand.`,
+        };
+      });
     }
 
     const analysis: LibraryAnalysis = {
