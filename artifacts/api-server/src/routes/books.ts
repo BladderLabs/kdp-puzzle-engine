@@ -10,6 +10,9 @@ import {
   CloneBookParams,
 } from "@workspace/api-zod";
 
+const blankToNull = (v: string | null | undefined): string | null =>
+  v && v.trim() ? v.trim() : null;
+
 const router: IRouter = Router();
 
 router.get("/books", async (req, res) => {
@@ -46,7 +49,7 @@ router.post("/books", async (req, res) => {
       difficultyMode: data.difficultyMode ?? "uniform",
       challengeDays: data.challengeDays ?? null,
       keywords: ((data.keywords as string[]) ?? []).slice(0, 7),
-      seriesName: data.seriesName ?? null,
+      seriesName: blankToNull(data.seriesName),
     }).returning();
     res.status(201).json({ ...book, words: book.words ?? [], keywords: book.keywords ?? [] });
   } catch (err) {
@@ -92,7 +95,7 @@ router.put("/books/:id", async (req, res) => {
       difficultyMode: data.difficultyMode ?? "uniform",
       challengeDays: data.challengeDays ?? null,
       keywords: ((data.keywords as string[]) ?? []).slice(0, 7),
-      seriesName: data.seriesName ?? null,
+      seriesName: blankToNull(data.seriesName),
       updatedAt: new Date(),
     }).where(eq(booksTable.id, id)).returning();
     if (!book) { res.status(404).json({ error: "Book not found" }); return; }

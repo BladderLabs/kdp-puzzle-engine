@@ -330,7 +330,7 @@ export function Home() {
   if (books) {
     const groupMap = new Map<string, typeof books>();
     for (const book of books) {
-      const sn = (book as Record<string, unknown>).seriesName as string | undefined;
+      const sn = (book as { seriesName?: string }).seriesName;
       if (sn) {
         if (!groupMap.has(sn)) groupMap.set(sn, []);
         groupMap.get(sn)!.push(book);
@@ -570,7 +570,7 @@ export function Home() {
                                       {book.title || "Untitled"}
                                     </h4>
                                     <span className={`shrink-0 text-xs px-1.5 py-0.5 rounded-full border font-medium ${typeColor}`}>
-                                      Vol {(book as Record<string, unknown>).volumeNumber as number ?? 1}
+                                      Vol {(book as { volumeNumber?: number }).volumeNumber ?? 1}
                                     </span>
                                   </div>
                                   <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-white/35">
@@ -661,7 +661,7 @@ export function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {books.map(book => {
                 const typeColor = PUZZLE_TYPE_COLORS[book.puzzleType] || "border-white/10 text-white/50";
-                const sn = (book as Record<string, unknown>).seriesName as string | undefined;
+                const sn = (book as { seriesName?: string }).seriesName;
                 return (
                   <div
                     key={book.id}
