@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { z } from "zod";
 import { db, booksTable } from "@workspace/db";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { listNiches } from "../../lib/niches";
@@ -38,6 +39,20 @@ export interface LibraryAnalysis {
   nicheGaps: string[];
   suggestions: LibrarySuggestion[];
 }
+
+// ── Zod schema for LLM suggestion validation ─────────────────────────────────
+const LibrarySuggestionSchema = z.object({
+  type: z.enum(["series_gap", "niche_gap", "cover_diversity"]),
+  brief: z.string().min(10),
+  niche: z.string().min(1),
+  nicheLabel: z.string().min(1),
+  puzzleType: z.string().min(1),
+  theme: z.string().min(1),
+  coverStyle: z.string().min(1),
+  rationale: z.string().min(10),
+  seriesName: z.string().optional(),
+  volumeNumber: z.number().int().positive().optional(),
+});
 
 function comboKey(theme: string, coverStyle: string, niche: string | null): string {
   return `${theme}+${coverStyle}+${niche ?? "general"}`;
@@ -165,8 +180,15 @@ Return ONLY a JSON array of 4 objects. No markdown, no explanation.`;
         messages: [{ role: "user", content: prompt }],
       });
       const text = message.content[0].type === "text" ? message.content[0].text : "[]";
-      const raw = parseModelJson(text) as LibrarySuggestion[];
-      suggestions = Array.isArray(raw) ? raw.slice(0, 5) : [];
+      const raw = parseModelJson(text);
+      // Validate each suggestion via Zod schema — drop malformed items to guarantee card shape
+      if (Array.isArray(raw)) {
+        suggestions = raw
+          .map((item: unknown) => LibrarySuggestionSchema.safeParse(item))
+          .filter(r => r.success)
+          .map(r => (r as z.SafeParseSuccess<LibrarySuggestion>).data)
+          .slice(0, 5);
+      }
     } catch (err) {
       req.log.warn({ err }, "Library analysis LLM failed — returning structural data only");
     }

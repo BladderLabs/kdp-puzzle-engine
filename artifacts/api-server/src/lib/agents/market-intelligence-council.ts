@@ -287,18 +287,25 @@ Return ONLY JSON (no markdown):
     }
   }
 
-  // ── Explicit post-parse uniqueness validator (3-field: theme+coverStyle+niche) ─
+  // ── Zod-level uniqueness validation (3-field: theme+coverStyle+niche) ────────
   if (usedCombos && usedCombos.length > 0) {
     const ALL_THEMES = ["midnight", "forest", "crimson", "ocean", "violet", "slate", "sunrise", "teal", "parchment", "sky"];
     const ALL_STYLES = ["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth"];
     const currentCombo = `${result.theme}+${result.coverStyle}+${result.niche}`;
-    if (usedCombos.includes(currentCombo)) {
+    // Zod safeParse refinement — validates combo is not already in the library
+    const comboUniquenessSchema = z.string().refine(
+      combo => !usedCombos.includes(combo),
+      combo => ({ message: `Cover combo "${combo}" already exists in library — correction required` }),
+    );
+    const uniquenessCheck = comboUniquenessSchema.safeParse(currentCombo);
+    if (!uniquenessCheck.success) {
+      console.warn(`[MarketDirector] ${uniquenessCheck.error.issues[0].message}`);
       let resolved = false;
       for (const theme of ALL_THEMES) {
         for (const style of ALL_STYLES) {
           const candidate = `${theme}+${style}+${result.niche}`;
           if (!usedCombos.includes(candidate)) {
-            console.warn(`[MarketDirector] Combo uniqueness violation: "${currentCombo}" already used. Correcting to "${candidate}".`);
+            console.warn(`[MarketDirector] Deterministic correction applied: "${currentCombo}" → "${candidate}"`);
             result.theme = theme;
             result.coverStyle = style;
             resolved = true;
