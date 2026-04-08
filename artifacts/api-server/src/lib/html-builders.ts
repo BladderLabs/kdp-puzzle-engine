@@ -1242,7 +1242,10 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const PC = opts.puzzleCount ?? 100;
 
   // Parse hook sentence: backDescription may be "Hook sentence\n\nBody copy"
-  // Hook is detected as text before the first double-newline, up to 20 words, no period at end.
+  // Hook is strictly detected as text before the FIRST double-newline:
+  //   - must be 5–20 words (rejects legacy multi-sentence openers)
+  //   - must not contain a period (sentence-like content, not paragraph)
+  //   - must not start with a digit (rejects count-first legacy descriptions like "100 puzzles...")
   const rawBack = opts.backDescription ||
     `${PC} carefully crafted ${diffLabel} ${ptLabel} puzzles designed for stress-free brain training. Each puzzle is presented on its own page with generous space for working through solutions.${lpLabel2} A full answer key is included at the back.`;
   const doubleLfIdx = rawBack.indexOf("\n\n");
@@ -1251,7 +1254,9 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   if (doubleLfIdx !== -1) {
     const candidate = rawBack.slice(0, doubleLfIdx).trim();
     const wordCount = candidate.split(/\s+/).length;
-    if (wordCount >= 5 && wordCount <= 25) {
+    const startsWithDigit = /^\d/.test(candidate);
+    const hasPeriod = candidate.includes(".");
+    if (wordCount >= 5 && wordCount <= 20 && !startsWithDigit && !hasPeriod) {
       hookText = candidate;
       bodyText = rawBack.slice(doubleLfIdx + 2).trim();
     }
@@ -1375,7 +1380,11 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const cs = opts.coverStyle || "classic";
 
   // Puzzle count badge — bottom-right of front cover on all styles
-  const puzzlePill = `<div style="position:absolute;bottom:0.45in;right:0.45in;z-index:10;padding:5px 13px;background:${ac};border-radius:20px;font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:3px;color:${bannerTx};font-weight:700;text-transform:uppercase;">${PC} PUZZLES</div>`;
+  // Two-line treatment: large bold count on top, "PUZZLES" label below — readable at thumbnail scale
+  const puzzlePill = `<div style="position:absolute;bottom:0.42in;right:0.42in;z-index:10;background:${ac};border-radius:10px;padding:8px 14px;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,0.35);min-width:68px;">` +
+    `<div style="font-family:'Oswald',sans-serif;font-size:30px;font-weight:700;color:${bannerTx};line-height:1;">${PC}</div>` +
+    `<div style="font-family:'Source Code Pro',monospace;font-size:7px;letter-spacing:3px;color:${bannerTx};opacity:0.9;text-transform:uppercase;margin-top:3px;">PUZZLES</div>` +
+    `</div>`;
 
   // Prominent LARGE PRINT banner — full-width accent-colored strip, clearly visible in thumbnail
   const lpBanner = isLargePrint
