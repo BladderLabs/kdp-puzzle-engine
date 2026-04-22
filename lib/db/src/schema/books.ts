@@ -28,6 +28,18 @@ export const booksTable = pgTable("books", {
   accentHexOverride: text("accent_hex_override"),
   casingOverride: text("casing_override"),
   fontStyleDirective: text("font_style_directive"),
+  // ── Advanced pipeline fields (session upgrade) ────────────────────────────
+  experienceMode: text("experience_mode").notNull().default("standard"),
+  authorPersonaId: integer("author_persona_id"),
+  giftSku: boolean("gift_sku").notNull().default(false),
+  giftRecipient: text("gift_recipient"),
+  listingCategories: jsonb("listing_categories").$type<Array<{ breadcrumb: string; rationale: string }>>(),
+  listingDescriptionHtml: text("listing_description_html"),
+  listingSlug: text("listing_slug"),
+  priceRecommended: text("price_recommended"),
+  royaltyEstimate: text("royalty_estimate"),
+  qaScore: integer("qa_score"),
+  qaIssuesJson: jsonb("qa_issues_json").$type<Array<{ code: string; severity: string; message: string }>>(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

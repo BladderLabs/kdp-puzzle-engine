@@ -1,4 +1,4 @@
-import type { BuyerProfile } from "./buyer-psychology-profiler";
+﻿import type { BuyerProfile } from "./buyer-psychology-profiler";
 
 export interface CoverArtResult {
   b64_json: string;
@@ -27,6 +27,7 @@ const STYLE_MODIFIERS: Record<string, string> = {
   retro: "retro vintage aesthetic with muted tones and nostalgic feel",
   warmth: "warm cozy intimate atmosphere with soft inviting textures",
   photo: "photographic fine art style, full-panel composition with visual weight concentrated in the upper two thirds",
+  sketch: "pencil sketch illustration style, hand-drawn charcoal lines, artistic sketchbook aesthetic, visible pencil strokes and crosshatching",
 };
 
 function buildNicheHint(niche: string): string {
@@ -127,21 +128,26 @@ export async function runCoverArtDirector(
   niche?: string,
   enrichedImagePrompt?: string,
   buyerProfile?: BuyerProfile,
+  experienceMode?: string,
 ): Promise<CoverArtResult | null> {
   try {
     const { generateImage } = await import("@workspace/integrations-gemini-ai/image");
 
     let prompt: string;
 
+    const sketchMode = experienceMode === "sketch";
+    const sketchSuffix = sketchMode
+      ? " Render the entire illustration in a hand-drawn pencil sketch style: visible pencil strokes, crosshatching for shadows, charcoal smudging, raw sketchbook paper texture, monochromatic graphite tones with occasional sepia wash. The aesthetic should feel like an artist's working sketchbook."
+      : "";
+
     if (enrichedImagePrompt && enrichedImagePrompt.trim().length > 20) {
       // Use research-backed enriched prompt from Cover Design Council
-      // Append buyer psychology visual metaphor + primaryEmotion + moodAdjectives for maximum resonance
       const psychHook = buyerProfile
         ? ` Emotional preface: the image must embody the visual metaphor "${buyerProfile.visualMetaphor}", feel ${buyerProfile.moodAdjectives.join(", ")}, and trigger "${buyerProfile.primaryEmotion}" on first glance.`
         : "";
       prompt = [
         `Create a stunning professional book cover background illustration for a "${puzzleType}" puzzle book titled "${title}".`,
-        enrichedImagePrompt.trim() + psychHook,
+        enrichedImagePrompt.trim() + psychHook + sketchSuffix,
         `CRITICAL COMPOSITION RULE: Use a strong VERTICAL portrait composition (2:3 aspect ratio, taller than wide).`,
         `Place the primary subject and visual interest in the UPPER TWO-THIRDS of the image.`,
         `The LOWER THIRD must be kept relatively clear — it will be overlaid with title text.`,
@@ -151,7 +157,7 @@ export async function runCoverArtDirector(
     } else {
       // Fallback: legacy basic prompt with expanded niche hints
       const themeDesc = THEME_DESCRIPTIONS[theme] || THEME_DESCRIPTIONS.midnight;
-      const styleDesc = STYLE_MODIFIERS[coverStyle] || STYLE_MODIFIERS.classic;
+      const styleDesc = sketchMode ? STYLE_MODIFIERS.sketch : (STYLE_MODIFIERS[coverStyle] || STYLE_MODIFIERS.classic);
       const nicheHint = niche ? buildNicheHint(niche) : "";
       const psychHook = buyerProfile
         ? ` The image must embody the visual metaphor "${buyerProfile.visualMetaphor}" and trigger "${buyerProfile.primaryEmotion}". Mood: ${buyerProfile.moodAdjectives.join(", ")}.`
@@ -164,7 +170,7 @@ export async function runCoverArtDirector(
 
       prompt = [
         `Create a stunning ${styleDesc} book cover background illustration for a "${puzzleType}" puzzle book titled "${title}".`,
-        subjectLine,
+        subjectLine + sketchSuffix,
         `Atmosphere and color palette: ${themeDesc}.`,
         `CRITICAL COMPOSITION RULE: Use a strong VERTICAL portrait composition (2:3 aspect ratio, taller than wide).`,
         `Place the primary subject and visual interest in the UPPER TWO-THIRDS of the image.`,

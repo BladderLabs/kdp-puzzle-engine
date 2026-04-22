@@ -1,8 +1,11 @@
-import { Router, type IRouter } from "express";
+﻿import { Router, type IRouter } from "express";
 import type { Response } from "express";
 import { z } from "zod";
-import { db, booksTable } from "@workspace/db";
+import { db, booksTable, authorPersonasTable } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
+import { runListingIntelligence } from "../../lib/agents/listing-intelligence";
+import { runCoverQAGate } from "../../lib/agents/cover-qa-gate";
+import { applyBranding } from "../../lib/gift-year-branding";
 import { runMarketScout, type MarketScoutResult } from "../../lib/agents/market-scout";
 import { runMarketIntelligenceCouncil } from "../../lib/agents/market-intelligence-council";
 import type { ApifyProduct } from "../apify/market-research";
@@ -44,6 +47,10 @@ const CreateBookAgentBody = z.object({
   marketEvidence: z.array(ApifyProductBodySchema).optional(),
   usedCombos: z.array(z.string()).optional(),
   seriesName: z.string().optional(),
+  experienceMode: z.enum(["standard", "sketch", "detective", "adventure", "darkacademia", "cozycottage", "mindful"]).optional(),
+  giftSku: z.boolean().optional(),
+  giftRecipient: z.string().optional(),
+  yearBranding: z.boolean().optional(),
 });
 
 function emit(res: Response, stage: string, status: string, data: Record<string, unknown> = {}): void {
@@ -74,6 +81,29 @@ router.post("/agents/create-book", async (req, res) => {
   const parsed = CreateBookAgentBody.safeParse(req.body);
   const rawBrief = parsed.success ? parsed.data.brief : undefined;
   const requestedSeriesName = parsed.success ? parsed.data.seriesName : undefined;
+  const experienceMode = parsed.success ? (parsed.data.experienceMode ?? "standard") : "standard";
+  const giftSku = parsed.success ? Boolean(parsed.data.giftSku) : false;
+  const giftRecipient = parsed.success ? parsed.data.giftRecipient : undefined;
+  const yearBrandingEnabled = parsed.success ? (parsed.data.yearBranding ?? true) : true;
+
+  // ── Active Author Persona lookup ──────────────────────────────────────────
+  // Every book the engine produces is published under the one AI-selected
+  // persona. If no persona exists, we fall back to the Content Architect's
+  // generated author — but log it so the first-run wizard can be surfaced.
+  let activePersona: typeof authorPersonasTable.$inferSelect | null = null;
+  try {
+    const [p] = await db
+      .select()
+      .from(authorPersonasTable)
+      .where(eq(authorPersonasTable.isActive, true))
+      .limit(1);
+    activePersona = p ?? null;
+    if (!activePersona) {
+      req.log.warn("No active author persona — pipeline will use Content Architect's generated author");
+    }
+  } catch (err) {
+    req.log.warn({ err }, "Active persona lookup failed — continuing without persona");
+  }
   // Normalize evidence: top 3 by demand_score (contract for Market Scout grounding)
   const rawEvidence = parsed.success ? (parsed.data.marketEvidence as ApifyProduct[] | undefined) : undefined;
   const marketEvidence = rawEvidence && rawEvidence.length > 0
@@ -449,10 +479,10 @@ router.post("/agents/create-book", async (req, res) => {
   // let — finalTheme and finalStyle may be swapped in QA cover_diversity revision loop
   let finalTheme = bookSpec?.coverTheme ?? coverDesignSpec.theme ?? market.recommendedTheme ?? market.theme;
   let finalStyle = bookSpec?.coverStyle ?? coverDesignSpec.style ?? market.coverStyle;
-  const finalTitle = bookSpec?.title ?? contentSpec.title;
+  let finalTitle = bookSpec?.title ?? contentSpec.title;
   const finalSubtitle = bookSpec?.subtitle ?? contentSpec.subtitle;
-  const finalHookSentence = bookSpec?.hookSentence ?? contentSpec.hookSentence;
-  const finalKeywords = bookSpec?.keywords ?? contentSpec.keywords;
+  let finalHookSentence = bookSpec?.hookSentence ?? contentSpec.hookSentence;
+  let finalKeywords = bookSpec?.keywords ?? contentSpec.keywords;
   // finalPuzzleCount resolved BEFORE description so we can normalise any stale count in the copy
   const finalPuzzleCount = bookSpec?.puzzleCount ?? puzzleSpec?.recommendedPuzzleCount ?? market.puzzleCount ?? 100;
   const finalPaperType = bookSpec?.paperType ?? productionSpec?.paperType ?? "white";
@@ -468,6 +498,87 @@ router.post("/agents/create-book", async (req, res) => {
   })();
   const enrichedImagePrompt = bookSpec?.coverImagePrompt ?? coverDesignSpec.enrichedImagePrompt;
 
+  // ─── Stage 8b: Listing Intelligence (replaces hallucinated keywords with data-grounded) ──
+  // Uses real Apify competitor data when available (from marketEvidence), otherwise
+  // falls back to Claude-only analytical mode. Always produces: 7 ranked keywords,
+  // 2 browse categories, Ogilvy HTML description, slug, competitor brief.
+  let listingCategories: Array<{ breadcrumb: string; rationale: string }> = [];
+  let listingDescriptionHtml = "";
+  let listingSlug = "";
+  let listingPriceUsd: number | null = null;
+  let listingRoyaltyUsd: number | null = null;
+  emit(res, "listing_intelligence", "running", { message: "Listing Intelligence — keywords, categories, Ogilvy description…" });
+  try {
+    const competitorPayload = marketEvidence?.map(m => ({
+      title: m.title,
+      price: m.price ?? undefined,
+      bsr: m.bsr ?? undefined,
+      reviewCount: m.reviews,
+    }));
+    const avgPrice = marketEvidence && marketEvidence.length > 0
+      ? marketEvidence.filter(m => m.price != null).reduce((s, m) => s + (m.price ?? 0), 0) / Math.max(1, marketEvidence.filter(m => m.price != null).length)
+      : undefined;
+    const listing = await runListingIntelligence({
+      niche: market.niche,
+      nicheLabel: market.nicheLabel,
+      puzzleType: market.puzzleType,
+      puzzleCount: finalPuzzleCount,
+      difficulty: market.difficulty,
+      largePrint: market.largePrint === true,
+      audience: market.audienceProfile,
+      authorPenName: activePersona?.penName,
+      experienceMode,
+      year: new Date().getFullYear(),
+      volumeNumber: draft.volumeNumber ?? 1,
+      giftSku,
+      seriesName: requestedSeriesName,
+      competitors: competitorPayload,
+      avgCompetitorPrice: avgPrice,
+    });
+    finalTitle = listing.title;
+    finalHookSentence = listing.hookSentence;
+    finalKeywords = listing.keywords;
+    listingCategories = listing.categories;
+    listingDescriptionHtml = listing.descriptionHtml;
+    listingSlug = listing.slug;
+    listingPriceUsd = listing.priceUsd;
+    listingRoyaltyUsd = listing.royaltyUsd;
+    req.log.info({ listingTitle: listing.title, price: listing.priceUsd }, "Listing Intelligence done");
+    emit(res, "listing_intelligence", "done", {
+      message: `Listing: "${listing.title}" · $${listing.priceUsd.toFixed(2)} · ${listing.keywords.length} keywords · ${listing.categories.length} categories`,
+      title: listing.title,
+      keywords: listing.keywords,
+      categories: listing.categories,
+      priceUsd: listing.priceUsd,
+      royaltyUsd: listing.royaltyUsd,
+    });
+  } catch (err) {
+    req.log.warn({ err }, "Listing Intelligence failed — using bookSpec/content council values");
+    emit(res, "listing_intelligence", "done", { message: "Listing Intelligence skipped — using council values" });
+  }
+
+  // ─── Stage 8c: Gift-SKU + Year-Branding ──────────────────────────────────
+  // Applies year token (2026/2027 with Q4 rollover) and, when giftSku is set,
+  // merges gift keyword boosters + frames the hook sentence.
+  const brandingResult = applyBranding(
+    { title: finalTitle, subtitle: finalSubtitle, keywords: finalKeywords, hookSentence: finalHookSentence },
+    {
+      yearBranding: yearBrandingEnabled ? {} : false,
+      giftSku: giftSku ? { recipientLabel: giftRecipient } : false,
+      coverAccent: bookSpec?.coverAccentHex ?? coverDesignSpec.accentHex,
+    },
+  );
+  if (brandingResult.title !== finalTitle) finalTitle = brandingResult.title;
+  if (brandingResult.keywords) finalKeywords = brandingResult.keywords;
+  if (brandingResult.hookSentence) finalHookSentence = brandingResult.hookSentence;
+  if (brandingResult.yearApplied || brandingResult.giftApplied) {
+    emit(res, "branding", "done", {
+      message: `Branding applied: ${brandingResult.yearApplied ? `year=${brandingResult.yearApplied}` : ""}${brandingResult.giftApplied ? " gift=on" : ""}`,
+      yearApplied: brandingResult.yearApplied,
+      giftApplied: brandingResult.giftApplied,
+    });
+  }
+
   // ─── Stage 9: Cover Art Director ────────────────────────────────────────────
   emit(res, "cover_art", "running", { message: `Generating AI cover with research-backed ${finalTheme} theme prompt…` });
   let coverImageDataUrl: string | null = null;
@@ -481,6 +592,7 @@ router.post("/agents/create-book", async (req, res) => {
       market.niche,
       enrichedImagePrompt || undefined,
       buyerProfile,
+      experienceMode,
     );
     if (result) {
       coverImageDataUrl = `data:${result.mimeType};base64,${result.b64_json}`;
@@ -499,6 +611,43 @@ router.post("/agents/create-book", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Cover Art Director failed — degrading to SVG");
     emit(res, "cover_art", "done", { message: "Cover art unavailable — using SVG theme art", hasImage: false });
+  }
+
+  // ─── Stage 9b: Cover QA Gate (heuristic pre-flight) ─────────────────────────
+  // Purely static heuristic — validates title/contrast/keywords/puzzle-count/
+  // safe-zones on the final resolved values. Never blocks; always records its
+  // verdict on the book row so the dashboard can surface failing covers.
+  let qaGateScore: number | null = null;
+  let qaGateIssues: Array<{ code: string; severity: string; message: string }> = [];
+  try {
+    const gate = runCoverQAGate({
+      title: finalTitle,
+      subtitle: finalSubtitle,
+      author: activePersona?.penName ?? draft.author,
+      backDescription: finalBackDescription,
+      puzzleType: market.puzzleType,
+      puzzleCount: finalPuzzleCount,
+      difficulty: market.difficulty,
+      theme: finalTheme,
+      coverStyle: finalStyle,
+      experienceMode,
+      keywords: finalKeywords,
+      volumeNumber: draft.volumeNumber ?? 1,
+      largePrint: market.largePrint === true,
+      coverImageUrl: coverImageDataUrl ?? undefined,
+      accentHexOverride: bookSpec?.coverAccentHex ?? coverDesignSpec.accentHex,
+    });
+    qaGateScore = gate.score;
+    qaGateIssues = gate.issues.map(i => ({ code: i.code, severity: i.severity, message: i.message }));
+    req.log.info({ qaGateScore: gate.score, issues: gate.issues.length, passed: gate.passed }, "Cover QA Gate done");
+    emit(res, "cover_qa_gate", "done", {
+      message: gate.summary,
+      score: gate.score,
+      passed: gate.passed,
+      issues: qaGateIssues,
+    });
+  } catch (err) {
+    req.log.warn({ err }, "Cover QA Gate failed — skipping");
   }
 
   // ─── Stage 10: QA Review ────────────────────────────────────────────────────
@@ -585,6 +734,7 @@ router.post("/agents/create-book", async (req, res) => {
               market.niche,
               enrichedImagePrompt || undefined,
               buyerProfile,
+              experienceMode,
             );
             if (newCoverResult) {
               coverImageDataUrl = `data:${newCoverResult.mimeType};base64,${newCoverResult.b64_json}`;
@@ -749,7 +899,7 @@ router.post("/agents/create-book", async (req, res) => {
       db.insert(booksTable).values({
         title: finalTitle,
         subtitle: finalSubtitle,
-        author: draft.author,
+        author: activePersona?.penName ?? draft.author,
         puzzleType: market.puzzleType,
         puzzleCount: finalPuzzleCount,
         difficulty: market.difficulty,
@@ -771,6 +921,18 @@ router.post("/agents/create-book", async (req, res) => {
         accentHexOverride: bookSpec?.coverAccentHex ?? coverDesignSpec.accentHex ?? null,
         casingOverride: coverDesignSpec.casingDirective ?? null,
         fontStyleDirective: coverDesignSpec.fontStyleDirective ?? null,
+        // ── Advanced pipeline fields ─────────────────────────────────────────
+        experienceMode,
+        authorPersonaId: activePersona?.id ?? null,
+        giftSku,
+        giftRecipient: giftRecipient ?? null,
+        listingCategories: listingCategories.length > 0 ? listingCategories : null,
+        listingDescriptionHtml: listingDescriptionHtml || null,
+        listingSlug: listingSlug || null,
+        priceRecommended: listingPriceUsd != null ? listingPriceUsd.toFixed(2) : null,
+        royaltyEstimate: listingRoyaltyUsd != null ? listingRoyaltyUsd.toFixed(2) : null,
+        qaScore: qaGateScore,
+        qaIssuesJson: qaGateIssues.length > 0 ? qaGateIssues : null,
       }).returning(),
       runSeriesArcPlanner(
         market,

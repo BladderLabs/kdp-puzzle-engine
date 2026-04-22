@@ -9,6 +9,7 @@ import geminiCoverImageRouter from "./gemini/cover-image";
 import agentCreateBookRouter from "./agents/create-book";
 import apifyMarketResearchRouter from "./apify/market-research";
 import libraryAnalysisRouter from "./library/analysis";
+import authorPersonaRouter from "./author-persona";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(geminiCoverImageRouter);
 router.use(agentCreateBookRouter);
 router.use(apifyMarketResearchRouter);
 router.use(libraryAnalysisRouter);
+router.use(authorPersonaRouter);
 
 export default router;
