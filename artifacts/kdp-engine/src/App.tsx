@@ -3,12 +3,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout } from "@/components/layout/Layout";
+import { AuthorHub } from "@/pages/AuthorHub";
 import { Home } from "@/pages/Home";
-import { CreateBook } from "@/pages/CreateBook";
 import { EditBook } from "@/pages/EditBook";
 import { GenerateBook } from "@/pages/GenerateBook";
-import { AgentCreateBook } from "@/pages/AgentCreateBook";
-import { CreateFlow } from "@/pages/CreateFlow";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -24,10 +22,8 @@ function Router() {
   return (
     <Layout>
       <Switch>
-        <Route path="/" component={Home} />
-        <Route path="/flow" component={CreateFlow} />
-        <Route path="/create" component={CreateBook} />
-        <Route path="/agent-create" component={AgentCreateBook} />
+        <Route path="/" component={AuthorHub} />
+        <Route path="/library" component={Home} />
         <Route path="/books/:id" component={EditBook} />
         <Route path="/generate/:id" component={GenerateBook} />
         <Route component={NotFound} />
