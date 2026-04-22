@@ -1,8 +1,9 @@
-import {
+﻿import {
   shuf, makeWordSearch, makeSudoku, makeMaze, makeNumberSearch,
   makeCryptogram, makeCrossword, generateCrosswordClues, applyCluesToCrossword, WORD_BANKS,
 } from "./puzzles";
 import type { CrosswordResult, CrosswordClue } from "./puzzles";
+import { experienceCoverLayers, renderMonogramBlock, barcodeSafeZone } from "./cover-experience-layers";
 
 /** Compute total page count from config without generating any puzzles. */
 export function computeTotalPages(opts: BuildOpts): number {
@@ -975,6 +976,13 @@ export interface CoverBuildOpts extends BuildOpts {
   accentHexOverride?: string;
   casingOverride?: string;
   fontStyleDirective?: string;
+  experienceMode?: string;
+  authorPersona?: {
+    penName?: string;
+    bio?: string;
+    monogramSvg?: string;
+    signatureColor?: string;
+  };
 }
 
 export interface CoverResult {
@@ -1441,6 +1449,17 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   const txLetters = txMap[opts.puzzleType || "Word Search"] || txMap["Word Search"];
   const puzzleTexture = `<div style="position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden;z-index:0;pointer-events:none;font-family:'Source Code Pro',monospace;font-size:13px;letter-spacing:5px;line-height:2;padding:0.3in;opacity:0.05;color:${ac};word-break:break-all;">${txLetters.repeat(20)}</div>`;
 
+  // Experience Mode decorative layers + author monogram — computed once, reused on front/spine/back
+  const xLayers = experienceCoverLayers(opts.experienceMode, ac, bg);
+  const monogramSvg = opts.authorPersona?.monogramSvg || "";
+  const monogramCorner = monogramSvg
+    ? `<div style="position:absolute;top:0.45in;left:0.45in;z-index:6;opacity:0.88;">${renderMonogramBlock(monogramSvg, "back-corner")}</div>`
+    : "";
+  const spineMonogram = (monogramSvg && spineW >= 0.25)
+    ? `<div style="position:absolute;top:0.35in;left:50%;transform:translateX(-50%);z-index:3;">${renderMonogramBlock(monogramSvg, "spine")}</div>` +
+      `<div style="position:absolute;bottom:0.35in;left:50%;transform:translateX(-50%);z-index:3;">${renderMonogramBlock(monogramSvg, "spine")}</div>`
+    : "";
+
 
   // Sanitize coverImageUrl: allow http(s) URLs (SSRF-validated) or data: URLs from Gemini image generation
   const rawUrl = opts.coverImageUrl || "";
@@ -1495,19 +1514,24 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
     : "";
 
   const back = `<div style="position:absolute;left:${bleed}in;top:${bleed}in;width:${trimW}in;height:${trimH}in;background:${bgGrad};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5in 1in;text-align:center;box-sizing:border-box;">` +
+    xLayers.texture +
+    xLayers.corners +
+    monogramCorner +
+    xLayers.backBanner +
     `${hookDiv}` +
     `<div style="font-family:Lora,serif;font-size:16px;color:${tx}dd;line-height:1.8;margin-bottom:28px;">${backDesc}</div>` +
     `<div style="margin-bottom:28px;">${featureList}</div>` +
     `<div style="width:50px;height:1px;background:${ac};margin-bottom:30px;"></div>` +
     `<div style="font-family:Lora,serif;font-size:13px;color:${tx};margin-bottom:12px;">${author}</div>` +
     `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:3px;color:${tx}cc;">${meta}</div>` +
-    `<div style="position:absolute;bottom:1.9in;left:${trimW * 0.1}in;right:${trimW * 0.1}in;">${readerCTA}</div>` +
-    `<div style="position:absolute;bottom:0.5in;right:0.4in;width:2in;height:1.2in;border:1px dashed ${ac}44;display:flex;align-items:center;justify-content:center;"><div style="font-family:'Source Code Pro',monospace;font-size:7px;color:${ac}88;">BARCODE AREA</div></div></div>`;
+    `<div style="position:absolute;bottom:1.9in;left:${trimW * 0.1}in;right:${trimW * 0.1}in;z-index:5;">${readerCTA}</div>` +
+    barcodeSafeZone() +
+    `</div>`;
 
-  // Spine: larger + bolder text
+  // Spine: experience-mode ornament + author monogram + rotated title (when book thick enough)
   const spine = totalPages >= 130
-    ? `<div style="position:absolute;left:${spineX}in;top:${bleed}in;width:${spineW}in;height:${trimH}in;background:${bg};display:flex;align-items:center;justify-content:center;"><div style="transform:rotate(-90deg);white-space:nowrap;font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:${tx};text-transform:uppercase;font-weight:600;">${title}${author ? " — " + author : ""}</div></div>`
-    : `<div style="position:absolute;left:${spineX}in;top:${bleed}in;width:${spineW}in;height:${trimH}in;background:${bg};"></div>`;
+    ? `<div style="position:absolute;left:${spineX}in;top:${bleed}in;width:${spineW}in;height:${trimH}in;background:${bg};display:flex;align-items:center;justify-content:center;">${xLayers.spineOrnament}${spineMonogram}<div style="transform:rotate(-90deg);white-space:nowrap;font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:${tx};text-transform:uppercase;font-weight:600;position:relative;z-index:2;">${title}${author ? " — " + author : ""}</div></div>`
+    : `<div style="position:absolute;left:${spineX}in;top:${bleed}in;width:${spineW}in;height:${trimH}in;background:${bg};">${xLayers.spineOrnament}</div>`;
 
   const fb = `position:absolute;left:${frontX}in;top:${bleed}in;width:${trimW}in;height:${trimH}in;background:${bgGrad};display:flex;flex-direction:column;align-items:center;justify-content:center;color:${tx};font-family:Lora,serif;box-sizing:border-box;overflow:hidden;`;
   const cs = opts.coverStyle || "classic";
@@ -1685,7 +1709,12 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `</div></div>`;
   }
 
-  const coverHtml = `<!DOCTYPE html><html style="background-color:${bg};"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@700;800&family=Lora:ital,wght@0,400;0,700;1,400&family=Oswald:wght@700&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet"><style>*{margin:0;padding:0;box-sizing:border-box;}@page{size:${fullW.toFixed(4)}in ${fullH.toFixed(4)}in;margin:0;}body{width:${fullW.toFixed(4)}in;height:${fullH.toFixed(4)}in;overflow:hidden;position:relative;background:${bg};print-color-adjust:exact;-webkit-print-color-adjust:exact;}</style></head><body>${back}${spine}${front}</body></html>`;
+  // Front decor overlay — experience-mode texture/border/corners sit above the front panel's
+  // content. pointer-events:none keeps back-cover interaction unaffected. This is composited
+  // as a sibling overlay so every coverStyle receives the decoration without touching each branch.
+  const frontDecor = `<div style="position:absolute;left:${frontX}in;top:${bleed}in;width:${trimW}in;height:${trimH}in;pointer-events:none;overflow:hidden;z-index:9;">${xLayers.texture}${xLayers.border}${xLayers.corners}</div>`;
+
+  const coverHtml = `<!DOCTYPE html><html style="background-color:${bg};"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Inter:wght@700;800&family=Lora:ital,wght@0,400;0,700;1,400&family=Oswald:wght@700&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Source+Code+Pro:wght@400;600&family=Special+Elite&display=swap" rel="stylesheet"><style>*{margin:0;padding:0;box-sizing:border-box;}@page{size:${fullW.toFixed(4)}in ${fullH.toFixed(4)}in;margin:0;}body{width:${fullW.toFixed(4)}in;height:${fullH.toFixed(4)}in;overflow:hidden;position:relative;background:${bg};print-color-adjust:exact;-webkit-print-color-adjust:exact;}</style></head><body>${back}${spine}${front}${frontDecor}</body></html>`;
 
   return { html: coverHtml, fullW, fullH, spineW };
 }
