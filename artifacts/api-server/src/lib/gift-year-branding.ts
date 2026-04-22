@@ -229,7 +229,7 @@ export function applyBranding(
   }
 
   // Gift-SKU
-  if (options.giftSku && options.giftSku !== false) {
+  if (options.giftSku) {
     giftApplied = true;
     const recipient = options.giftSku.recipientLabel;
 

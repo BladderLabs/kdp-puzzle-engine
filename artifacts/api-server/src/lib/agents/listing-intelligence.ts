@@ -261,8 +261,8 @@ export async function runListingIntelligence(
   const royaltyUsd = calcRoyalty(priceUsd, input.largePrint, totalPages);
 
   // Ensure categories has exactly 2 entries
-  let categories = Array.isArray(raw.categories) ? (raw.categories as Record<string, unknown>[]) : [];
-  categories = categories
+  const rawCategories = Array.isArray(raw.categories) ? (raw.categories as Record<string, unknown>[]) : [];
+  let categories: Array<{ breadcrumb: string; rationale: string }> = rawCategories
     .map(c => ({
       breadcrumb: String(c.breadcrumb || ""),
       rationale: String(c.rationale || ""),
