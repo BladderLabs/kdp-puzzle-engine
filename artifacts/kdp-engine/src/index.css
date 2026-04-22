@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Caveat:wght@500;600&display=swap');
@@ -139,4 +139,71 @@ body::before {
 @keyframes shimmer-slide {
   from { transform: translateX(-200%); }
   to   { transform: translateX(500%); }
+}
+
+/* ── QA score pill — floating top-right on book covers ──────────────────── */
+.qa-score-pill {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  font-family: 'Source Code Pro', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  z-index: 4;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.qa-score-pill.excellent { background: rgba(45, 180, 90, 0.25);  color: #6ee7a0; border: 1px solid rgba(110, 231, 160, 0.4); }
+.qa-score-pill.good      { background: rgba(200, 149, 26, 0.25); color: #f5c842; border: 1px solid rgba(245, 200, 66, 0.4); }
+.qa-score-pill.fair      { background: rgba(220, 140, 40, 0.25); color: #f5a542; border: 1px solid rgba(245, 165, 66, 0.4); }
+.qa-score-pill.poor      { background: rgba(220, 60, 60, 0.3);   color: #ff7a7a; border: 1px solid rgba(255, 122, 122, 0.5); }
+
+/* ── Gift-SKU ribbon overlay on card corners ────────────────────────────── */
+.gift-ribbon-overlay {
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  width: 52px;
+  height: 52px;
+  pointer-events: none;
+  z-index: 5;
+  filter: drop-shadow(1px 2px 3px rgba(0, 0, 0, 0.3));
+}
+
+/* ── Experience Mode chip — icon + label ────────────────────────────────── */
+.experience-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.75);
+}
+.experience-chip.sketch       { background: rgba(139, 107, 58, 0.2); color: #c9a970; border-color: rgba(201, 169, 112, 0.35); }
+.experience-chip.detective    { background: rgba(59, 10, 10, 0.4);   color: #e87070; border-color: rgba(232, 112, 112, 0.35); }
+.experience-chip.adventure    { background: rgba(123, 58, 0, 0.3);   color: #e8a550; border-color: rgba(232, 165, 80, 0.35); }
+.experience-chip.darkacademia { background: rgba(42, 26, 74, 0.35);  color: #b395d9; border-color: rgba(179, 149, 217, 0.35); }
+.experience-chip.cozycottage  { background: rgba(166, 92, 58, 0.25); color: #e8a088; border-color: rgba(232, 160, 136, 0.35); }
+.experience-chip.mindful      { background: rgba(107, 142, 107, 0.2); color: #98c498; border-color: rgba(152, 196, 152, 0.35); }
+
+/* ── Book card pulse — subtle attention animation for newly-generated books ── */
+@keyframes card-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 200, 66, 0); }
+  50%      { box-shadow: 0 0 0 6px rgba(245, 200, 66, 0.15); }
+}
+.card-pulse { animation: card-pulse 2s ease-in-out 2; }
+
+/* ── Step-dot focus halo ────────────────────────────────────────────────── */
+@keyframes step-active {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 200, 66, 0.35); }
+  50%      { box-shadow: 0 0 0 4px rgba(245, 200, 66, 0); }
 }
