@@ -1,26 +1,21 @@
 /**
  * GET /api/opportunities
  *
- * Resilient opportunity research endpoint.
+ * Primary path: Claude Sonnet 4.5 researches the market with full awareness of
+ * persona niches, seasonal windows, used combos, and the 37-entry niches DB —
+ * producing 8 ranked shippable book opportunities.
  *
- * Strategy:
- *   1. Build a deterministic seed list of 8 opportunities from the NICHES DB,
- *      the persona's primary niches, seasonal windows, and already-used combos.
- *      This is the guaranteed baseline — if every LLM call fails, this alone
- *      produces a usable card grid.
- *   2. Attempt a Claude enrichment pass that rewrites the seeds with
- *      keyword-front-loaded titles, fresh rationale, and per-card heat level.
- *   3. If Claude succeeds → merge; if Claude fails for any reason → ship
- *      the deterministic seeds. Either way the user always gets 8 cards.
+ * Fallback path: deterministic seed builder from the niches DB. Only fires if
+ * Claude throws (network error, bad response, etc.). Ensures the endpoint
+ * never returns 500 — the user always sees a full grid.
  *
- * The endpoint never throws a 500 unless the DB itself is unreachable.
+ * Cache: 6-hour per (persona, YYYY-MM-DD) when Claude succeeds.
  */
 
 import { Router, type IRouter } from "express";
 import { db, booksTable, authorPersonasTable } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
-import { z } from "zod";
 import { NICHES, type NicheData } from "../lib/niches";
 
 const router: IRouter = Router();
@@ -64,17 +59,17 @@ const TTL_MS = 6 * 60 * 60 * 1000;
 
 interface GiftWindow { name: string; date: string; recipient?: string; niches?: string[] }
 const ALL_WINDOWS: GiftWindow[] = [
-  { name: "Mother's Day (US)",      date: "2026-05-10", recipient: "Mom",     niches: ["mothers-day", "grandma", "anxiety-mindfulness"] },
-  { name: "Graduation season",      date: "2026-05-25", recipient: "Graduate",niches: ["graduation", "teachers"] },
-  { name: "Father's Day (US)",      date: "2026-06-21", recipient: "Dad",     niches: ["fathers-day", "grandpa", "retirement"] },
-  { name: "Summer travel",          date: "2026-07-15", niches: ["travel", "seniors"] },
-  { name: "Back to school",         date: "2026-08-20", niches: ["teachers", "kids"] },
-  { name: "Halloween",              date: "2026-10-31", niches: ["halloween", "true-crime"] },
-  { name: "Thanksgiving (US)",      date: "2026-11-26", niches: ["seniors", "bible"] },
-  { name: "Christmas",              date: "2026-12-25", recipient: "Gift",    niches: ["christmas", "grandma", "grandpa"] },
-  { name: "New Year / brain health",date: "2027-01-01", niches: ["dementia-prevention", "brain-workout-daily", "anxiety-mindfulness"] },
-  { name: "Valentine's Day",        date: "2027-02-14", recipient: "Partner", niches: ["valentines"] },
-  { name: "Mother's Day 2027 (US)", date: "2027-05-09", recipient: "Mom",     niches: ["mothers-day", "grandma"] },
+  { name: "Mother's Day (US)",       date: "2026-05-10", recipient: "Mom",     niches: ["mothers-day", "grandma", "anxiety-mindfulness"] },
+  { name: "Graduation season",       date: "2026-05-25", recipient: "Graduate",niches: ["graduation", "teachers"] },
+  { name: "Father's Day (US)",       date: "2026-06-21", recipient: "Dad",     niches: ["fathers-day", "grandpa", "retirement"] },
+  { name: "Summer travel",           date: "2026-07-15", niches: ["travel", "seniors"] },
+  { name: "Back to school",          date: "2026-08-20", niches: ["teachers", "kids"] },
+  { name: "Halloween",               date: "2026-10-31", niches: ["halloween", "true-crime"] },
+  { name: "Thanksgiving (US)",       date: "2026-11-26", niches: ["seniors", "bible"] },
+  { name: "Christmas",               date: "2026-12-25", recipient: "Gift",    niches: ["christmas", "grandma", "grandpa"] },
+  { name: "New Year brain training", date: "2027-01-01", niches: ["dementia-prevention", "brain-workout-daily", "anxiety-mindfulness"] },
+  { name: "Valentine's Day",         date: "2027-02-14", recipient: "Partner", niches: ["valentines"] },
+  { name: "Mother's Day (2027)",     date: "2027-05-09", recipient: "Mom",     niches: ["mothers-day", "grandma"] },
 ];
 
 function upcomingWindows(today: Date) {
@@ -130,11 +125,101 @@ function safeNumber(raw: unknown, fallback: number, min = 0, max = 10000): numbe
   return Math.min(max, Math.max(min, n));
 }
 
+function safeString(raw: unknown, fallback = ""): string {
+  return typeof raw === "string" ? raw.trim() : fallback;
+}
+
+function safeBool(raw: unknown, fallback = false): boolean {
+  if (typeof raw === "boolean") return raw;
+  if (typeof raw === "string") return raw.toLowerCase() === "true" || raw === "1";
+  return fallback;
+}
+
 function yearPrefix(today: Date): string {
   return today.getMonth() >= 9 ? String(today.getFullYear() + 1) : String(today.getFullYear());
 }
 
-// ── Deterministic seed generation (the safety net) ──────────────────────────
+function parseModelJson(text: string): unknown {
+  const cleaned = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+  try { return JSON.parse(cleaned); } catch { /* fall through */ }
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start !== -1 && end !== -1) {
+    return JSON.parse(cleaned.slice(start, end + 1));
+  }
+  throw new Error("Could not parse JSON from model response");
+}
+
+// ── Lenient coercion: map any LLM response shape into a valid Opportunity ─
+
+function coerceOpportunity(raw: unknown, today: Date): Opportunity | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+
+  // Niche must resolve to a known key. Accept raw key, label, or fuzzy match.
+  const nicheInput = safeString(r.niche || r.nicheKey || r.nicheLabel);
+  if (!nicheInput) return null;
+  const nicheData = findNiche(nicheInput);
+  if (!nicheData) return null;
+
+  const titlePreview = safeString(r.titlePreview || r.title, `${yearPrefix(today)} ${nicheData.label}`);
+  const subtitle = safeString(r.subtitle, nicheData.keywords[0] || "Large print puzzles for relaxation");
+  const whySells = safeString(r.whySells || r.rationale, `Proven ${nicheData.label} segment.`);
+  const puzzleType = safeString(r.puzzleType, nicheData.puzzleType);
+  const audience = safeString(r.audience, nicheData.label);
+  const experienceMode = normalizeExperience(r.experienceMode);
+  const theme = normalizeTheme(r.theme);
+  const coverStyle = normalizeStyle(r.coverStyle);
+  const difficulty = safeString(r.difficulty, nicheData.recommendedDifficulty || "Medium");
+  const puzzleCount = Math.round(safeNumber(r.puzzleCount, nicheData.recommendedCount || 100, 20, 500));
+  const largePrint = safeBool(r.largePrint, true);
+  const heatLevel = normalizeHeat(r.heatLevel);
+  const seasonalWindow = safeString(r.seasonalWindow).length > 0 ? safeString(r.seasonalWindow) : null;
+  const estimatedPrice = safeNumber(r.estimatedPrice, largePrint ? 9.99 : 7.99, 2, 99);
+  const prefilledBrief = safeString(r.prefilledBrief,
+    `${puzzleCount} ${difficulty} ${puzzleType} puzzles for ${nicheData.label}${largePrint ? ", large print edition" : ""}.`);
+  const giftSku = safeBool(r.giftSku, false);
+  const giftRecipient = giftSku ? (safeString(r.giftRecipient) || null) : null;
+
+  return {
+    niche: nicheData.key,
+    nicheLabel: nicheData.label,
+    puzzleType,
+    titlePreview,
+    subtitle,
+    audience,
+    experienceMode,
+    theme,
+    coverStyle,
+    difficulty,
+    puzzleCount,
+    largePrint,
+    whySells,
+    heatLevel,
+    seasonalWindow,
+    estimatedPrice,
+    estimatedRoyalty: estimateRoyalty(estimatedPrice, largePrint, puzzleCount),
+    prefilledBrief,
+    giftSku,
+    giftRecipient,
+  };
+}
+
+function findNiche(input: string): NicheData | null {
+  const tok = input.toLowerCase().trim();
+  const byKey = NICHES.find(n => n.key.toLowerCase() === tok);
+  if (byKey) return byKey;
+  const byLabel = NICHES.find(n => n.label.toLowerCase() === tok);
+  if (byLabel) return byLabel;
+  const byContains = NICHES.find(n =>
+    n.key.toLowerCase().includes(tok) ||
+    n.label.toLowerCase().includes(tok) ||
+    tok.includes(n.key.toLowerCase()),
+  );
+  return byContains ?? null;
+}
+
+// ── Deterministic seed fallback ─────────────────────────────────────────────
 
 interface SeedContext {
   today: Date;
@@ -164,35 +249,28 @@ function buildSeedFromNiche(
   const titleTemplate = nicheData.titles[0] || `${nicheData.label} Puzzle Book`;
   const hasYear = /\b20\d{2}\b/.test(titleTemplate);
   const titlePreview = (hasYear ? titleTemplate : `${year} ${titleTemplate}`).replace("{N}", "1");
-  const largePrint = nicheData.key === "seniors" || nicheData.label.toLowerCase().includes("large print")
+  const largePrint = nicheData.key === "seniors"
+    || nicheData.label.toLowerCase().includes("large print")
     || ["grandma", "grandpa", "dementia-prevention", "mothers-day", "fathers-day"].includes(nicheData.key);
-
   const isGift = Boolean(window?.recipient)
     || ["mothers-day", "fathers-day", "grandma", "grandpa", "valentines", "christmas", "birthdays", "graduation", "teachers", "nurses"].includes(nicheData.key);
-
   const price = largePrint ? 9.99 : 7.99;
   const difficulty = nicheData.recommendedDifficulty || "Medium";
   const puzzleCount = nicheData.recommendedCount || 100;
-
   let heatLevel: HeatLevel = "stable";
   if (window && window.daysUntil <= 45 && window.daysUntil >= 0) heatLevel = "hot";
   else if (window && window.daysUntil <= 120) heatLevel = "rising";
-
   const experienceMode: ExperienceMode =
     nicheData.key === "true-crime" ? "detective"
-    : nicheData.key === "anxiety-mindfulness" ? "mindful"
-    : nicheData.key === "bible" ? "mindful"
-    : isGift ? "cozycottage"
-    : "standard";
-
+      : ["anxiety-mindfulness", "bible"].includes(nicheData.key) ? "mindful"
+      : isGift ? "cozycottage"
+      : "standard";
   const seasonalWindow = window && window.daysUntil >= 0
     ? `${window.name} — ${window.daysUntil} days`
     : null;
-
   const whySells = window
-    ? `${nicheData.label} book published into the ${window.name} window — high buyer intent with deadline pressure.`
-    : `${nicheData.label} is a proven evergreen segment — documented bestsellers in this niche and the persona's primary focus.`;
-
+    ? `${nicheData.label} published into the ${window.name} window — buyer intent is high with deadline pressure.`
+    : `${nicheData.label} is a proven evergreen with documented bestsellers.`;
   const prefilledBrief = `${puzzleCount} ${difficulty} ${nicheData.puzzleType} puzzles for ${nicheData.label}${largePrint ? ", large print edition" : ""}${isGift && window?.recipient ? `, positioned as a gift for ${window.recipient}` : ""}.`;
 
   return {
@@ -224,13 +302,11 @@ function buildSeedOpportunities(ctx: SeedContext): Opportunity[] {
   const used = new Set<string>();
   const windows = upcomingWindows(ctx.today).filter(w => w.daysUntil >= 0);
 
-  // Seasonal picks first (HOT)
   for (const w of windows.slice(0, 4)) {
     for (const nicheKey of (w.niches ?? [])) {
       if (used.has(nicheKey)) continue;
       const nd = NICHES.find(n => n.key === nicheKey);
       if (!nd) continue;
-      if (ctx.usedNiches.has(nicheKey) && seeds.length < 4) continue;
       seeds.push(buildSeedFromNiche(nd, ctx, w));
       used.add(nicheKey);
       if (seeds.length >= 4) break;
@@ -238,26 +314,19 @@ function buildSeedOpportunities(ctx: SeedContext): Opportunity[] {
     if (seeds.length >= 4) break;
   }
 
-  // Persona-aligned picks
   for (const primaryRaw of ctx.primaryNiches) {
     if (seeds.length >= 6) break;
-    const token = primaryRaw.toLowerCase().trim();
-    const match = NICHES.find(n =>
-      n.key === token ||
-      n.label.toLowerCase().includes(token) ||
-      n.keywords.some(k => k.toLowerCase().includes(token)),
-    );
+    const match = findNiche(primaryRaw);
     if (match && !used.has(match.key)) {
       seeds.push(buildSeedFromNiche(match, ctx));
       used.add(match.key);
     }
   }
 
-  // Fill to 8 with high-value evergreens not yet used
   const EVERGREEN_ORDER = [
     "dementia-prevention", "brain-workout-daily", "true-crime", "seniors",
     "anxiety-mindfulness", "foodie", "bible", "nurses", "teachers",
-    "gardening", "travel", "cryptogram-adults", "sudoku-easy", "sudoku-hard",
+    "gardening", "travel", "cryptogram-adults",
   ];
   for (const key of EVERGREEN_ORDER) {
     if (seeds.length >= 8) break;
@@ -268,7 +337,6 @@ function buildSeedOpportunities(ctx: SeedContext): Opportunity[] {
     used.add(key);
   }
 
-  // Absolute fallback — anything still in NICHES
   for (const nd of NICHES) {
     if (seeds.length >= 8) break;
     if (used.has(nd.key)) continue;
@@ -279,80 +347,97 @@ function buildSeedOpportunities(ctx: SeedContext): Opportunity[] {
   return seeds.slice(0, 8);
 }
 
-// ── Claude enrichment (optional, best-effort) ──────────────────────────────
+// ── Claude: primary research pass ───────────────────────────────────────────
 
-function parseModelJson(text: string): unknown {
-  const cleaned = text
-    .replace(/```json\s*/gi, "")
-    .replace(/```\s*/g, "")
-    .trim();
-  // Try direct JSON.parse first
-  try { return JSON.parse(cleaned); } catch {}
-  // Fall back to brace-slicing
-  const start = cleaned.indexOf("{");
-  const end = cleaned.lastIndexOf("}");
-  if (start !== -1 && end !== -1) {
-    try { return JSON.parse(cleaned.slice(start, end + 1)); } catch {}
-  }
-  throw new Error("Could not parse JSON from model response");
-}
+async function researchWithClaude(ctx: SeedContext): Promise<{ opportunities: Opportunity[]; researchNote: string | null }> {
+  const windowContext = upcomingWindows(ctx.today)
+    .map(w => {
+      const note = w.daysUntil < 0
+        ? `passed ${Math.abs(w.daysUntil)}d ago`
+        : w.daysUntil === 0 ? "TODAY"
+        : w.daysUntil < 14 ? `in ${w.daysUntil}d — URGENT`
+        : w.daysUntil < 45 ? `in ${w.daysUntil}d — publish now`
+        : `in ${w.daysUntil}d — plan ahead`;
+      return `- ${w.name} on ${w.date} (${note})${w.recipient ? ` — recipient: ${w.recipient}` : ""}`;
+    }).join("\n");
 
-async function enrichWithClaude(
-  seeds: Opportunity[],
-  ctx: SeedContext,
-): Promise<{ enriched: Opportunity[]; researchNote: string | null }> {
-  const seedSummary = seeds.map((s, i) =>
-    `${i + 1}. ${s.titlePreview} — ${s.niche}/${s.puzzleType} — ${s.heatLevel}${s.seasonalWindow ? ` · ${s.seasonalWindow}` : ""}`,
-  ).join("\n");
+  const nicheList = NICHES.map(n => `  ${n.key} — ${n.label} (${n.puzzleType}, ${n.recommendedDifficulty})`).join("\n");
 
-  const prompt = `You are a senior Amazon KDP market editor. I've selected 8 seed opportunities for today's publishing list.
-Your job: sharpen each one. Rewrite the titlePreview, subtitle, and whySells into something more compelling and accurate.
-Keep all other fields (niche, puzzleType, experienceMode, theme, coverStyle, giftSku, giftRecipient, estimatedPrice) EXACTLY as given.
+  const prompt = `You are a senior Amazon KDP market researcher. Today is ${ctx.today.toISOString().slice(0, 10)}.
+Produce 8 specific shippable book opportunities the publisher should write RIGHT NOW.
 
-Today: ${ctx.today.toISOString().slice(0, 10)}.
-Persona niches: ${ctx.primaryNiches.join(", ") || "(general)"}.
+Active author persona niches: ${ctx.primaryNiches.length ? ctx.primaryNiches.join(", ") : "(general publisher)"}
+Already-published niches (avoid repeating unless Vol 2+): ${Array.from(ctx.usedNiches).join(", ") || "(greenfield)"}
+Already-used theme+style+niche combos (avoid exact repeats): ${Array.from(ctx.usedCombos).slice(0, 25).join("; ") || "(none)"}
 
-Seed opportunities:
-${seedSummary}
+Seasonal windows:
+${windowContext}
 
-Return STRICT JSON (no markdown, no commentary):
+Use EXACT niche keys from this list:
+${nicheList}
+
+Valid puzzleType: Word Search | Sudoku | Maze | Number Search | Cryptogram | Crossword
+Valid experienceMode: standard | sketch | detective | adventure | darkacademia | cozycottage | mindful
+Valid theme: midnight | forest | crimson | ocean | violet | slate | sunrise | teal | parchment | sky
+Valid coverStyle: classic | geometric | luxury | bold | minimal | retro | warmth | photo
+
+Rules:
+- AT LEAST 3 opportunities must be hot (tied to a gift window in the next 60 days) if any window is in range.
+- AT LEAST 2 opportunities must be stable (evergreen).
+- Year-brand titles when the niche supports it ("${yearPrefix(ctx.today)} ...").
+- For gift niches (Mom / Dad / Grandma / Teacher / Nurse), set giftSku: true and giftRecipient.
+- Every titlePreview must be Amazon-ready: primary keyword in first 5 words, large-print tag when applicable.
+- whySells must be one concrete data-grounded sentence, not generic.
+- prefilledBrief: 1-2 sentences that will POST to create-book as the brief.
+
+Return STRICT JSON ONLY:
 {
-  "researchNote": "1-2 sentences on the single most important window",
-  "cards": [
-    { "i": 1, "titlePreview": "...", "subtitle": "...", "whySells": "..." },
-    ...
+  "researchNote": "1-2 sentences on the single most important publishing window right now",
+  "opportunities": [
+    {
+      "niche": "exact-key-from-list",
+      "nicheLabel": "...",
+      "puzzleType": "...",
+      "titlePreview": "...",
+      "subtitle": "...",
+      "audience": "...",
+      "experienceMode": "...",
+      "theme": "...",
+      "coverStyle": "...",
+      "difficulty": "Easy|Medium|Hard",
+      "puzzleCount": 100,
+      "largePrint": true,
+      "whySells": "...",
+      "heatLevel": "hot|rising|stable",
+      "seasonalWindow": "e.g. Mother's Day — 18 days" or null,
+      "estimatedPrice": 9.99,
+      "prefilledBrief": "...",
+      "giftSku": true|false,
+      "giftRecipient": "Mom|Dad|null"
+    }
   ]
 }`;
 
   const msg = await anthropic.messages.create({
     model: "claude-sonnet-4-5",
-    max_tokens: 2500,
+    max_tokens: 6000,
     messages: [{ role: "user", content: prompt }],
   });
   const text = msg.content[0].type === "text" ? msg.content[0].text : "{}";
-  const parsed = parseModelJson(text) as { researchNote?: unknown; cards?: unknown };
+  const raw = parseModelJson(text) as { researchNote?: unknown; opportunities?: unknown };
 
-  const enriched = [...seeds];
-  if (Array.isArray(parsed.cards)) {
-    for (const cardRaw of parsed.cards) {
-      const card = cardRaw as Record<string, unknown>;
-      const i = safeNumber(card.i, 0, 0, enriched.length);
-      const idx = Math.max(0, Math.min(enriched.length - 1, i - 1));
-      if (typeof card.titlePreview === "string" && card.titlePreview.length > 4) {
-        enriched[idx] = { ...enriched[idx], titlePreview: card.titlePreview };
-      }
-      if (typeof card.subtitle === "string" && card.subtitle.length > 4) {
-        enriched[idx] = { ...enriched[idx], subtitle: card.subtitle };
-      }
-      if (typeof card.whySells === "string" && card.whySells.length > 10) {
-        enriched[idx] = { ...enriched[idx], whySells: card.whySells };
-      }
+  const opportunities: Opportunity[] = [];
+  if (Array.isArray(raw.opportunities)) {
+    for (const item of raw.opportunities) {
+      const opp = coerceOpportunity(item, ctx.today);
+      if (opp) opportunities.push(opp);
+      if (opportunities.length >= 8) break;
     }
   }
 
   return {
-    enriched,
-    researchNote: typeof parsed.researchNote === "string" ? parsed.researchNote : null,
+    opportunities,
+    researchNote: typeof raw.researchNote === "string" ? raw.researchNote : null,
   };
 }
 
@@ -375,11 +460,7 @@ router.get("/opportunities", async (req, res) => {
     }
 
     const existing = await db
-      .select({
-        niche: booksTable.niche,
-        theme: booksTable.theme,
-        coverStyle: booksTable.coverStyle,
-      })
+      .select({ niche: booksTable.niche, theme: booksTable.theme, coverStyle: booksTable.coverStyle })
       .from(booksTable)
       .orderBy(desc(booksTable.id))
       .limit(60);
@@ -387,37 +468,44 @@ router.get("/opportunities", async (req, res) => {
     const usedCombos = new Set(existing.map(b => `${b.theme}+${b.coverStyle}+${b.niche ?? "general"}`));
     const usedNiches = new Set(existing.map(b => b.niche).filter((n): n is string => Boolean(n)));
     const primaryNiches = (persona?.primaryNiches as string[] | null) ?? [];
-
     const ctx: SeedContext = { today, primaryNiches, usedNiches, usedCombos };
 
-    // Step 1: Build deterministic seeds (always works)
-    const seeds = buildSeedOpportunities(ctx);
-
-    // Step 2: Attempt Claude enrichment (best-effort)
-    let opportunities = seeds;
+    // Primary path: Claude research
+    let opportunities: Opportunity[] = [];
     let researchNote: string | null = null;
-    let enrichmentStatus: "succeeded" | "skipped" | "failed" = "skipped";
+    let source: "claude" | "deterministic-fallback" = "claude";
+
     try {
-      const result = await enrichWithClaude(seeds, ctx);
-      opportunities = result.enriched;
-      researchNote = result.researchNote;
-      enrichmentStatus = "succeeded";
+      const claudeResult = await researchWithClaude(ctx);
+      opportunities = claudeResult.opportunities;
+      researchNote = claudeResult.researchNote;
+      req.log.info({ count: opportunities.length }, "Claude opportunity research done");
     } catch (err) {
-      enrichmentStatus = "failed";
-      req.log.warn({ err: (err as Error).message }, "Claude enrichment failed — shipping deterministic seeds");
+      req.log.error({ err: (err as Error).message }, "Claude research failed — falling back to deterministic seeds");
+      source = "deterministic-fallback";
+    }
+
+    // Backfill from seeds if Claude returned fewer than 8 (or failed entirely)
+    if (opportunities.length < 8) {
+      const seeds = buildSeedOpportunities(ctx);
+      const have = new Set(opportunities.map(o => o.niche));
+      for (const s of seeds) {
+        if (opportunities.length >= 8) break;
+        if (have.has(s.niche)) continue;
+        opportunities.push(s);
+        have.add(s.niche);
+      }
     }
 
     const payload = {
-      opportunities,
+      opportunities: opportunities.slice(0, 8),
       researchNote,
       generatedAt: today.toISOString(),
       personaId: persona?.id ?? null,
       personaName: persona?.penName ?? null,
-      source: enrichmentStatus === "succeeded" ? "claude-enriched" : "deterministic-seed",
-      enrichmentStatus,
+      source,
     };
-    // Only cache when Claude succeeded — failed calls should retry next request
-    if (enrichmentStatus === "succeeded") {
+    if (source === "claude") {
       cache.set(cacheKey, { payload, at: Date.now() });
     }
 
@@ -431,7 +519,7 @@ router.get("/opportunities", async (req, res) => {
   }
 });
 
-// ── Diagnostic endpoints ────────────────────────────────────────────────────
+// ── Diagnostic endpoint ─────────────────────────────────────────────────────
 
 router.get("/opportunities/debug", async (req, res) => {
   try {
