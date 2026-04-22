@@ -44,6 +44,10 @@ const THEMES = [
   { value: "sky",       label: "Clear Sky",       bg: "#E0EFFF", ac: "#2050B8" },
 ];
 const COVER_STYLES = ["classic", "geometric", "luxury", "bold", "minimal", "retro", "warmth", "photo"] as const;
+const STYLE_ICONS: Record<string, string> = {
+  classic: "🎨", geometric: "◆", luxury: "✦", bold: "⬛",
+  minimal: "○", retro: "⌛", warmth: "☀", photo: "📷",
+};
 
 const NICHE_PICKS = [
   { value: "Seniors & Large Print", titlePrefix: "Large Print", audience: "seniors" },
@@ -52,6 +56,13 @@ const NICHE_PICKS = [
   { value: "Travel & On-the-Go",   titlePrefix: "Travel",      audience: "travelers" },
   { value: "Holiday Gifts",        titlePrefix: "Holiday",     audience: "gift buyers" },
   { value: "Other (custom)",       titlePrefix: "",            audience: "" },
+];
+
+const EXPERIENCE_MODES = [
+  { value: "standard",   label: "Standard",           desc: "Classic puzzle book",   icon: "📚" },
+  { value: "sketch",     label: "Sketch Journey",     desc: "Hand-drawn aesthetic",  icon: "✏️" },
+  { value: "detective",  label: "Detective Casebook", desc: "Mystery theme",         icon: "🔍" },
+  { value: "adventure",  label: "Adventure Quest",    desc: "Epic adventure theme",  icon: "⚔️" },
 ];
 
 const formSchema = z.object({
@@ -65,6 +76,7 @@ const formSchema = z.object({
   paperType: z.string().default("white"),
   theme: z.string().default("midnight"),
   coverStyle: z.string().default("classic"),
+  experienceMode: z.string().default("standard"),
   backDescription: z.string().optional(),
   words: z.string().optional(),
   wordCategory: z.string().optional(),
@@ -93,7 +105,7 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
     defaultValues: {
       title: initialValues?.title || "",
       subtitle: initialValues?.subtitle || "",
-      author: initialValues?.author || "Eleanor Bennett",
+      author: initialValues?.author || "",
       puzzleType: initialValues?.puzzleType || "Word Search",
       puzzleCount: initialValues?.puzzleCount || 50,
       difficulty: initialValues?.difficulty || "Medium",
@@ -101,6 +113,7 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
       paperType: initialValues?.paperType || "white",
       theme: initialValues?.theme || "midnight",
       coverStyle: initialValues?.coverStyle || "classic",
+      experienceMode: initialValues?.experienceMode || "standard",
       backDescription: initialValues?.backDescription || "",
       words: initialValues?.words || "",
       wordCategory: initialValues?.wordCategory || "General",
@@ -121,7 +134,6 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
   const largePrint = form.watch("largePrint");
   const wordsStr = form.watch("words") || "";
   const difficulty = form.watch("difficulty") || "Medium";
-  const backDescription = form.watch("backDescription") || "";
   const dedication = form.watch("dedication");
   const difficultyMode = form.watch("difficultyMode") || "uniform";
   const challengeDays = form.watch("challengeDays");
@@ -135,20 +147,16 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
   const [isGeneratingAICover, setIsGeneratingAICover] = useState(false);
   const [aiCoverError, setAiCoverError] = useState<string | null>(null);
 
-  // Dynamic title formula hint
   const lpTag = largePrint ? "Large Print " : "";
   const titleHint = `e.g. "${lpTag}${puzzleType} for Seniors: ${puzzleCount} Puzzles Vol. 1"`;
   const subtitleHint = `e.g. "Big Letters, Easy to Read — Perfect for Adults & Beginners"`;
 
-  // Auto-fill back description template
   const generateDescTemplate = () => {
     const lpNote = largePrint ? "in large print for easy reading " : "";
     return `Discover ${puzzleCount} carefully crafted ${difficulty.toLowerCase()} ${puzzleType} puzzles ${lpNote}— perfect for brain training, relaxation, and daily fun! Each puzzle is laid out on its own page with generous space for working through solutions. A complete answer key is included at the back. Whether you're a beginner or an experienced solver, this collection offers hours of satisfying mental exercise. Makes a wonderful gift for puzzle enthusiasts of all ages!`;
   };
 
-  // Track the last auto-generated description so we can update it when key fields change
   const lastGeneratedRef = useRef<string>("");
-  // Seed lastGeneratedRef on mount if existing description matches what the template would produce
   useEffect(() => {
     const initial = form.getValues("backDescription") || "";
     if (initial && initial === generateDescTemplate()) {
@@ -159,7 +167,6 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
   useEffect(() => {
     const newTemplate = generateDescTemplate();
     const currentVal = form.getValues("backDescription") || "";
-    // Auto-update only if the field currently contains the previously auto-generated template
     if (currentVal && currentVal === lastGeneratedRef.current && newTemplate !== currentVal) {
       lastGeneratedRef.current = newTemplate;
       form.setValue("backDescription", newTemplate);
@@ -224,11 +231,14 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
   const progressive = difficultyMode === "progressive";
   const fmExtra = (dedication ? 1 : 0) + (challengeDays ? 1 : 0);
   const dividers = progressive ? (puzzleCount < 3 ? 1 : 3) : 0;
-  // frontMatter: title(1) + htp(1) + toc(1) + dedication? + tracker?
-  // back matter: 4 notes pages + answer key pages
   const totP = 3 + fmExtra + dividers + puzzleCount + 4 + Math.ceil(puzzleCount / aPer);
   const thick = paperType === "cream" ? 0.0025 : 0.002252;
   const spineW = totP * thick + 0.06;
+
+  const trimW = largePrint ? 8.5 : 6;
+  const trimH = largePrint ? 11 : 9;
+  const coverFullW = (0.125 + trimW + spineW + trimW + 0.125).toFixed(3);
+  const coverFullH = (trimH + 0.25).toFixed(3);
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 items-start">
@@ -264,7 +274,7 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
                   <FormField control={form.control} name="author" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Author</FormLabel>
-                      <FormControl><Input placeholder="Eleanor Bennett" {...field} /></FormControl>
+                      <FormControl><Input placeholder="Your pen name" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
@@ -370,20 +380,12 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
                   </FormItem>
                 )} />
 
-                {/* Live dimensions display */}
-                {(() => {
-                  const trimW = largePrint ? 8.5 : 6;
-                  const trimH = largePrint ? 11 : 9;
-                  const fullW = 0.125 + trimW + spineW + trimW + 0.125;
-                  const fullH = (trimH + 0.25).toFixed(3);
-                  return (
-                    <div className="font-mono text-xs text-amber-500/70 bg-amber-500/5 border border-amber-500/10 rounded px-3 py-2 leading-relaxed">
-                      Interior: ~{totP} pages &nbsp;·&nbsp;
-                      Cover: {fullW.toFixed(3)} × {fullH} in &nbsp;·&nbsp;
-                      Spine: {spineW.toFixed(3)} in
-                    </div>
-                  );
-                })()}
+                {/* Live dimensions */}
+                <div className="font-mono text-xs text-amber-500/70 bg-amber-500/5 border border-amber-500/10 rounded px-3 py-2 leading-relaxed">
+                  Interior: ~{totP} pages &nbsp;·&nbsp;
+                  Cover: {coverFullW} × {coverFullH} in &nbsp;·&nbsp;
+                  Spine: {spineW.toFixed(3)} in
+                </div>
 
                 {/* Word Category (Word Search / Number Search only) */}
                 {(puzzleType === "Word Search" || puzzleType === "Number Search") && (
@@ -416,40 +418,87 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
 
                 <div className="border-t" />
 
-                {/* Row 6 — Cover: Theme + Style */}
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField control={form.control} name="theme" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cover Theme</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          {THEMES.map(t => (
-                            <SelectItem key={t.value} value={t.value}>
-                              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <span style={{ display: "inline-flex", width: 12, height: 12, borderRadius: "50%", background: t.ac, border: `1px solid ${t.ac}88`, flexShrink: 0 }} />
-                                {t.label}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="coverStyle" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cover Style</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          {COVER_STYLES.map(t => <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                </div>
+                {/* Experience Mode */}
+                <FormField control={form.control} name="experienceMode" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Experience Mode</FormLabel>
+                    <div className="grid grid-cols-2 gap-2 mt-1">
+                      {EXPERIENCE_MODES.map(mode => (
+                        <button
+                          key={mode.value}
+                          type="button"
+                          onClick={() => field.onChange(mode.value)}
+                          className={`flex items-start gap-3 px-3 py-2.5 rounded-md border text-left transition-all ${
+                            field.value === mode.value
+                              ? "border-amber-500 bg-amber-500/10"
+                              : "border-border hover:border-amber-500/40"
+                          }`}
+                        >
+                          <span className="text-xl leading-none mt-0.5">{mode.icon}</span>
+                          <div>
+                            <div className="text-xs font-semibold">{mode.label}</div>
+                            <div className="text-[10px] text-muted-foreground">{mode.desc}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                {/* Cover Theme — visual swatch grid */}
+                <FormField control={form.control} name="theme" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cover Theme</FormLabel>
+                    <div className="grid grid-cols-5 gap-1.5 mt-1">
+                      {THEMES.map(t => (
+                        <button
+                          key={t.value}
+                          type="button"
+                          title={t.label}
+                          onClick={() => field.onChange(t.value)}
+                          className={`flex flex-col items-center gap-1 rounded-md p-1.5 border transition-all ${
+                            field.value === t.value
+                              ? "border-amber-500 bg-amber-500/10"
+                              : "border-border hover:border-amber-500/40"
+                          }`}
+                        >
+                          <span
+                            className="w-6 h-6 rounded-full ring-1 ring-white/10"
+                            style={{ background: `linear-gradient(135deg, ${t.bg} 50%, ${t.ac} 50%)` }}
+                          />
+                          <span className="text-[9px] text-muted-foreground leading-tight text-center line-clamp-1">{t.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+                {/* Cover Style — tile buttons */}
+                <FormField control={form.control} name="coverStyle" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cover Style</FormLabel>
+                    <div className="grid grid-cols-4 gap-1.5 mt-1">
+                      {COVER_STYLES.map(style => (
+                        <button
+                          key={style}
+                          type="button"
+                          onClick={() => field.onChange(style)}
+                          className={`py-2 text-xs rounded border transition-colors capitalize ${
+                            field.value === style
+                              ? "bg-amber-500 text-black border-amber-500 font-semibold"
+                              : "border-border text-muted-foreground hover:border-amber-500/40"
+                          }`}
+                        >
+                          <div className="text-base leading-none mb-0.5">{STYLE_ICONS[style]}</div>
+                          {style}
+                        </button>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )} />
 
                 {/* Cover Image URL */}
                 <FormField control={form.control} name="coverImageUrl" render={({ field }) => (
