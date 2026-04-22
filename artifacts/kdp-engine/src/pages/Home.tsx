@@ -1,4 +1,4 @@
-﻿import { useState, useCallback } from "react";
+﻿﻿import { useState, useCallback } from "react";
 import { useListBooks, useDeleteBook, useCloneBook, useCreateBook } from "@workspace/api-client-react";
 import type { Book } from "@workspace/api-client-react";
 import { Link, useLocation } from "wouter";
@@ -36,12 +36,52 @@ function ScoreRing({ score }: { score: number }) {
   );
 }
 
+const EXPERIENCE_META: Record<string, { icon: string; label: string }> = {
+  sketch:       { icon: "✏️", label: "Sketch" },
+  detective:    { icon: "🔍", label: "Detective" },
+  adventure:    { icon: "⚔️", label: "Adventure" },
+  darkacademia: { icon: "📜", label: "Dark Acad." },
+  cozycottage:  { icon: "🫖", label: "Cozy" },
+  mindful:      { icon: "🌿", label: "Mindful" },
+};
+
+function qaPillClass(score: number): string {
+  if (score >= 85) return "excellent";
+  if (score >= 70) return "good";
+  if (score >= 50) return "fair";
+  return "poor";
+}
+
 function BookCoverCard({ book, onDelete, onClone }: { book: Book; onDelete:(id:number)=>void; onClone:(id:number)=>void }) {
   const accent = COVER_ACCENT[book.theme ?? "midnight"] ?? "#C8951A";
   const typeColor = PUZZLE_TYPE_COLORS[book.puzzleType] || "border-white/10 text-white/50";
+  // Cast for new pipeline fields — OpenAPI schema hasn't been regenerated yet; runtime has them.
+  const ext = book as unknown as {
+    qaScore?: number | null;
+    giftSku?: boolean;
+    experienceMode?: string;
+  };
+  const qaScore = typeof ext.qaScore === "number" ? ext.qaScore : null;
+  const giftSku = Boolean(ext.giftSku);
+  const experienceMode = ext.experienceMode && ext.experienceMode !== "standard" ? ext.experienceMode : null;
+  const expMeta = experienceMode ? EXPERIENCE_META[experienceMode] : null;
   return (
     <div className="group relative flex flex-col book-lift cursor-pointer w-full">
       <div className="relative rounded-sm overflow-hidden sketch-border" style={{paddingBottom:"148%",background:"linear-gradient(160deg,#181210 0%,#0e0c09 100%)",borderLeft:`3px solid ${accent}`,boxShadow:"inset -1px 0 0 rgba(255,255,255,0.04)"}}>
+        {giftSku && (
+          <svg className="gift-ribbon-overlay" viewBox="0 0 110 130">
+            <path d="M 0,0 L 70,0 L 100,30 L 100,70 L 70,100 L 0,100 Z" fill={accent}/>
+            <path d="M 8,8 L 64,8 L 90,32 L 90,66 L 64,92 L 8,92 Z" fill="none" stroke="#fff" strokeWidth="1.2" strokeOpacity="0.6"/>
+            <text x="48" y="56" textAnchor="middle" fontFamily="Playfair Display,Georgia,serif" fontSize="14" fontWeight="800" fill="#fff" letterSpacing="2">GIFT</text>
+            <path d="M 8,100 L 0,125 L 20,110 Z" fill={accent} opacity="0.85"/>
+            <path d="M 20,110 L 38,125 L 38,100 Z" fill={accent} opacity="0.7"/>
+          </svg>
+        )}
+        {qaScore != null && (
+          <span className={`qa-score-pill ${qaPillClass(qaScore)}`} title={`Cover QA score: ${qaScore}/100`}>
+            QA {qaScore}
+          </span>
+        )}
         <div className="absolute inset-0 p-2.5 flex flex-col justify-between">
           <div>
             <div className="w-7 h-0.5 rounded-full mb-1" style={{background:accent,opacity:0.7}}/>
@@ -64,7 +104,15 @@ function BookCoverCard({ book, onDelete, onClone }: { book: Book; onDelete:(id:n
         </div>
       </div>
       <div className="h-1.5 rounded-b-sm" style={{background:`linear-gradient(to bottom,${accent}22,transparent)`}}/>
-      <div className="mt-1 px-0.5"><span className={`inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full border font-medium ${typeColor}`}>Vol {book.volumeNumber??1}</span></div>
+      <div className="mt-1 px-0.5 flex items-center gap-1 flex-wrap">
+        <span className={`inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full border font-medium ${typeColor}`}>Vol {book.volumeNumber??1}</span>
+        {expMeta && (
+          <span className={`experience-chip ${experienceMode}`} title={expMeta.label}>
+            <span>{expMeta.icon}</span>
+            <span className="hidden md:inline">{expMeta.label}</span>
+          </span>
+        )}
+      </div>
     </div>
   );
 }
