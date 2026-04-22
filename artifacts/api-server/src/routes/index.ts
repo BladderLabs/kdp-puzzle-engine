@@ -10,6 +10,7 @@ import agentCreateBookRouter from "./agents/create-book";
 import apifyMarketResearchRouter from "./apify/market-research";
 import libraryAnalysisRouter from "./library/analysis";
 import authorPersonaRouter from "./author-persona";
+import opportunitiesRouter from "./opportunities";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(agentCreateBookRouter);
 router.use(apifyMarketResearchRouter);
 router.use(libraryAnalysisRouter);
 router.use(authorPersonaRouter);
+router.use(opportunitiesRouter);
 
 export default router;
