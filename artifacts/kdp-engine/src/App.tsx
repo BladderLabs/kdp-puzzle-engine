@@ -8,6 +8,7 @@ import { CreateBook } from "@/pages/CreateBook";
 import { EditBook } from "@/pages/EditBook";
 import { GenerateBook } from "@/pages/GenerateBook";
 import { AgentCreateBook } from "@/pages/AgentCreateBook";
+import { CreateFlow } from "@/pages/CreateFlow";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -24,6 +25,7 @@ function Router() {
     <Layout>
       <Switch>
         <Route path="/" component={Home} />
+        <Route path="/flow" component={CreateFlow} />
         <Route path="/create" component={CreateBook} />
         <Route path="/agent-create" component={AgentCreateBook} />
         <Route path="/books/:id" component={EditBook} />
