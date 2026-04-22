@@ -336,9 +336,7 @@ export function GenerateBook() {
               },
               {
                 label: "All 7 KDP keywords set",
-                pass: Array.isArray((book as Record<string, unknown>).keywords)
-                  ? ((book as Record<string, unknown>).keywords as string[]).length >= 7
-                  : false,
+                pass: Array.isArray(book.keywords) ? book.keywords.length >= 7 : false,
                 fix: "Add all 7 keywords in Book Setup → KDP Keywords field (max 7 per KDP guidelines)",
               },
             ];
@@ -467,8 +465,8 @@ export function GenerateBook() {
                     zip.file(`${bookSlug}-interior.pdf`, interiorBlobRef.current);
                     zip.file(`${bookSlug}-cover.pdf`, coverBlobRef.current);
                     // Add KDP listing companion files
-                    const desc = (book as Record<string, unknown>).backDescription as string | undefined;
-                    const kws = (book as Record<string, unknown>).keywords as string[] | undefined;
+                    const desc = book.backDescription;
+                    const kws = book.keywords;
                     if (desc) zip.file("listing-description.txt", desc);
                     if (Array.isArray(kws) && kws.length > 0) zip.file("keywords.txt", kws.join("\n"));
                     const zipBlob = await zip.generateAsync({ type: "blob" });

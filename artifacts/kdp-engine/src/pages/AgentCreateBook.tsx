@@ -193,19 +193,19 @@ function StageRow({ stage, state }: { stage: StageConfig; state: StageState }) {
             {state.message}
           </p>
         )}
-        {state.status === "done" && state.data.title && (
+        {state.status === "done" && !!state.data.title && (
           <p className="text-xs mt-1 italic" style={{ color: "rgba(255,255,255,0.55)" }}>
             "{String(state.data.title)}"
           </p>
         )}
         {/* Market Intelligence Council done details */}
-        {state.status === "done" && stage.id === "market_scout" && state.data.winnerRationale && (
+        {state.status === "done" && stage.id === "market_scout" && !!state.data.winnerRationale && (
           <p className="text-xs mt-1 leading-relaxed" style={{ color: "rgba(255,255,255,0.40)", fontStyle: "italic" }}>
             {String(state.data.winnerRationale)}
           </p>
         )}
         {/* Council-specific done details */}
-        {state.status === "done" && stage.id === "cover_research" && state.data.theme && (
+        {state.status === "done" && stage.id === "cover_research" && !!state.data.theme && (
           <div className="flex gap-2 mt-1 flex-wrap">
             <span className="text-xs px-2 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.45)" }}>
               {String(state.data.theme)} theme
@@ -213,7 +213,7 @@ function StageRow({ stage, state }: { stage: StageConfig; state: StageState }) {
             <span className="text-xs px-2 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.45)" }}>
               {String(state.data.style)} style
             </span>
-            {state.data.accentHex && (
+            {!!state.data.accentHex && (
               <span className="text-xs px-2 py-0.5 rounded flex items-center gap-1" style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.45)" }}>
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: String(state.data.accentHex), display: "inline-block" }} />
                 {String(state.data.accentHex)}
@@ -1285,6 +1285,9 @@ export function AgentCreateBook() {
     evidenceRef.current = marketEvidence;
     usedCombosRef.current = pipelineUsedCombos;
     seriesNameRef.current = pipelineSeriesName;
+    experienceModeRef.current = experienceMode;
+    giftSkuRef.current = giftSku;
+    giftRecipientRef.current = giftRecipient;
     runPipeline(brief);
   };
 
@@ -1300,6 +1303,12 @@ export function AgentCreateBook() {
     setCompletion(null);
     setBrief("");
     briefRef.current = "";
+    setExperienceMode("standard");
+    experienceModeRef.current = "standard";
+    setGiftSku(false);
+    giftSkuRef.current = false;
+    setGiftRecipient("");
+    giftRecipientRef.current = "";
     setMarketEvidence([]);
     setEvidenceLabel("");
     evidenceRef.current = [];
@@ -1317,6 +1326,12 @@ export function AgentCreateBook() {
     setCompletion(null);
     setBrief(volumeBrief);
     briefRef.current = volumeBrief;
+    setExperienceMode("standard");
+    experienceModeRef.current = "standard";
+    setGiftSku(false);
+    giftSkuRef.current = false;
+    setGiftRecipient("");
+    giftRecipientRef.current = "";
     setMarketEvidence([]);
     setEvidenceLabel("");
     evidenceRef.current = [];
@@ -1335,6 +1350,12 @@ export function AgentCreateBook() {
     setCompletion(null);
     setBrief(suggBrief);
     briefRef.current = suggBrief;
+    setExperienceMode("standard");
+    experienceModeRef.current = "standard";
+    setGiftSku(false);
+    giftSkuRef.current = false;
+    setGiftRecipient("");
+    giftRecipientRef.current = "";
     setMarketEvidence([]);
     setEvidenceLabel("");
     evidenceRef.current = [];
@@ -1433,6 +1454,94 @@ export function AgentCreateBook() {
                 </button>
               </div>
             )}
+
+            {/* Experience mode picker */}
+            <div>
+              <label
+                className="block text-xs font-semibold uppercase tracking-widest mb-2"
+                style={{ color: "rgba(255,255,255,0.40)" }}
+              >
+                Cover style
+              </label>
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                {EXPERIENCE_MODES.map(mode => (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    onClick={() => setExperienceMode(mode.id)}
+                    className="rounded-lg px-2.5 py-2 text-left transition-all"
+                    style={experienceMode === mode.id ? {
+                      background: `${GOLD}18`,
+                      border: `1px solid ${GOLD}66`,
+                      outline: `none`,
+                    } : {
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      outline: "none",
+                    }}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span style={{ fontSize: 13 }}>{mode.icon}</span>
+                      <span
+                        className="text-xs font-semibold truncate"
+                        style={{ color: experienceMode === mode.id ? GOLD : "rgba(255,255,255,0.65)" }}
+                      >
+                        {mode.label}
+                      </span>
+                    </div>
+                    <p className="text-[10px] mt-0.5 leading-snug" style={{ color: "rgba(255,255,255,0.30)" }}>
+                      {mode.desc}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Gift SKU option */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setGiftSku(v => !v)}
+                className="flex items-center gap-2.5 w-full rounded-lg px-3.5 py-2.5 transition-all"
+                style={giftSku ? {
+                  background: "#ec489915",
+                  border: "1px solid #ec489950",
+                } : {
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                <div
+                  className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-all"
+                  style={giftSku ? { background: "#ec4899", border: "none" } : { background: "transparent", border: "1px solid rgba(255,255,255,0.25)" }}
+                >
+                  {giftSku && <span style={{ color: "#fff", fontSize: 11, fontWeight: 700 }}>✓</span>}
+                </div>
+                <div className="text-left">
+                  <p className="text-xs font-semibold" style={{ color: giftSku ? "#ec4899" : "rgba(255,255,255,0.65)" }}>
+                    🎁 Gift SKU
+                  </p>
+                  <p className="text-[10px] leading-none mt-0.5" style={{ color: "rgba(255,255,255,0.30)" }}>
+                    Gift ribbon on cover + gift-season keyword strategy
+                  </p>
+                </div>
+              </button>
+              {giftSku && (
+                <input
+                  value={giftRecipient}
+                  onChange={e => setGiftRecipient(e.target.value)}
+                  placeholder="Gift recipient label (optional) — e.g. 'Mom', 'Grandma', 'Dog Lovers'"
+                  className="mt-1.5 w-full rounded-lg px-3 py-2 text-xs"
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid #ec489930",
+                    color: "rgba(255,255,255,0.75)",
+                    outline: "none",
+                  }}
+                  maxLength={40}
+                />
+              )}
+            </div>
 
             <div>
               <label
@@ -1611,6 +1720,107 @@ export function AgentCreateBook() {
                   </div>
                 )}
               </div>
+
+              {/* Cover QA Gate result */}
+              {completion.coverQA && completion.coverQA.score !== undefined && (
+                <div
+                  className="rounded-xl px-4 py-3"
+                  style={{
+                    background: (completion.coverQA.passed ? "#22c55e" : "#f59e0b") + "10",
+                    border: `1px solid ${(completion.coverQA.passed ? "#22c55e" : "#f59e0b")}30`,
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span
+                      className="text-xs font-bold uppercase tracking-widest"
+                      style={{ color: completion.coverQA.passed ? "#22c55e99" : "#f59e0b99" }}
+                    >
+                      Cover QA Gate
+                    </span>
+                    <span
+                      className="text-sm font-bold"
+                      style={{ color: completion.coverQA.passed ? "#22c55e" : "#f59e0b" }}
+                    >
+                      {completion.coverQA.score}/100
+                      {completion.coverQA.passed ? " · Pass" : " · Partial"}
+                    </span>
+                  </div>
+                  {completion.coverQA.summary && (
+                    <p className="text-xs" style={{ color: "rgba(255,255,255,0.50)" }}>
+                      {completion.coverQA.summary}
+                    </p>
+                  )}
+                  {(completion.coverQA.issueCount ?? 0) > 0 && (
+                    <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+                      {completion.coverQA.issueCount} issue{completion.coverQA.issueCount !== 1 ? "s" : ""} flagged
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Listing Intelligence */}
+              {completion.listingData && (completion.listingData.categories?.length || completion.listingData.priceUsd) && (
+                <div
+                  className="rounded-xl px-4 py-3 space-y-2"
+                  style={{ background: `${GOLD}08`, border: `1px solid ${GOLD}25` }}
+                >
+                  <p className="text-xs font-bold uppercase tracking-widest" style={{ color: GOLD + "80" }}>
+                    Listing Intelligence
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    {completion.listingData.priceUsd && (
+                      <div className="rounded-lg px-3 py-1.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                        <span style={{ color: "rgba(255,255,255,0.40)" }}>AI Price</span>
+                        <p className="font-semibold mt-0.5" style={{ color: "#22c55e" }}>${completion.listingData.priceUsd.toFixed(2)}</p>
+                      </div>
+                    )}
+                    {completion.listingData.royaltyUsd && (
+                      <div className="rounded-lg px-3 py-1.5" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                        <span style={{ color: "rgba(255,255,255,0.40)" }}>Est. Royalty</span>
+                        <p className="font-semibold mt-0.5" style={{ color: GOLD }}>${completion.listingData.royaltyUsd.toFixed(2)}</p>
+                      </div>
+                    )}
+                  </div>
+                  {completion.listingData.categories && completion.listingData.categories.length > 0 && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "rgba(255,255,255,0.30)" }}>
+                        KDP Categories
+                      </p>
+                      {completion.listingData.categories.slice(0, 2).map((cat, i) => (
+                        <p key={i} className="text-[11px] leading-snug mb-0.5 truncate" style={{ color: "rgba(255,255,255,0.55)" }}>
+                          {cat.breadcrumb}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                  {completion.listingData.keywords && completion.listingData.keywords.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {completion.listingData.keywords.slice(0, 7).map((kw, i) => (
+                        <span
+                          key={i}
+                          className="text-[10px] px-2 py-0.5 rounded-full"
+                          style={{ background: `${GOLD}15`, border: `1px solid ${GOLD}30`, color: GOLD + "bb" }}
+                        >
+                          {kw}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Experience mode + gift indicator chips */}
+              {(completion.experienceMode && completion.experienceMode !== "standard") && (
+                <div className="flex flex-wrap gap-2">
+                  <span
+                    className="text-xs px-2.5 py-1 rounded-full font-medium"
+                    style={{ background: `${GOLD}15`, border: `1px solid ${GOLD}30`, color: GOLD + "cc" }}
+                  >
+                    {EXPERIENCE_MODES.find(m => m.id === completion.experienceMode)?.icon ?? "✦"}{" "}
+                    {EXPERIENCE_MODES.find(m => m.id === completion.experienceMode)?.label ?? completion.experienceMode} mode
+                  </span>
+                </div>
+              )}
 
               {/* Buyer Psychology Profile */}
               {completion.buyerProfile && (
