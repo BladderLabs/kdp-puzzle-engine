@@ -15,13 +15,16 @@ interface StageConfig {
 const STAGES: StageConfig[] = [
   { id: "market_scout", label: "Market Intelligence Council", subLabel: "Opportunity · Competition · Director" },
   { id: "content_architect", label: "Content Architect" },
+  { id: "buyer_profiler", label: "Buyer Psychology Profiler" },
   { id: "content_council", label: "Content Excellence Council", subLabel: "Title · Copy · Keywords" },
   { id: "cover_research", label: "Cover Design Council", subLabel: "Design · Color · Typography" },
   { id: "puzzle_council", label: "Puzzle Production Council", subLabel: "Difficulty · Layout" },
   { id: "interior_council", label: "Interior Design Council", subLabel: "Typography · Margins" },
   { id: "production_council", label: "Production & Pricing Council", subLabel: "Format · Price" },
   { id: "master_director", label: "Master Book Director", subLabel: "Synthesising all councils" },
+  { id: "listing_intelligence", label: "Listing Intelligence", subLabel: "Amazon categories · SEO description · Pricing" },
   { id: "cover_art", label: "Cover Art Director" },
+  { id: "cover_qa_gate", label: "Cover QA Gate", subLabel: "Legibility · Contrast · KDP compliance" },
   { id: "qa_review", label: "QA Reviewer" },
   { id: "assemble", label: "Assembling" },
 ];
@@ -88,6 +91,20 @@ interface CoverDirectives {
   fontStyleDirective?: string;
 }
 
+interface ListingData {
+  priceUsd?: number;
+  royaltyUsd?: number;
+  categories?: Array<{ breadcrumb: string; rationale: string }>;
+  keywords?: string[];
+}
+
+interface CoverQAData {
+  score?: number;
+  passed?: boolean;
+  issueCount?: number;
+  summary?: string;
+}
+
 interface CompletionInfo {
   bookId: number;
   title: string;
@@ -95,6 +112,7 @@ interface CompletionInfo {
   puzzleType?: string;
   puzzleCount?: number;
   theme?: string;
+  experienceMode?: string;
   hasCoverImage: boolean;
   coverDataUrl?: string;
   qaFailed: boolean;
@@ -105,6 +123,8 @@ interface CompletionInfo {
   seriesArc?: SeriesArc | null;
   buyerProfile?: BuyerProfile | null;
   coverDirectives?: CoverDirectives | null;
+  listingData?: ListingData | null;
+  coverQA?: CoverQAData | null;
 }
 
 const initStages = (): Record<string, StageState> =>
@@ -1085,9 +1105,22 @@ function VolumeBuilderPanel({
   );
 }
 
+const EXPERIENCE_MODES: Array<{ id: string; label: string; icon: string; desc: string }> = [
+  { id: "standard",     label: "Standard",       icon: "✦", desc: "AI-driven — clean & versatile" },
+  { id: "sketch",       label: "Sketch Journal",  icon: "✏️", desc: "Hand-drawn borders & crosshatch" },
+  { id: "detective",    label: "Detective Noir",  icon: "🔍", desc: "Dark, textured, moody" },
+  { id: "adventure",    label: "Adventure",       icon: "🧭", desc: "Bold, rugged, explorer feel" },
+  { id: "darkacademia", label: "Dark Academia",   icon: "📚", desc: "Sophisticated, scholarly" },
+  { id: "cozycottage",  label: "Cozy Cottage",   icon: "🌸", desc: "Warm, soft, floral accents" },
+  { id: "mindful",      label: "Mindful",         icon: "🌿", desc: "Clean, zen, breathing room" },
+];
+
 export function AgentCreateBook() {
   const [, setLocation] = useLocation();
   const [brief, setBrief] = useState("");
+  const [experienceMode, setExperienceMode] = useState("standard");
+  const [giftSku, setGiftSku] = useState(false);
+  const [giftRecipient, setGiftRecipient] = useState("");
   const [running, setRunning] = useState(false);
   const [stages, setStages] = useState<Record<string, StageState>>(initStages);
   const [error, setError] = useState<string | null>(null);
@@ -1098,6 +1131,9 @@ export function AgentCreateBook() {
   const [pipelineSeriesName, setPipelineSeriesName] = useState<string | undefined>(undefined);
   const abortRef = useRef<AbortController | null>(null);
   const briefRef = useRef<string>("");
+  const experienceModeRef = useRef<string>("standard");
+  const giftSkuRef = useRef<boolean>(false);
+  const giftRecipientRef = useRef<string>("");
   const evidenceRef = useRef<ApifyProduct[]>([]);
   const usedCombosRef = useRef<string[]>([]);
   const seriesNameRef = useRef<string | undefined>(undefined);
@@ -1138,6 +1174,9 @@ export function AgentCreateBook() {
             marketEvidence: evidence.length > 0 ? evidence : undefined,
             usedCombos: combos.length > 0 ? combos : undefined,
             seriesName: sName || undefined,
+            experienceMode: experienceModeRef.current !== "standard" ? experienceModeRef.current : undefined,
+            giftSku: giftSkuRef.current || undefined,
+            giftRecipient: giftSkuRef.current && giftRecipientRef.current.trim() ? giftRecipientRef.current.trim() : undefined,
           }),
           signal: abort.signal,
         });
@@ -1165,6 +1204,8 @@ export function AgentCreateBook() {
               const event = JSON.parse(line.slice(6)) as Record<string, unknown>;
 
               if (event.stage === "done" && typeof event.bookId === "number") {
+                const listStage = stages["listing_intelligence"];
+                const qaStage = stages["cover_qa_gate"];
                 setCompletion({
                   bookId: event.bookId,
                   title: typeof event.title === "string" ? event.title : "",
@@ -1172,6 +1213,7 @@ export function AgentCreateBook() {
                   puzzleType: typeof event.puzzleType === "string" ? event.puzzleType : undefined,
                   puzzleCount: typeof event.puzzleCount === "number" ? event.puzzleCount : undefined,
                   theme: typeof event.theme === "string" ? event.theme : undefined,
+                  experienceMode: experienceModeRef.current,
                   hasCoverImage: event.hasCoverImage === true,
                   coverDataUrl: typeof event.coverDataUrl === "string" ? event.coverDataUrl : undefined,
                   qaFailed: event.qaFailed === true,
@@ -1182,6 +1224,18 @@ export function AgentCreateBook() {
                   seriesArc: event.seriesArc as SeriesArc | null | undefined,
                   buyerProfile: event.buyerProfile as BuyerProfile | null | undefined,
                   coverDirectives: event.coverDirectives as CoverDirectives | null | undefined,
+                  listingData: listStage?.data ? {
+                    priceUsd: typeof listStage.data.priceUsd === "number" ? listStage.data.priceUsd : undefined,
+                    royaltyUsd: typeof listStage.data.royaltyUsd === "number" ? listStage.data.royaltyUsd : undefined,
+                    categories: Array.isArray(listStage.data.categories) ? listStage.data.categories as Array<{ breadcrumb: string; rationale: string }> : undefined,
+                    keywords: Array.isArray(listStage.data.keywords) ? listStage.data.keywords as string[] : undefined,
+                  } : null,
+                  coverQA: qaStage?.data ? {
+                    score: typeof qaStage.data.score === "number" ? qaStage.data.score : undefined,
+                    passed: typeof qaStage.data.passed === "boolean" ? qaStage.data.passed : undefined,
+                    issueCount: typeof qaStage.data.issueCount === "number" ? qaStage.data.issueCount : undefined,
+                    summary: typeof qaStage.data.summary === "string" ? qaStage.data.summary : undefined,
+                  } : null,
                 });
                 done_flag = true;
                 break;
