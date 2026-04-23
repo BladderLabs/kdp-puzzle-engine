@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Cover QA Gate.
  *
  * Runs a heuristic pre-flight over a cover's inputs (no rendering required)
@@ -305,7 +305,174 @@ export function runCoverQAGate(input: QAInput): QAResult {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Optional multimodal critic — Claude Sonnet 4.5 with vision
+// KDP Publication Preflight — broader checks before uploading to Amazon
+// ────────────────────────────────────────────────────────────────────────────
+
+// Amazon KDP explicitly bans these promotional terms in titles/subtitles.
+// Using them triggers manual review and often outright rejection.
+const BANNED_TITLE_TERMS = [
+  "best-selling", "best selling", "bestseller", "bestselling",
+  "#1 bestseller", "#1 best", "number one",
+  "free gift", "free bonus", "100% free",
+  "amazon #1", "amazon best", "amazon bestseller",
+  "new york times", "nyt bestseller",
+  "buy now", "click here", "limited time", "limited edition",
+  "brand new", "lowest price",
+];
+
+// Fields KDP rejects outright
+const MAX_TITLE_CHARS = 200;
+const MAX_SUBTITLE_CHARS = 200;
+const MIN_DESCRIPTION_CHARS = 100;
+const MAX_DESCRIPTION_CHARS = 4000;
+const MAX_KEYWORD_LENGTH = 50;
+const REQUIRED_KEYWORD_COUNT = 7;
+
+/**
+ * Extra preflight checks unique to KDP publication. Stricter than the QA gate —
+ * issues here will cause Amazon to reject the book outright or flag it for
+ * manual review. Wraps runCoverQAGate() with additional publication-specific
+ * rules.
+ */
+export function runPublicationPreflight(input: QAInput): QAResult {
+  const baseResult = runCoverQAGate(input);
+  const extra: QAIssue[] = [];
+
+  const title = (input.title || "").trim();
+  const subtitle = (input.subtitle || "").trim();
+  const desc = (input.backDescription || "").trim();
+  const keywords = input.keywords || [];
+
+  // ── Title & subtitle length (KDP hard limits) ───────────────────────────
+  if (title.length > MAX_TITLE_CHARS) {
+    extra.push({
+      code: "kdp.title-over-200",
+      severity: "fail",
+      message: `Title is ${title.length} chars — KDP rejects titles over ${MAX_TITLE_CHARS}.`,
+      recommendation: "Shorten the title or split into title + subtitle.",
+    });
+  }
+  if (subtitle.length > MAX_SUBTITLE_CHARS) {
+    extra.push({
+      code: "kdp.subtitle-over-200",
+      severity: "fail",
+      message: `Subtitle is ${subtitle.length} chars — KDP rejects subtitles over ${MAX_SUBTITLE_CHARS}.`,
+      recommendation: "Shorten the subtitle.",
+    });
+  }
+
+  // ── Banned marketing terms (triggers manual review or outright rejection) ──
+  const titleLower = (title + " " + subtitle).toLowerCase();
+  for (const term of BANNED_TITLE_TERMS) {
+    if (titleLower.includes(term)) {
+      extra.push({
+        code: "kdp.banned-term",
+        severity: "fail",
+        message: `Title/subtitle contains banned promotional term: "${term}".`,
+        recommendation: "Remove or rephrase. KDP flags these as misleading.",
+      });
+    }
+  }
+
+  // ── Description length bounds ───────────────────────────────────────────
+  if (desc.length < MIN_DESCRIPTION_CHARS) {
+    extra.push({
+      code: "kdp.description-too-short",
+      severity: "fail",
+      message: `Description is ${desc.length} chars — KDP minimum is ${MIN_DESCRIPTION_CHARS}.`,
+    });
+  } else if (desc.length > MAX_DESCRIPTION_CHARS) {
+    extra.push({
+      code: "kdp.description-too-long",
+      severity: "fail",
+      message: `Description is ${desc.length} chars — KDP maximum is ${MAX_DESCRIPTION_CHARS}.`,
+      recommendation: "Trim the description or move detail into A+ Content later.",
+    });
+  }
+
+  // ── 7 keywords, each under 50 chars ─────────────────────────────────────
+  if (keywords.length < REQUIRED_KEYWORD_COUNT) {
+    extra.push({
+      code: "kdp.keywords-under-7",
+      severity: keywords.length === 0 ? "fail" : "warn",
+      message: `${keywords.length} of ${REQUIRED_KEYWORD_COUNT} keyword slots used. Each empty slot is a free ranking signal.`,
+    });
+  }
+  for (let i = 0; i < keywords.length; i++) {
+    if (keywords[i].length > MAX_KEYWORD_LENGTH) {
+      extra.push({
+        code: `kdp.keyword-${i + 1}-too-long`,
+        severity: "fail",
+        message: `Keyword ${i + 1} is ${keywords[i].length} chars — KDP maximum per keyword is ${MAX_KEYWORD_LENGTH}.`,
+      });
+    }
+  }
+
+  // ── Keyword duplication across title + subtitle + keywords ──────────────
+  // KDP algorithm sees these together. Duplicate terms waste a slot.
+  const titleTokens = new Set(
+    (title + " " + subtitle).toLowerCase().split(/\s+/).filter(t => t.length >= 4),
+  );
+  for (let i = 0; i < keywords.length; i++) {
+    const kwTokens = keywords[i].toLowerCase().split(/\s+/).filter(t => t.length >= 4);
+    const allInTitle = kwTokens.length > 0 && kwTokens.every(t => titleTokens.has(t));
+    if (allInTitle) {
+      extra.push({
+        code: `kdp.keyword-${i + 1}-duplicates-title`,
+        severity: "warn",
+        message: `Keyword ${i + 1} ("${keywords[i]}") is entirely contained in the title/subtitle — replace with a fresh long-tail term.`,
+      });
+    }
+  }
+
+  // ── Keyword duplication amongst each other ──────────────────────────────
+  const seen = new Set<string>();
+  for (let i = 0; i < keywords.length; i++) {
+    const key = keywords[i].toLowerCase().trim();
+    if (seen.has(key)) {
+      extra.push({
+        code: `kdp.keyword-${i + 1}-duplicate`,
+        severity: "fail",
+        message: `Keyword ${i + 1} ("${keywords[i]}") is a duplicate of an earlier keyword.`,
+      });
+    }
+    seen.add(key);
+  }
+
+  // ── Puzzle count claim vs actual ────────────────────────────────────────
+  // If the title claims "100 Puzzles" but puzzleCount is 50, KDP reviewers notice.
+  const titleClaim = /\b(\d{2,3})\s+puzzle/i.exec(title);
+  if (titleClaim && input.puzzleCount != null) {
+    const claimed = Number(titleClaim[1]);
+    if (claimed !== input.puzzleCount) {
+      extra.push({
+        code: "kdp.puzzle-count-mismatch",
+        severity: "fail",
+        message: `Title claims "${claimed} puzzles" but the book has ${input.puzzleCount}. Amazon buyers call this out in reviews.`,
+        recommendation: "Align the title number with the actual puzzle count before publishing.",
+      });
+    }
+  }
+
+  // ── Merge with base results ─────────────────────────────────────────────
+  const allIssues = [...baseResult.issues, ...extra];
+  let score = 100;
+  for (const i of allIssues) {
+    score -= i.severity === "fail" ? 20 : i.severity === "warn" ? 5 : 1;
+  }
+  score = Math.max(0, Math.min(100, score));
+  const failCount = allIssues.filter(i => i.severity === "fail").length;
+  const warnCount = allIssues.filter(i => i.severity === "warn").length;
+  const passed = failCount === 0;
+  const summary = passed
+    ? `Publication Preflight PASSED — score ${score}/100 (${warnCount} warnings).`
+    : `Publication Preflight FAILED — ${failCount} KDP blocker${failCount === 1 ? "" : "s"} must be fixed before upload.`;
+
+  return { passed, score, issues: allIssues, summary };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Optional multimodal critic — Claude Sonnet 4.6 with vision
 // ────────────────────────────────────────────────────────────────────────────
 
 export interface VisualCriticResult {
