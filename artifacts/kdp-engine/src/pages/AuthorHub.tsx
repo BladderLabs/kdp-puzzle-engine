@@ -130,14 +130,38 @@ function MiniCover({ opp }: { opp: Opportunity }) {
 // Opportunity Card
 // ─────────────────────────────────────────────────────────────────────────────
 
-function OpportunityCard({ opp, onGenerate }: { opp: Opportunity; onGenerate: (o: Opportunity) => void }) {
+function OpportunityCard({
+  opp,
+  onGenerate,
+  isQueued,
+  onToggleQueue,
+}: {
+  opp: Opportunity;
+  onGenerate: (o: Opportunity) => void;
+  isQueued: boolean;
+  onToggleQueue: (o: Opportunity) => void;
+}) {
   const heat = HEAT_STYLE[opp.heatLevel];
   const theme = THEME_COLORS[opp.theme] ?? THEME_COLORS.midnight;
 
   return (
     <div
-      className="group relative rounded-xl border bg-card/60 p-4 transition-all duration-200 hover:border-amber-500/40 hover:bg-card/90 hover:shadow-[0_8px_32px_rgba(0,0,0,0.4)] hover:-translate-y-0.5"
+      className={`group relative rounded-xl border bg-card/60 p-4 transition-all duration-200 hover:border-amber-500/40 hover:bg-card/90 hover:shadow-[0_8px_32px_rgba(0,0,0,0.4)] hover:-translate-y-0.5 ${
+        isQueued ? "ring-2 ring-amber-500/70 bg-amber-500/5" : ""
+      }`}
     >
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onToggleQueue(opp); }}
+        title={isQueued ? "Remove from batch queue" : "Add to batch queue (generate multiple at once)"}
+        className={`absolute top-2 right-2 z-10 w-6 h-6 rounded-full flex items-center justify-center text-sm transition-all opacity-0 group-hover:opacity-100 ${
+          isQueued
+            ? "bg-amber-500 text-black opacity-100"
+            : "bg-white/10 text-white/70 hover:bg-white/20"
+        }`}
+      >
+        {isQueued ? "✓" : "+"}
+      </button>
       <div className="flex items-start gap-3">
         <MiniCover opp={opp} />
         <div className="flex-1 min-w-0">
@@ -223,6 +247,50 @@ function GenerationModal({
 
     (async () => {
       try {
+        // Pre-fetch real Amazon competitor data for this niche so the pipeline's
+        // Market Intelligence + Listing Intelligence can ground their output in
+        // actual BSR / price / review counts, not LLM guesses. Cached server-side
+        // for 15 min, so repeat clicks on the same niche are free.
+        let marketEvidence: unknown[] | undefined;
+        try {
+          setStream(s => [...s, {
+            stage: "apify_research",
+            status: "running",
+            message: `Pulling live Amazon data for ${opp.nicheLabel}…`,
+          }]);
+          const apifyRes = await fetch("/api/apify/market-research", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: controller.signal,
+            body: JSON.stringify({
+              keyword: `${opp.nicheLabel} ${opp.puzzleType}`.toLowerCase(),
+              puzzleType: opp.puzzleType,
+            }),
+          });
+          if (apifyRes.ok) {
+            const apifyData = await apifyRes.json() as { results?: unknown[]; source?: string };
+            marketEvidence = Array.isArray(apifyData.results) ? apifyData.results.slice(0, 5) : undefined;
+            setStream(s => [...s, {
+              stage: "apify_research",
+              status: "done",
+              message: `${marketEvidence?.length ?? 0} live competitors found${apifyData.source === "fallback" ? " (Apify unavailable — using fallback)" : ""}`,
+            }]);
+          } else {
+            setStream(s => [...s, {
+              stage: "apify_research",
+              status: "done",
+              message: "Amazon scraper unavailable — pipeline will use LLM-only research",
+            }]);
+          }
+        } catch {
+          // Apify optional — don't block generation on scraper failure
+          setStream(s => [...s, {
+            stage: "apify_research",
+            status: "done",
+            message: "Skipped — pipeline will run without live competitor data",
+          }]);
+        }
+
         const res = await fetch("/api/agents/create-book", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -233,6 +301,7 @@ function GenerationModal({
             giftSku: opp.giftSku,
             giftRecipient: opp.giftSku && opp.giftRecipient ? opp.giftRecipient : undefined,
             yearBranding: true,
+            marketEvidence,
           }),
         });
         if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
@@ -370,6 +439,178 @@ function ResearchingState({ personaName }: { personaName: string | null | undefi
 // Main
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Batch Generation Modal — N parallel SSE streams
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface BatchItem {
+  opp: Opportunity;
+  stream: StageEvent[];
+  status: "queued" | "running" | "done" | "failed";
+  bookId?: number;
+  error?: string;
+}
+
+function BatchModal({
+  queue,
+  onClose,
+}: {
+  queue: Opportunity[];
+  onClose: () => void;
+}) {
+  const [items, setItems] = useState<BatchItem[]>(queue.map(opp => ({ opp, stream: [], status: "queued" })));
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    const controllers = queue.map(() => new AbortController());
+
+    queue.forEach((opp, idx) => {
+      const ctrl = controllers[idx];
+      (async () => {
+        setItems(prev => prev.map((it, i) => i === idx ? { ...it, status: "running" } : it));
+        try {
+          // Apify pre-fetch (best-effort, silent)
+          let marketEvidence: unknown[] | undefined;
+          try {
+            const apifyRes = await fetch("/api/apify/market-research", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              signal: ctrl.signal,
+              body: JSON.stringify({
+                keyword: `${opp.nicheLabel} ${opp.puzzleType}`.toLowerCase(),
+                puzzleType: opp.puzzleType,
+              }),
+            });
+            if (apifyRes.ok) {
+              const d = await apifyRes.json() as { results?: unknown[] };
+              marketEvidence = Array.isArray(d.results) ? d.results.slice(0, 5) : undefined;
+            }
+          } catch {/* non-fatal */}
+
+          const res = await fetch("/api/agents/create-book", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: ctrl.signal,
+            body: JSON.stringify({
+              brief: opp.prefilledBrief,
+              experienceMode: opp.experienceMode,
+              giftSku: opp.giftSku,
+              giftRecipient: opp.giftSku && opp.giftRecipient ? opp.giftRecipient : undefined,
+              yearBranding: true,
+              marketEvidence,
+            }),
+          });
+          if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buf = "";
+          let finalBookId: number | null = null;
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buf += decoder.decode(value, { stream: true });
+            const chunks = buf.split("\n\n");
+            buf = chunks.pop() ?? "";
+            for (const chunk of chunks) {
+              const line = chunk.startsWith("data: ") ? chunk.slice(6) : chunk;
+              if (!line.trim()) continue;
+              try {
+                const evt = JSON.parse(line) as StageEvent & { bookId?: number };
+                setItems(prev => prev.map((it, i) => i === idx ? { ...it, stream: [...it.stream, evt] } : it));
+                if (evt.stage === "done" && typeof evt.bookId === "number") finalBookId = evt.bookId;
+              } catch {/* tolerate */}
+            }
+          }
+          setItems(prev => prev.map((it, i) => i === idx ? { ...it, status: "done", bookId: finalBookId ?? undefined } : it));
+        } catch (err) {
+          setItems(prev => prev.map((it, i) => i === idx ? { ...it, status: "failed", error: (err as Error).message } : it));
+        }
+      })();
+    });
+
+    return () => controllers.forEach(c => c.abort());
+  }, [queue]);
+
+  const allDone = items.every(i => i.status === "done" || i.status === "failed");
+  const doneCount = items.filter(i => i.status === "done").length;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <div className="w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-xl border bg-background shadow-2xl p-6">
+        <div className="flex items-baseline justify-between mb-4">
+          <div>
+            <h2 className="font-display text-2xl font-bold">Batch Generation</h2>
+            <p className="text-sm text-muted-foreground font-sketch mt-0.5">
+              {allDone
+                ? `${doneCount} of ${items.length} books complete`
+                : `${doneCount} of ${items.length} done · ${items.filter(i => i.status === "running").length} running in parallel`}
+            </p>
+          </div>
+          {allDone && <Button onClick={onClose}>Close</Button>}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {items.map((it, i) => {
+            const lastEvent = it.stream[it.stream.length - 1];
+            return (
+              <div
+                key={i}
+                className={`rounded-lg border p-4 transition-colors ${
+                  it.status === "done" ? "border-emerald-500/40 bg-emerald-500/5"
+                  : it.status === "failed" ? "border-destructive/40 bg-destructive/5"
+                  : it.status === "running" ? "border-amber-500/40 bg-amber-500/5"
+                  : "border-white/10 bg-card/40"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <MiniCover opp={it.opp} />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-display font-bold text-sm leading-tight line-clamp-2">{it.opp.titlePreview}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5 capitalize">{it.opp.nicheLabel}</div>
+                    <div className="mt-2 text-[10px] font-mono">
+                      {it.status === "queued" && <span className="text-muted-foreground">queued</span>}
+                      {it.status === "running" && (
+                        <span className="text-amber-500 flex items-center gap-1">
+                          <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                          {lastEvent?.stage ?? "starting…"}
+                        </span>
+                      )}
+                      {it.status === "done" && (
+                        <span className="text-emerald-500">✓ done · saved</span>
+                      )}
+                      {it.status === "failed" && (
+                        <span className="text-destructive">✗ {it.error?.slice(0, 80) ?? "failed"}</span>
+                      )}
+                    </div>
+                    {it.status === "done" && it.bookId && (
+                      <div className="flex gap-1.5 mt-2">
+                        <Button
+                          size="sm"
+                          className="text-[10px] h-6 px-2 flex-1"
+                          onClick={() => setLocation(`/publish/${it.bookId}`)}
+                        >
+                          Open →
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function AuthorHub() {
   const [, setLocation] = useLocation();
   const qc = useQueryClient();
@@ -377,6 +618,8 @@ export function AuthorHub() {
 
   const [wizardOpen, setWizardOpen] = useState(false);
   const [generating, setGenerating] = useState<Opportunity | null>(null);
+  const [batchQueue, setBatchQueue] = useState<Opportunity[]>([]);
+  const [batchRunning, setBatchRunning] = useState<Opportunity[] | null>(null);
 
   const query = useQuery({
     queryKey: ["opportunities", persona?.id ?? 0],
@@ -443,9 +686,45 @@ export function AuthorHub() {
 
       {query.data && query.data.opportunities.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {query.data.opportunities.map((opp, i) => (
-            <OpportunityCard key={`${opp.niche}-${i}`} opp={opp} onGenerate={setGenerating} />
-          ))}
+          {query.data.opportunities.map((opp, i) => {
+            const isQueued = batchQueue.some(q => q.niche === opp.niche && q.titlePreview === opp.titlePreview);
+            return (
+              <OpportunityCard
+                key={`${opp.niche}-${i}`}
+                opp={opp}
+                onGenerate={setGenerating}
+                isQueued={isQueued}
+                onToggleQueue={(o) => setBatchQueue(prev =>
+                  prev.some(q => q.niche === o.niche && q.titlePreview === o.titlePreview)
+                    ? prev.filter(q => !(q.niche === o.niche && q.titlePreview === o.titlePreview))
+                    : [...prev, o],
+                )}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {/* Floating batch action bar */}
+      {batchQueue.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 rounded-full border bg-background/95 backdrop-blur-md px-5 py-3 shadow-2xl">
+          <span className="text-sm font-semibold">
+            {batchQueue.length} queued
+          </span>
+          <button
+            type="button"
+            onClick={() => setBatchQueue([])}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            clear
+          </button>
+          <Button
+            size="sm"
+            onClick={() => { setBatchRunning(batchQueue); setBatchQueue([]); }}
+            className="text-sm font-semibold"
+          >
+            ✨ Generate all {batchQueue.length} in parallel
+          </Button>
         </div>
       )}
 
@@ -454,6 +733,12 @@ export function AuthorHub() {
         onClose={() => setGenerating(null)}
         onDone={handleGenerationDone}
       />
+      {batchRunning && (
+        <BatchModal
+          queue={batchRunning}
+          onClose={() => { setBatchRunning(null); qc.invalidateQueries({ queryKey: ["books"] }); }}
+        />
+      )}
       <AuthorWizard open={wizardOpen} onOpenChange={setWizardOpen} />
     </div>
   );
