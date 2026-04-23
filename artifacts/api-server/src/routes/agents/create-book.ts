@@ -1,7 +1,7 @@
-﻿﻿import { Router, type IRouter } from "express";
+﻿﻿﻿import { Router, type IRouter } from "express";
 import type { Response } from "express";
 import { z } from "zod";
-import { db, booksTable, authorPersonasTable } from "@workspace/db";
+import { db, booksTable, authorPersonasTable, cachedRun, stableKey } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
 import { runListingIntelligence } from "../../lib/agents/listing-intelligence";
 import { runCoverQAGate } from "../../lib/agents/cover-qa-gate";
@@ -253,14 +253,23 @@ router.post("/agents/create-book", async (req, res) => {
   // sales copy (emotion / copy angle) and the cover design (visual metaphor / mood).
   emit(res, "buyer_profiler", "running", { message: "Profiling buyer psychology…" });
   try {
-    buyerProfile = await runBuyerPsychologyProfiler(
-      market.niche,
-      market.nicheLabel,
-      market.puzzleType,
-      market.audienceProfile,
-      market.largePrint === true,
-      draft.title,
-      draft.backDescription,
+    buyerProfile = await cachedRun(
+      "buyer-psychology",
+      stableKey({
+        niche: market.niche,
+        puzzleType: market.puzzleType,
+        audience: market.audienceProfile,
+        largePrint: market.largePrint === true,
+      }),
+      () => runBuyerPsychologyProfiler(
+        market.niche,
+        market.nicheLabel,
+        market.puzzleType,
+        market.audienceProfile,
+        market.largePrint === true,
+        draft.title,
+        draft.backDescription,
+      ),
     );
     req.log.info({ primaryEmotion: buyerProfile.primaryEmotion, buyerMoment: buyerProfile.buyerMoment }, "Buyer Psychology Profiler done");
     emit(res, "buyer_profiler", "done", {
@@ -335,32 +344,61 @@ router.post("/agents/create-book", async (req, res) => {
       // Cover Design Council — buyer profile already available from Stage 3
       (async () => {
         const hasAiImage = true;
+        const coverCacheKey = stableKey({
+          niche: market.niche,
+          puzzleType: market.puzzleType,
+          audience: market.audienceProfile,
+          largePrint: market.largePrint === true,
+          hasImage: hasAiImage,
+        });
         const [designAnalysis, colorStrategy, typographySpec] = await Promise.all([
-          runCoverDesignAnalyst(market.niche, market.nicheLabel, market.puzzleType, market.audienceProfile, hasAiImage, buyerProfile)
-            .then(r => {
-              coverSubAgentDone.push("Design Analyst");
-              emit(res, "cover_research", "running", { message: coverProgress() });
-              return r;
-            }),
-          runCoverColorStrategist(market.niche, market.nicheLabel, market.puzzleType, market.audienceProfile, market.largePrint === true, buyerProfile)
-            .then(r => {
-              coverSubAgentDone.push("Color Strategist");
-              emit(res, "cover_research", "running", { message: coverProgress() });
-              return r;
-            }),
-          runCoverTypographyDirector(market.niche, market.nicheLabel, market.puzzleType, market.audienceProfile, market.largePrint === true, buyerProfile)
-            .then(r => {
-              coverSubAgentDone.push("Typography Director");
-              emit(res, "cover_research", "running", { message: coverProgress() });
-              return r;
-            }),
+          cachedRun(
+            "cover-design-analyst",
+            coverCacheKey,
+            () => runCoverDesignAnalyst(market.niche, market.nicheLabel, market.puzzleType, market.audienceProfile, hasAiImage, buyerProfile),
+          ).then(r => {
+            coverSubAgentDone.push("Design Analyst");
+            emit(res, "cover_research", "running", { message: coverProgress() });
+            return r;
+          }),
+          cachedRun(
+            "cover-color-strategist",
+            coverCacheKey,
+            () => runCoverColorStrategist(market.niche, market.nicheLabel, market.puzzleType, market.audienceProfile, market.largePrint === true, buyerProfile),
+          ).then(r => {
+            coverSubAgentDone.push("Color Strategist");
+            emit(res, "cover_research", "running", { message: coverProgress() });
+            return r;
+          }),
+          cachedRun(
+            "cover-typography-director",
+            coverCacheKey,
+            () => runCoverTypographyDirector(market.niche, market.nicheLabel, market.puzzleType, market.audienceProfile, market.largePrint === true, buyerProfile),
+          ).then(r => {
+            coverSubAgentDone.push("Typography Director");
+            emit(res, "cover_research", "running", { message: coverProgress() });
+            return r;
+          }),
         ]);
 
-        // Round-2 cross-talk: 3 parallel Haiku calls — each specialist checks compatibility with the other two
+        // Round-2 cross-talk: 3 parallel Haiku calls — each specialist checks compatibility with the other two.
+        // Cached against the same cover key since outputs are deterministic given the same three round-1 inputs.
         const [designCrossTalk, colorCrossTalk, typographyCrossTalk] = await Promise.all([
-          roundTwoDesignCompatibility(designAnalysis, colorStrategy, typographySpec),
-          roundTwoColorCompatibility(colorStrategy, designAnalysis, typographySpec),
-          roundTwoTypographyCompatibility(typographySpec, designAnalysis, colorStrategy),
+          cachedRun(
+            "cross-talk-design",
+            coverCacheKey,
+            () => roundTwoDesignCompatibility(designAnalysis, colorStrategy, typographySpec),
+          ),
+          cachedRun(
+            "cross-talk-color",
+            coverCacheKey,
+            () => roundTwoColorCompatibility(colorStrategy, designAnalysis, typographySpec),
+          ),
+          cachedRun(
+            "cross-talk-typography",
+            coverCacheKey,
+            () => roundTwoTypographyCompatibility(typographySpec, designAnalysis, colorStrategy),
+          ),
         ]);
         const crossTalkFlags = {
           design: designCrossTalk,
@@ -410,8 +448,23 @@ router.post("/agents/create-book", async (req, res) => {
   try {
     const estimatedPageCount = Math.ceil((market.puzzleCount ?? 100) * 1.15) + 20;
     const isWordBased = ["Word Search", "Crossword"].includes(market.puzzleType);
+    // Council cache keys — niche+format tuple is stable across books in the same niche.
+    // Interior Council includes a page-count bucket so very different book sizes don't share output.
+    const councilsKey = stableKey({
+      niche: market.niche,
+      puzzleType: market.puzzleType,
+      difficulty: market.difficulty,
+      largePrint: market.largePrint === true,
+      count: market.puzzleCount ?? 100,
+    });
+    const interiorKey = stableKey({
+      niche: market.niche,
+      puzzleType: market.puzzleType,
+      largePrint: market.largePrint === true,
+      pageBucket: Math.round(estimatedPageCount / 25) * 25, // bucket to nearest 25 pages
+    });
     const [puzzle, layout, production, wordBankResult] = await Promise.all([
-      runPuzzleProductionCouncil(market)
+      cachedRun("puzzle-production-council", councilsKey, () => runPuzzleProductionCouncil(market))
         .then(r => {
           req.log.info({ puzzleCount: r.recommendedPuzzleCount }, "Puzzle Council done");
           emit(res, "puzzle_council", "done", {
@@ -427,7 +480,7 @@ router.post("/agents/create-book", async (req, res) => {
           return null;
         }),
 
-      runInteriorDesignCouncil(market, estimatedPageCount)
+      cachedRun("interior-design-council", interiorKey, () => runInteriorDesignCouncil(market, estimatedPageCount))
         .then(r => {
           req.log.info({ bodyFont: r.bodyFontSizePt }, "Interior Council done");
           emit(res, "interior_council", "done", {
@@ -443,7 +496,7 @@ router.post("/agents/create-book", async (req, res) => {
           return null;
         }),
 
-      runProductionPricingCouncil(market)
+      cachedRun("production-pricing-council", councilsKey, () => runProductionPricingCouncil(market))
         .then(r => {
           req.log.info({ price: r.recommendedPrice, paper: r.paperType }, "Production Council done");
           emit(res, "production_council", "done", {
