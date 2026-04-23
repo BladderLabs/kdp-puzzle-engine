@@ -1,4 +1,4 @@
-﻿﻿﻿import { useState, useCallback } from "react";
+﻿﻿﻿﻿import { useState, useCallback } from "react";
 import { useListBooks, useDeleteBook, useCloneBook, useCreateBook } from "@workspace/api-client-react";
 import type { Book } from "@workspace/api-client-react";
 import { Link, useLocation } from "wouter";
@@ -293,30 +293,6 @@ export function Home() {
           <div className="flex items-center gap-2">
             <Link href="/"><button className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs transition-colors shadow-lg shadow-amber-500/20">✦ New Book from Studio</button></Link>
           </div>
-        </div>
-
-        <div className="space-y-4">
-          <div><h2 className="text-xs font-bold text-white/60 uppercase tracking-widest mb-0.5">Discover Opportunities</h2><p className="text-sm text-white/35">Pick a puzzle type — AI finds what sells right now</p></div>
-          <div className="flex flex-wrap gap-2">
-            {PUZZLE_TYPES.map(type=>(
-              <button key={type} onClick={()=>{setActiveType(type);fetchSuggestions(type);}} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all duration-150 ${activeType===type&&suggestionsOpen?"bg-amber-500 text-black border-amber-500 shadow-lg shadow-amber-500/20":"border-white/10 text-white/55 hover:border-white/25 hover:text-white"}`}>
-                {type!=="All"&&<span>{PUZZLE_ICONS[type]}</span>}{type}
-              </button>
-            ))}
-          </div>
-          {suggestionsOpen&&(
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-white/55">{loadingSuggestions?"Analysing KDP market…":`${suggestions.length} opportunit${suggestions.length!==1?"ies":"y"} found`}{!loadingSuggestions&&suggestions.length>0&&<button onClick={()=>fetchSuggestions(activeType)} className="ml-3 text-xs text-amber-400/60 hover:text-amber-400 hover:underline underline-offset-2">Refresh</button>}</span>
-                <button onClick={()=>setSuggestionsOpen(false)} className="text-white/20 hover:text-white/60 text-xs transition-colors">✕ Close</button>
-              </div>
-              {loadingSuggestions?(
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">{[...Array(4)].map((_,i)=><div key={i} className="bg-white/[0.025] border border-white/8 rounded-2xl p-5 space-y-3 animate-pulse"><div className="flex gap-3"><div className="w-12 h-12 rounded-full bg-white/5"/><div className="flex-1 space-y-2"><div className="h-3 bg-white/8 rounded w-3/4"/><div className="h-2 bg-white/5 rounded w-1/2"/></div></div><div className="space-y-1.5"><div className="h-2 bg-white/5 rounded"/><div className="h-2 bg-white/5 rounded w-5/6"/></div></div>)}</div>
-              ):suggestions.length>0?(
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">{suggestions.map((card,i)=><SuggestionCard key={i} card={card} onQuickCreate={setQuickCreateCard}/>)}</div>
-              ):<div className="text-center py-8 text-white/30 text-sm border border-white/8 rounded-2xl">No suggestions returned. Try again.</div>}
-            </div>
-          )}
         </div>
 
         <div className="space-y-4">
