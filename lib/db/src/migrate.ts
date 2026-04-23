@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Auto-migration runner.
  *
  * On server startup, creates a _schema_migrations tracking table and applies
@@ -65,6 +65,22 @@ ALTER TABLE books ADD COLUMN IF NOT EXISTS qa_score                 INTEGER;
 ALTER TABLE books ADD COLUMN IF NOT EXISTS qa_issues_json           JSONB;
 
 CREATE INDEX IF NOT EXISTS books_author_persona_idx ON books (author_persona_id);
+`,
+  },
+  {
+    name: "002_narrative_arc",
+    sql: `
+-- Solve-the-Story: store the Narrative Architect output for detective/adventure
+-- experience modes. Contains case file, suspects, clue beats tied to puzzle
+-- indices, revelation, and epilogue (detective) — or quest, treasure map,
+-- coordinates, guardian, epilogue (adventure).
+ALTER TABLE books ADD COLUMN IF NOT EXISTS narrative_arc_json JSONB;
+
+-- Optional tracking for post-publish feedback loops (ASIN + BSR history).
+-- Populated manually when the user records a book's ASIN after KDP publish.
+ALTER TABLE books ADD COLUMN IF NOT EXISTS amazon_asin TEXT;
+
+CREATE INDEX IF NOT EXISTS books_asin_idx ON books (amazon_asin) WHERE amazon_asin IS NOT NULL;
 `,
   },
 ];
