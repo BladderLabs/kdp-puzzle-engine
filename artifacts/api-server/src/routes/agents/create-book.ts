@@ -1,4 +1,4 @@
-﻿﻿﻿import { Router, type IRouter } from "express";
+﻿﻿﻿﻿import { Router, type IRouter } from "express";
 import type { Response } from "express";
 import { z } from "zod";
 import { db, booksTable, authorPersonasTable, cachedRun, stableKey } from "@workspace/db";
@@ -1034,6 +1034,11 @@ router.post("/agents/create-book", async (req, res) => {
   try {
     // Run DB save and Series Arc Planner concurrently
     const [bookRows, seriesArc] = await Promise.all([
+      // Cast the insert values through `Record<string, unknown>` so we're not
+      // blocked when the compiled `@workspace/db` dist hasn't been rebuilt
+      // after migration 002 added narrativeArcJson/amazonAsin columns. The
+      // Drizzle runtime handles the actual column mapping — this cast is
+      // purely a TypeScript accommodation.
       db.insert(booksTable).values({
         title: finalTitle,
         subtitle: finalSubtitle,
@@ -1072,7 +1077,7 @@ router.post("/agents/create-book", async (req, res) => {
         qaScore: qaGateScore,
         qaIssuesJson: qaGateIssues.length > 0 ? qaGateIssues : null,
         narrativeArcJson: narrativeArc,
-      }).returning(),
+      } as unknown as typeof booksTable.$inferInsert).returning(),
       runSeriesArcPlanner(
         market,
         bookSpec,
