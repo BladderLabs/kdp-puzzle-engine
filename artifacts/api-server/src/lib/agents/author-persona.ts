@@ -207,7 +207,7 @@ export async function runAuthorPersonaAgent(briefInput: PortfolioBrief): Promise
 
   // Stage 1 — generate 8 candidates
   const candMsg = await anthropic.messages.create({
-    model: "claude-sonnet-4-5",
+    model: "claude-sonnet-4-6",
     max_tokens: 2000,
     messages: [{ role: "user", content: buildCandidatePrompt(brief) }],
   });
@@ -230,7 +230,7 @@ export async function runAuthorPersonaAgent(briefInput: PortfolioBrief): Promise
 
   // Stage 3 — enrich the winner: bio, voice-avoid list, portfolio fit
   const enrichMsg = await anthropic.messages.create({
-    model: "claude-sonnet-4-5",
+    model: "claude-sonnet-4-6",
     max_tokens: 900,
     messages: [{ role: "user", content: buildEnrichmentPrompt(winner.candidate, brief) }],
   });
