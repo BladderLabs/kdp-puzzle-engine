@@ -1,4 +1,4 @@
-﻿/**
+﻿﻿/**
  * Auto-migration runner.
  *
  * On server startup, creates a _schema_migrations tracking table and applies
@@ -103,6 +103,32 @@ CREATE UNIQUE INDEX IF NOT EXISTS council_cache_lookup
 
 CREATE INDEX IF NOT EXISTS council_cache_expires
   ON council_cache (expires_at);
+`,
+  },
+  {
+    name: "004_bsr_snapshots",
+    sql: `
+-- Post-publish BSR tracking. Every book with an amazon_asin gets periodic
+-- snapshots from Apify. The rank-over-time series lets the user see which
+-- books trend up, which decay, and which niches are worth scaling.
+CREATE TABLE IF NOT EXISTS bsr_snapshots (
+  id           SERIAL PRIMARY KEY,
+  book_id      INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+  asin         TEXT NOT NULL,
+  marketplace  TEXT NOT NULL DEFAULT 'US',
+  bsr          INTEGER,
+  price_usd    NUMERIC(6,2),
+  review_count INTEGER,
+  star_rating  NUMERIC(2,1),
+  captured_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+  source       TEXT NOT NULL DEFAULT 'apify'
+);
+
+CREATE INDEX IF NOT EXISTS bsr_snapshots_book_idx
+  ON bsr_snapshots (book_id, captured_at DESC);
+
+CREATE INDEX IF NOT EXISTS bsr_snapshots_asin_idx
+  ON bsr_snapshots (asin);
 `,
   },
 ];
