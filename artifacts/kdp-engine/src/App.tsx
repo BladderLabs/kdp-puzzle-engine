@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout } from "@/components/layout/Layout";
 import { AuthorHub } from "@/pages/AuthorHub";
+import { BookPublish } from "@/pages/BookPublish";
 import { Home } from "@/pages/Home";
 import { EditBook } from "@/pages/EditBook";
 import { GenerateBook } from "@/pages/GenerateBook";
@@ -24,6 +25,7 @@ function Router() {
       <Switch>
         <Route path="/" component={AuthorHub} />
         <Route path="/library" component={Home} />
+        <Route path="/publish/:id" component={BookPublish} />
         <Route path="/books/:id" component={EditBook} />
         <Route path="/generate/:id" component={GenerateBook} />
         <Route component={NotFound} />
