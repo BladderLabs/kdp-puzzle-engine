@@ -1,4 +1,4 @@
-﻿import { Router, type IRouter } from "express";
+﻿﻿import { Router, type IRouter } from "express";
 import healthRouter from "./health";
 import booksRouter from "./books";
 import generateRouter from "./generate";
@@ -12,6 +12,7 @@ import libraryAnalysisRouter from "./library/analysis";
 import authorPersonaRouter from "./author-persona";
 import opportunitiesRouter from "./opportunities";
 import bsrRouter from "./bsr";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(libraryAnalysisRouter);
 router.use(authorPersonaRouter);
 router.use(opportunitiesRouter);
 router.use(bsrRouter);
+router.use(adminRouter);
 
 export default router;
