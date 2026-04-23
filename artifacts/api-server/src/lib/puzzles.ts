@@ -1,4 +1,4 @@
-import { anthropic } from "@workspace/integrations-anthropic-ai";
+﻿import { anthropic } from "@workspace/integrations-anthropic-ai";
 
 export function shuf<T>(a: T[]): T[] {
   const b = [...a];
@@ -695,12 +695,19 @@ export function makeCryptogramFromQuote(quote: QuoteEntry): CryptogramResult {
   return { cipher, plain, key, author: quote.author };
 }
 
-export function makeCryptogram(puzzleIndex = 0, bookSeed = 0): CryptogramResult {
+export function makeCryptogram(
+  puzzleIndex = 0,
+  bookSeed = 0,
+  themedQuotes?: QuoteEntry[],
+): CryptogramResult {
+  // Prefer the niche-themed quote pool curated per book when available. Falls back
+  // to the static QUOTE_BANK for backwards compatibility and when the curator is offline.
+  const pool = themedQuotes && themedQuotes.length >= 10 ? themedQuotes : QUOTE_BANK;
   // Deterministic quote selection: offset by bookSeed so each book uses a different starting
-  // position in the quote bank, then advance by puzzleIndex to avoid repeats within the book.
-  const offset = ((bookSeed % QUOTE_BANK.length) + QUOTE_BANK.length) % QUOTE_BANK.length;
-  const idx = (offset + puzzleIndex) % QUOTE_BANK.length;
-  const quote = QUOTE_BANK[idx];
+  // position in the pool, then advance by puzzleIndex to avoid repeats within the book.
+  const offset = ((bookSeed % pool.length) + pool.length) % pool.length;
+  const idx = (offset + puzzleIndex) % pool.length;
+  const quote = pool[idx];
   return makeCryptogramFromQuote(quote);
 }
 
