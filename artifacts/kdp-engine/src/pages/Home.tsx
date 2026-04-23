@@ -1,4 +1,4 @@
-﻿﻿import { useState, useCallback } from "react";
+﻿﻿﻿import { useState, useCallback } from "react";
 import { useListBooks, useDeleteBook, useCloneBook, useCreateBook } from "@workspace/api-client-react";
 import type { Book } from "@workspace/api-client-react";
 import { Link, useLocation } from "wouter";
@@ -291,8 +291,7 @@ export function Home() {
             <p className="text-white/35 text-base mt-0.5 font-sketch">{statLine}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/agent-create"><button className="px-4 py-2 rounded-xl font-bold text-xs border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:border-amber-500/70 transition-colors">✦ AI Create</button></Link>
-            <Link href="/create"><button className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs transition-colors shadow-lg shadow-amber-500/20">+ New Book</button></Link>
+            <Link href="/"><button className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs transition-colors shadow-lg shadow-amber-500/20">✦ New Book from Studio</button></Link>
           </div>
         </div>
 
@@ -333,7 +332,7 @@ export function Home() {
           </div>
           {isLoading?(<div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9 gap-4">{[...Array(9)].map((_,i)=><div key={i} className="bg-white/[0.025] border border-white/8 rounded-sm animate-pulse" style={{paddingBottom:"148%"}}/>)}</div>
           ):!books?.length?(
-            <div className="text-center py-20 border border-dashed border-white/10 rounded-2xl"><div className="text-5xl mb-4">✏️</div><p className="font-display text-lg text-white/60 font-bold">Your workshop is empty</p><p className="text-white/30 text-sm mt-1 mb-6">Use the Discover section above or craft a book from scratch</p><Link href="/create"><button className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm transition-colors">Create First Book</button></Link></div>
+            <div className="text-center py-20 border border-dashed border-white/10 rounded-2xl"><div className="text-5xl mb-4">✏️</div><p className="font-display text-lg text-white/60 font-bold">Your workshop is empty</p><p className="text-white/30 text-sm mt-1 mb-6">Open the Studio — pick one of today's AI-researched opportunities and it generates automatically.</p><Link href="/"><button className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm transition-colors">Open Studio</button></Link></div>
           ):q&&!hasFilteredContent?(
             <div className="text-center py-10 border border-dashed border-white/8 rounded-2xl text-white/30 text-sm">No books match "<span className="text-white/50">{librarySearch}</span>"</div>
           ):(
