@@ -1,9 +1,10 @@
-﻿﻿import {
+﻿﻿﻿import {
   shuf, makeWordSearch, makeSudoku, makeMaze, makeNumberSearch,
   makeCryptogram, makeCrossword, generateCrosswordClues, applyCluesToCrossword, WORD_BANKS,
 } from "./puzzles";
 import type { CrosswordResult, CrosswordClue } from "./puzzles";
 import { experienceCoverLayers, renderMonogramBlock, barcodeSafeZone } from "./cover-experience-layers";
+import { renderNarrativePreamble, renderNarrativeRevelation, type NarrativeArc } from "./agents/narrative-architect";
 
 /** Compute total page count from config without generating any puzzles. */
 export function computeTotalPages(opts: BuildOpts): number {
@@ -18,13 +19,14 @@ export function computeTotalPages(opts: BuildOpts): number {
     : PT === "Crossword" ? (LP ? 4 : 6)
     : (LP ? 6 : 8);
   // Front matter: title(1) + htp(2) + toc(3)
-  // Optional: dedication (+1), tracker (+1)
+  // Optional: dedication (+1), tracker (+1), narrative preamble (+1 for detective/adventure)
   // Section dividers in progressive mode: always 1 Easy divider + Medium + Hard only when PC >= 3
-  // Back matter: 4 notes pages (always) + answer key pages
-  const frontMatter = 3 + (opts.dedication ? 1 : 0) + (opts.challengeDays ? 1 : 0);
+  // Back matter: 4 notes pages (always) + answer key pages + narrative revelation (+1 for detective/adventure)
+  const hasNarrative = Boolean(opts.narrativeArc);
+  const frontMatter = 3 + (opts.dedication ? 1 : 0) + (opts.challengeDays ? 1 : 0) + (hasNarrative ? 1 : 0);
   // Mirrors hasSections sec1/sec2 clamping: PC<3 means only Easy divider renders (1 divider)
   const dividers = progressive ? (PC < 3 ? 1 : 3) : 0;
-  return frontMatter + 4 + PC + Math.ceil(PC / aPer) + dividers;
+  return frontMatter + 4 + PC + Math.ceil(PC / aPer) + dividers + (hasNarrative ? 1 : 0);
 }
 
 export function escapeHtml(s: string): string {
@@ -60,6 +62,9 @@ export interface BuildOpts {
   difficultyMode?: string;
   challengeDays?: number;
   keywords?: string[];
+  // Solve-the-Story narrative arc — when set, interior inserts a case-file
+  // preamble before the puzzles and a revelation page before the answer key.
+  narrativeArc?: NarrativeArc | null;
 }
 
 export interface BuildResult {
@@ -270,16 +275,21 @@ export async function buildInteriorHTML(opts: BuildOpts): Promise<BuildResult> {
   // Actual number of section divider pages rendered:
   // Progressive always renders an Easy divider (1); Medium/Hard dividers only if PC >= 3.
   const numDividers = hasSections ? (PC < 3 ? 1 : 3) : 0;
-  // Pages: title(1) + optional dedication + htp + toc + optional tracker + section dividers + PC + notes(4) + aP
-  const frontMatter = 1 + (hasDedication ? 1 : 0) + 1 + 1 + (hasTracker ? 1 : 0);
-  const totP = frontMatter + numDividers + PC + 4 + aP;
+  // Pages: title(1) + optional dedication + htp + toc + optional tracker + optional narrative preamble + section dividers + PC + notes(4) + aP
+  const frontMatter = 1 + (hasDedication ? 1 : 0) + 1 + 1 + (hasTracker ? 1 : 0) + (opts.narrativeArc ? 1 : 0);
+  // Narrative arc (Solve-the-Story): present for detective/adventure modes.
+  // Adds 1 page to frontMatter (preamble before puzzles) and +1 page between
+  // last puzzle and answer key (revelation).
+  const narrativeArc = opts.narrativeArc ?? null;
+  const hasNarrative = Boolean(narrativeArc);
+  const totP = frontMatter + numDividers + PC + 4 + aP + (hasNarrative ? 1 : 0);
   const gut = Math.max(0.5, gutterIn(totP));
   // pS = first puzzle page (1-based); frontMatter pages + Easy section divider if hasSections
   const pS = frontMatter + (hasSections ? 1 : 0) + 1;
   // numMidDividers = dividers that appear mid-book (Medium + Hard); 2 if PC >= 3, 0 otherwise
   const numMidDividers = hasSections && PC >= 3 ? 2 : 0;
-  // aS = answer key start page: right after puzzles + mid-book section dividers
-  const aS = pS + PC + numMidDividers;
+  // aS = answer key start page: right after puzzles + mid-book section dividers + narrative revelation
+  const aS = pS + PC + numMidDividers + (hasNarrative ? 1 : 0);
   // puzzle page helper: accounts for section-divider pages inserted mid-book
   const puzzlePageOf = (i: number) => pS + i + (numMidDividers > 0 ? (i >= sec2 ? 2 : i >= sec1 ? 1 : 0) : 0);
 
@@ -310,6 +320,14 @@ export async function buildInteriorHTML(opts: BuildOpts): Promise<BuildResult> {
     `<style>*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}` +
     `@page{size:${trimW}in ${trimH}in;margin:0;}` +
     `@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}` +
+    // ── Print quality for puzzle grids (300 DPI crisp lines) ───────────────
+    // Collapse borders so adjacent cells share one razor-thin line instead of
+    // two sub-pixel blurry ones. Anti-alias text, keep black at true #000 for
+    // clean text rendering but avoid pure black on grid LINES so they don't
+    // pick up ink spread on a real press.
+    `table{border-collapse:collapse!important;-webkit-font-smoothing:antialiased;}` +
+    `table td,table th{box-sizing:border-box;}` +
+    `svg{shape-rendering:geometricPrecision;}` +
     `.pg{width:${trimW}in;min-height:${trimH}in;page-break-after:always;position:relative;overflow:hidden;}` +
     `.pg:last-child{page-break-after:auto;}` +
     `.in{padding:0.55in 0.4in 0.6in ${gut}in;background:#fff;}` +
@@ -568,6 +586,22 @@ export async function buildInteriorHTML(opts: BuildOpts): Promise<BuildResult> {
     `<div style="width:48px;height:2px;background:#333;"></div>` +
     `</div><div class="ft"><span></span><span class="ft-pg">&mdash; ${pageNum} &mdash;</span></div></div>`;
 
+  // ── Narrative preamble (Solve-the-Story, detective/adventure modes) ─────
+  // Wraps a "CASE FILE" or "QUEST" page just before puzzles start so the
+  // reader knows what the N puzzle solutions collectively reveal.
+  if (narrativeArc) {
+    try {
+      const preambleAccent = (opts.theme === "crimson" || opts.theme === "midnight" || opts.theme === "slate")
+        ? "#8b2e2e" : "#7b3a00";
+      const preambleBody = renderNarrativePreamble(narrativeArc as NarrativeArc, preambleAccent);
+      const modeLabel = (narrativeArc as NarrativeArc).mode === "detective" ? "CASE FILE" : "THE QUEST";
+      html += `<div class="pg in"><div class="hd"><span class="hd-title">${T}</span><span>${modeLabel}</span></div>${preambleBody}<div class="ft"><span>${T} — ${AU}</span><span class="ft-pg">— ${currentPage} —</span></div></div>`;
+      currentPage++;
+    } catch {
+      // Corrupt arc data — skip render silently
+    }
+  }
+
   // Emit Level 1 section divider before first puzzle (only when hasSections)
   if (hasSections) {
     html += sectionDivider("EASY PUZZLES", `Puzzles 1\u2013${sec1}`, currentPage);
@@ -723,6 +757,21 @@ export async function buildInteriorHTML(opts: BuildOpts): Promise<BuildResult> {
         ).join("") + `</tr>` +
         `</table>`;
       html += `<div class="pg in"><div class="hd"><span class="hd-title">${T}</span>${progressBadge}</div><div style="padding-top:0.2in;"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;"><span style="font-family:'Source Code Pro',monospace;font-size:12px;font-weight:600;color:#222;">${lb}</span><span style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:#666;">CRYPTOGRAM</span></div>${ornamentRule}<div style="font-family:'Source Code Pro',monospace;font-size:${LP ? 16 : 13}px;color:#222;line-height:2.8;word-spacing:4px;">${cipherDisplay}</div><div style="margin-top:20px;">${cgKeyTable}</div>${lpSep}</div><div class="ft"><span>${T} — ${AU}</span><span class="ft-pg">&mdash; ${pN} &mdash;</span></div></div>`;
+    }
+  }
+
+  // ── Narrative revelation (Solve-the-Story) ─────────────────────────────
+  // Appears between the last puzzle and the answer key — closes the case
+  // or reveals the treasure. Consumes 1 page that was already counted in aS.
+  if (narrativeArc) {
+    try {
+      const revelationAccent = (narrativeArc as NarrativeArc).mode === "detective" ? "#8b2e2e" : "#7b3a00";
+      const revelationBody = renderNarrativeRevelation(narrativeArc as NarrativeArc, revelationAccent);
+      const modeLabel = (narrativeArc as NarrativeArc).mode === "detective" ? "CASE CLOSED" : "THE TREASURE";
+      html += `<div class="pg in"><div class="hd"><span class="hd-title">${T}</span><span>${modeLabel}</span></div>${revelationBody}<div class="ft"><span>${T} — ${AU}</span><span class="ft-pg">— ${currentPage} —</span></div></div>`;
+      currentPage++;
+    } catch {
+      // Corrupt arc data — skip render silently
     }
   }
 
