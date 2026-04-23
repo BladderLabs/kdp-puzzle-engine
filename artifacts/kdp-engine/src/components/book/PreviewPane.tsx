@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+﻿﻿import { useEffect, useState } from "react";
 import { usePreviewPuzzles } from "@workspace/api-client-react";
 import type { PuzzleData } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -253,11 +253,11 @@ function PuzzleRenderer({ puzzle, type }: { puzzle: PuzzleData; type: string }) 
             </tbody>
           </table>
         </div>
-        {/* Clues */}
+        {/* Clues — guard cw.across / cw.down which the generated type marks as optional */}
         <div className="grid grid-cols-2 gap-x-3 text-[9px]">
           <div>
             <div className="font-bold text-[10px] mb-1 text-gray-700">ACROSS</div>
-            {cw.across.slice(0, 8).map((cl) => (
+            {(cw.across ?? []).slice(0, 8).map((cl: CrosswordClueLite) => (
               <div key={cl.num} className="leading-snug text-gray-600">
                 <span className="font-bold text-gray-800">{cl.num}.</span> {cl.clue}
               </div>
@@ -265,7 +265,7 @@ function PuzzleRenderer({ puzzle, type }: { puzzle: PuzzleData; type: string }) 
           </div>
           <div>
             <div className="font-bold text-[10px] mb-1 text-gray-700">DOWN</div>
-            {cw.down.slice(0, 8).map((cl) => (
+            {(cw.down ?? []).slice(0, 8).map((cl: CrosswordClueLite) => (
               <div key={cl.num} className="leading-snug text-gray-600">
                 <span className="font-bold text-gray-800">{cl.num}.</span> {cl.clue}
               </div>
