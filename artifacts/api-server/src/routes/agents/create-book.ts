@@ -1,7 +1,10 @@
-﻿﻿﻿﻿import { Router, type IRouter } from "express";
+﻿﻿﻿﻿﻿import { Router, type IRouter } from "express";
 import type { Response } from "express";
 import { z } from "zod";
-import { db, booksTable, authorPersonasTable, cachedRun, stableKey } from "@workspace/db";
+import { db, booksTable, authorPersonasTable } from "@workspace/db";
+// Cache helpers are LOCAL to api-server so create-book doesn't depend on the
+// compiled @workspace/db dist being rebuilt after adding council-cache.
+import { cachedRun, stableKey } from "../../lib/council-cache";
 import { desc, eq } from "drizzle-orm";
 import { runListingIntelligence } from "../../lib/agents/listing-intelligence";
 import { runCoverQAGate } from "../../lib/agents/cover-qa-gate";
