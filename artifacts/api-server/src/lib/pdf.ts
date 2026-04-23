@@ -1,4 +1,4 @@
-import puppeteer, { Browser } from "puppeteer";
+﻿import puppeteer, { Browser } from "puppeteer";
 import { execSync } from "child_process";
 
 let browserInstance: Browser | null = null;
@@ -73,9 +73,14 @@ export async function htmlToPdf(
     // Explicit font readiness — Chromium's networkidle0 fires when the font
     // STYLESHEET finishes loading, not when the font FILES have finished
     // loading AND rendering. document.fonts.ready covers the latter.
+    // The callback runs in the browser context, so we cast through globalThis
+    // to keep the Node-side TypeScript happy (api-server tsconfig has no "dom" lib).
     await page.evaluate(async () => {
-      if (typeof document !== "undefined" && document.fonts && document.fonts.ready) {
-        await document.fonts.ready;
+      const doc = (globalThis as unknown as {
+        document?: { fonts?: { ready?: Promise<void> } };
+      }).document;
+      if (doc?.fonts?.ready) {
+        await doc.fonts.ready;
       }
     });
 
@@ -83,13 +88,21 @@ export async function htmlToPdf(
     // tags must be fully decoded before rasterizing, or the PDF gets blank
     // boxes. Timeout per image at 15s to avoid hanging on a single broken src.
     await page.evaluate(async () => {
-      const images = Array.from(document.images);
+      type MinImg = {
+        complete: boolean;
+        naturalWidth: number;
+        addEventListener: (ev: string, cb: () => void, opts?: { once?: boolean }) => void;
+      };
+      const doc = (globalThis as unknown as {
+        document?: { images?: ArrayLike<MinImg> };
+      }).document;
+      const images: MinImg[] = doc?.images ? Array.from(doc.images) : [];
       await Promise.all(
-        images.map(img =>
+        images.map((img: MinImg) =>
           img.complete && img.naturalWidth > 0
             ? Promise.resolve()
             : new Promise<void>(resolve => {
-                const done = () => resolve();
+                const done = (): void => resolve();
                 img.addEventListener("load", done, { once: true });
                 img.addEventListener("error", done, { once: true });
                 setTimeout(done, 15000);
