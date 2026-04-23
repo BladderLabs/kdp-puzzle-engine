@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+﻿import { Router, type IRouter } from "express";
 import healthRouter from "./health";
 import booksRouter from "./books";
 import generateRouter from "./generate";
@@ -11,6 +11,7 @@ import apifyMarketResearchRouter from "./apify/market-research";
 import libraryAnalysisRouter from "./library/analysis";
 import authorPersonaRouter from "./author-persona";
 import opportunitiesRouter from "./opportunities";
+import bsrRouter from "./bsr";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(apifyMarketResearchRouter);
 router.use(libraryAnalysisRouter);
 router.use(authorPersonaRouter);
 router.use(opportunitiesRouter);
+router.use(bsrRouter);
 
 export default router;
