@@ -1,4 +1,4 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import type { MarketScoutResult } from "./market-scout";
 
@@ -28,14 +28,58 @@ function parseModelJson(text: string): unknown {
   return JSON.parse(cleaned);
 }
 
+export interface SeriesContext {
+  seriesName: string;
+  nextVolumeNumber: number;
+  authorPenName?: string | null;
+  previousVolumes: Array<{
+    volumeNumber: number;
+    title: string;
+    subtitle?: string | null;
+    backDescription?: string | null;
+    words: string[];
+  }>;
+}
+
 export async function runContentArchitect(
   market: MarketScoutResult,
   brief?: string,
   qaFeedback?: string[],
+  seriesContext?: SeriesContext,
 ): Promise<ContentArchitectResult> {
   const briefSection = brief ? `\nUser's original idea: "${brief}"` : "";
   const revisionSection = qaFeedback && qaFeedback.length > 0
     ? `\n\nREVISION REQUIRED — You previously produced content that failed QA. Fix ALL of these issues:\n${qaFeedback.map((issue, i) => `${i + 1}. ${issue}`).join("\n")}`
+    : "";
+
+  // ── Series continuity: when this is Vol 2+, tell the architect everything
+  // about earlier volumes so it can dedupe words, escalate theme, and keep
+  // the brand voice consistent across the series.
+  const seriesSection = seriesContext && seriesContext.previousVolumes.length > 0
+    ? (() => {
+        const usedWords = [
+          ...new Set(seriesContext.previousVolumes.flatMap(v => v.words.map(w => w.toUpperCase()))),
+        ].slice(0, 150);
+        const volumes = seriesContext.previousVolumes
+          .map(v => `  - Vol ${v.volumeNumber}: "${v.title}"${v.subtitle ? ` — ${v.subtitle}` : ""}`)
+          .join("\n");
+        const authorLine = seriesContext.authorPenName
+          ? `\n- Author pen name carried across the series: ${seriesContext.authorPenName} (use EXACTLY this name).`
+          : "";
+        return `
+
+── SERIES CONTEXT — this is Vol ${seriesContext.nextVolumeNumber} of "${seriesContext.seriesName}" ──
+Previously published volumes:
+${volumes}${authorLine}
+
+SERIES RULES for Vol ${seriesContext.nextVolumeNumber}:
+- Title must reference the series ("Vol ${seriesContext.nextVolumeNumber}", "Book ${seriesContext.nextVolumeNumber}", or a clear continuation like "The Next Chapter").
+- Back description MUST open with a nod to earlier volumes ("Back by popular demand…", "The continuing favourite…", "Volume ${seriesContext.nextVolumeNumber} of the series readers love…").
+- Do NOT reuse words already featured in prior volumes. Pick fresh words from the same thematic universe. Already-used words (do NOT reuse any of these):
+  ${usedWords.join(", ")}
+- Difficulty stays within 1 step of Vol 1's level. Don't jump Easy→Hard.
+- Your word list should have <25% overlap with the combined list above.`;
+      })()
     : "";
 
   const prompt = `You are an expert Amazon KDP puzzle book content writer.${briefSection}
@@ -49,7 +93,7 @@ Market intelligence for this book:
 - Target price: $${market.pricePoint}
 - Audience: ${market.audienceProfile}
 - Keywords: ${market.keywords.join(", ")}
-- Why it sells: ${market.whySells}${revisionSection}
+- Why it sells: ${market.whySells}${revisionSection}${seriesSection}
 
 Create publication-ready content for this KDP puzzle book.
 
