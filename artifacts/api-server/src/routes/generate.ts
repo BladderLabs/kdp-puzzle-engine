@@ -1,10 +1,11 @@
-﻿import { Router, type IRouter } from "express";
+﻿﻿import { Router, type IRouter } from "express";
 import { zipSync } from "fflate";
 import { GenerateBookBody, PreviewPuzzlesBody, CoverPreviewBody } from "@workspace/api-zod";
 import { buildInteriorHTML, buildCoverHTML, computeTotalPages, type BuildOpts, type CoverBuildOpts } from "../lib/html-builders";
 import { makeWordSearch, makeSudoku, makeMaze, makeNumberSearch, makeCryptogram, makeCrosswordAsync, shuf, DEFWORDS } from "../lib/puzzles";
 import { htmlToPdf } from "../lib/pdf";
 import type { NarrativeArc } from "../lib/agents/narrative-architect";
+import { runNicheContentCurator } from "../lib/agents/niche-content-curator";
 
 const router: IRouter = Router();
 
@@ -70,6 +71,39 @@ function toOpts(
 router.post("/generate", async (req, res) => {
   try {
     const opts = toOpts(GenerateBookBody.parse(req.body), req.body as Record<string, unknown>);
+
+    // ── Niche Content Curator ─────────────────────────────────────────────
+    // For any book with a niche set, pull a themed content pack (cached by
+    // niche+experienceMode). Replaces static QUOTE_BANK for cryptograms so
+    // every quote inside the book fits the theme. Fails open — no niche or
+    // curator unavailable simply means fallback to the static bank.
+    const rawBody = req.body as Record<string, unknown>;
+    const nicheKey = typeof rawBody.niche === "string" ? rawBody.niche : "";
+    const nicheLabel = typeof rawBody.nicheLabel === "string" ? rawBody.nicheLabel : nicheKey;
+    const experienceMode = typeof rawBody.experienceMode === "string" ? rawBody.experienceMode : "standard";
+    if (nicheKey && nicheKey.length > 0) {
+      try {
+        const pack = await runNicheContentCurator({
+          niche: nicheKey,
+          nicheLabel: nicheLabel || nicheKey,
+          puzzleType: opts.puzzleType ?? "Word Search",
+          puzzleCount: opts.puzzleCount ?? 100,
+          experienceMode,
+          audience: typeof rawBody.audience === "string" ? rawBody.audience : undefined,
+        });
+        if (pack.themedQuotes.length >= 10) {
+          (opts as BuildOpts).themedQuotes = pack.themedQuotes.map(q => ({ quote: q.quote, author: q.author }));
+          req.log.info({
+            niche: nicheKey,
+            quoteCount: pack.themedQuotes.length,
+            motifKey: pack.motifKey,
+          }, "Niche Content Curator applied to book generation");
+        }
+      } catch (err) {
+        req.log.warn({ err, niche: nicheKey }, "Niche Content Curator unavailable — falling back to static quote bank");
+      }
+    }
+
     const interior = await buildInteriorHTML(opts);
     const cover = buildCoverHTML(opts, interior.totalPages);
     res.json({
