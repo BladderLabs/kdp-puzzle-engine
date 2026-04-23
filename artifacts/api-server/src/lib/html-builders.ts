@@ -1,4 +1,4 @@
-﻿﻿﻿﻿import {
+﻿﻿﻿﻿﻿import {
   shuf, makeWordSearch, makeSudoku, makeMaze, makeNumberSearch,
   makeCryptogram, makeCrossword, generateCrosswordClues, applyCluesToCrossword, WORD_BANKS,
 } from "./puzzles";
@@ -65,6 +65,10 @@ export interface BuildOpts {
   // Solve-the-Story narrative arc — when set, interior inserts a case-file
   // preamble before the puzzles and a revelation page before the answer key.
   narrativeArc?: NarrativeArc | null;
+  // Niche-themed quote pool — replaces the static QUOTE_BANK for cryptograms
+  // so a Mother's Day book gets quotes about mothers, a True Crime book gets
+  // detective quotes, etc. Populated by the Niche Content Curator.
+  themedQuotes?: Array<{ quote: string; author: string }>;
 }
 
 export interface BuildResult {
@@ -190,7 +194,7 @@ export async function buildInteriorHTML(opts: BuildOpts): Promise<BuildResult> {
         puzzles.push(makeNumberSearch(gsz, wordBank, i, bookSeed));
         break;
       case "Cryptogram": {
-        puzzles.push(makeCryptogram(cryptoQIdx++, bookSeed));
+        puzzles.push(makeCryptogram(cryptoQIdx++, bookSeed, opts.themedQuotes));
         break;
       }
       case "Crossword": {
