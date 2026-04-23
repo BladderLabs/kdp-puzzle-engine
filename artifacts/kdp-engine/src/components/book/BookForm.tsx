@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -660,7 +660,7 @@ export function BookForm({ initialValues, onSubmit, isSubmitting, onApplyRef }: 
                       <button
                         key={days}
                         type="button"
-                        onClick={() => form.setValue("challengeDays", days === 0 ? undefined : days)}
+                        onClick={() => form.setValue("challengeDays", days === 0 ? undefined : (days as 30 | 60 | 90))}
                         className={`text-xs px-3 py-1 rounded-full border transition-colors ${
                           (form.watch("challengeDays") ?? 0) === days
                             ? "bg-amber-500 text-black border-amber-500 font-semibold"
