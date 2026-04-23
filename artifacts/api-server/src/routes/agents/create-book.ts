@@ -1,4 +1,4 @@
-﻿import { Router, type IRouter } from "express";
+﻿﻿import { Router, type IRouter } from "express";
 import type { Response } from "express";
 import { z } from "zod";
 import { db, booksTable, authorPersonasTable } from "@workspace/db";
@@ -183,11 +183,55 @@ router.post("/agents/create-book", async (req, res) => {
   }
 
   // ─── Stage 2: Content Architect (draft) ─────────────────────────────────────
+  // If this book joins an existing series, pull Vol 1-N context so the
+  // Content Architect can dedupe words, escalate theme, and keep the
+  // brand voice consistent across every volume.
+  let seriesContext: Parameters<typeof runContentArchitect>[3] = undefined;
+  if (requestedSeriesName) {
+    try {
+      const prior = await db.select({
+        volumeNumber: booksTable.volumeNumber,
+        title: booksTable.title,
+        subtitle: booksTable.subtitle,
+        backDescription: booksTable.backDescription,
+        words: booksTable.words,
+      })
+        .from(booksTable)
+        .where(eq(booksTable.seriesName, requestedSeriesName))
+        .orderBy(booksTable.volumeNumber);
+      if (prior.length > 0) {
+        const maxVol = Math.max(...prior.map(p => p.volumeNumber ?? 1));
+        seriesContext = {
+          seriesName: requestedSeriesName,
+          nextVolumeNumber: maxVol + 1,
+          authorPenName: activePersona?.penName ?? null,
+          previousVolumes: prior.map(p => ({
+            volumeNumber: p.volumeNumber ?? 1,
+            title: p.title,
+            subtitle: p.subtitle,
+            backDescription: p.backDescription,
+            words: (p.words ?? []) as string[],
+          })),
+        };
+        req.log.info(
+          { series: requestedSeriesName, priorVolumes: prior.length, nextVol: maxVol + 1 },
+          "Series context assembled",
+        );
+      }
+    } catch (err) {
+      req.log.warn({ err }, "Series context lookup failed — Vol 2+ will be generated without continuity");
+    }
+  }
+
   let draft: ContentArchitectResult;
   let buyerProfile: BuyerProfile | undefined;
-  emit(res, "content_architect", "running", { message: "Drafting title, description, and puzzle words…" });
+  emit(res, "content_architect", "running", {
+    message: seriesContext
+      ? `Drafting Vol ${seriesContext.nextVolumeNumber} with continuity from ${seriesContext.previousVolumes.length} prior volume${seriesContext.previousVolumes.length === 1 ? "" : "s"}…`
+      : "Drafting title, description, and puzzle words…",
+  });
   try {
-    draft = await runContentArchitect(market, brief);
+    draft = await runContentArchitect(market, brief, undefined, seriesContext);
     req.log.info({ title: draft.title }, "Content Architect done");
     emit(res, "content_architect", "done", {
       message: `Draft: "${draft.title}"`,
