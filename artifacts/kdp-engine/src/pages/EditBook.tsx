@@ -1,4 +1,4 @@
-import { useGetBook, useUpdateBook } from "@workspace/api-client-react";
+﻿import { useGetBook, useUpdateBook } from "@workspace/api-client-react";
 import { useParams, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { BookForm, BookFormValues } from "@/components/book/BookForm";
@@ -17,11 +17,14 @@ export function EditBook() {
     try {
       await updateBook.mutateAsync({
         id: bookId,
+        // Cast through unknown — BookFormValues carries the extended pipeline
+        // fields (experienceMode, giftSku, ...) that aren't yet in the Orval-
+        // generated UpdateBookBody schema. Drizzle ignores unknown fields.
         data: {
           ...values,
           words: values.words?.split("\n").map(w => w.trim()).filter(Boolean),
           keywords: values.keywords?.split("\n").map(k => k.trim()).filter(Boolean).slice(0, 7),
-        }
+        } as unknown as Parameters<typeof updateBook.mutateAsync>[0]["data"],
       });
       toast({ title: "Project saved!" });
       setLocation("/");
@@ -33,12 +36,11 @@ export function EditBook() {
   if (isLoading) return <div className="space-y-6 max-w-7xl mx-auto"><Skeleton className="h-12 w-1/3" /><Skeleton className="h-[600px] w-full" /></div>;
   if (!book) return <div>Book not found</div>;
 
+  const bookRec = book as unknown as Record<string, unknown>;
   const initialValues = {
     ...book,
     words: book.words?.join("\n") || "",
-    keywords: Array.isArray((book as Record<string, unknown>).keywords)
-      ? ((book as Record<string, unknown>).keywords as string[]).join("\n")
-      : "",
+    keywords: Array.isArray(bookRec.keywords) ? (bookRec.keywords as string[]).join("\n") : "",
   };
 
   return (
