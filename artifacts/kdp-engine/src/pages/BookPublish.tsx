@@ -33,6 +33,8 @@ interface BookRow {
   royaltyEstimate?: string | null;
   qaScore?: number | null;
   qaIssuesJson?: Array<{ code: string; severity: string; message: string }> | null;
+  narrativeArcJson?: unknown | null;
+  amazonAsin?: string | null;
 }
 
 async function fetchBook(id: number): Promise<BookRow> {
@@ -151,6 +153,9 @@ async function downloadPdf(kind: "interior" | "cover", book: BookRow): Promise<v
     casingOverride: (rec.casingOverride as string | null) ?? null,
     fontStyleDirective: (rec.fontStyleDirective as string | null) ?? null,
     experienceMode: book.experienceMode ?? "standard",
+    // Thread the Solve-the-Story narrative arc so detective/adventure books
+    // get their case-file preamble and revelation pages in the interior PDF.
+    narrativeArc: (rec.narrativeArcJson as unknown) ?? null,
   };
 
   const genRes = await fetch("/api/generate", {
