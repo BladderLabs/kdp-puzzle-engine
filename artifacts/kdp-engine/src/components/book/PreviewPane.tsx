@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { usePreviewPuzzles } from "@workspace/api-client-react";
 import type { PuzzleData } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -195,8 +195,20 @@ function PuzzleRenderer({ puzzle, type }: { puzzle: PuzzleData; type: string }) 
     );
   }
 
-  if (type === "Crossword" && puzzle.crossword) {
-    const cw = puzzle.crossword;
+  // The generated PuzzleData type doesn't include `crossword` yet (awaiting
+  // Orval regeneration). Cast through a local shape so the preview renders
+  // without losing the iterator types.
+  interface CrosswordClueLite { num: number; clue: string; answer: string; row: number; col: number; len: number }
+  interface CrosswordPayload {
+    grid: string[][];
+    nums?: Record<string, number>;
+    across?: CrosswordClueLite[];
+    down?: CrosswordClueLite[];
+    size?: number;
+  }
+  const cwData = (puzzle as unknown as { crossword?: CrosswordPayload }).crossword;
+  if (type === "Crossword" && cwData) {
+    const cw = cwData;
     const CELL = 18;
     const numMap: Record<string, number> = cw.nums || {};
     return (
@@ -205,9 +217,9 @@ function PuzzleRenderer({ puzzle, type }: { puzzle: PuzzleData; type: string }) 
         <div className="flex justify-center">
           <table style={{ borderCollapse: "collapse" }} aria-label="Crossword grid preview">
             <tbody>
-              {cw.grid.map((row, r) => (
+              {cw.grid.map((row: string[], r: number) => (
                 <tr key={r}>
-                  {row.map((cell, c) => {
+                  {row.map((cell: string, c: number) => {
                     const isBlack = cell === "#";
                     const num = numMap[`${r},${c}`];
                     return (
