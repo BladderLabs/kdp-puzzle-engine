@@ -6,6 +6,7 @@ import { desc, eq } from "drizzle-orm";
 import { runListingIntelligence } from "../../lib/agents/listing-intelligence";
 import { runCoverQAGate } from "../../lib/agents/cover-qa-gate";
 import { applyBranding } from "../../lib/gift-year-branding";
+import { runNarrativeArchitect, type NarrativeArc } from "../../lib/agents/narrative-architect";
 import { runMarketScout, type MarketScoutResult } from "../../lib/agents/market-scout";
 import { runMarketIntelligenceCouncil } from "../../lib/agents/market-intelligence-council";
 import type { ApifyProduct } from "../apify/market-research";
@@ -875,6 +876,46 @@ router.post("/agents/create-book", async (req, res) => {
     return;
   }
 
+  // ─── Stage 10b: Narrative Architect (Solve-the-Story) ───────────────────────
+  // Only runs for detective / adventure experience modes. Produces a case
+  // file with N clue beats or a treasure quest with coordinates — narrative
+  // structure the interior PDF can render as preamble + revelation pages.
+  let narrativeArc: NarrativeArc | null = null;
+  if (experienceMode === "detective" || experienceMode === "adventure") {
+    emit(res, "narrative_arc", "running", {
+      message: experienceMode === "detective"
+        ? "Narrative Architect drafting the case file…"
+        : "Narrative Architect charting the quest…",
+    });
+    try {
+      narrativeArc = await runNarrativeArchitect({
+        mode: experienceMode,
+        title: finalTitle,
+        niche: market.niche,
+        nicheLabel: market.nicheLabel,
+        puzzleType: market.puzzleType,
+        puzzleCount: finalPuzzleCount,
+        difficulty: market.difficulty,
+        audience: market.audienceProfile,
+        words: expandedWords.slice(0, 60),
+        authorPenName: activePersona?.penName,
+      });
+      const beatCount = narrativeArc.beats.length;
+      const name = narrativeArc.mode === "detective" ? narrativeArc.caseName : narrativeArc.questName;
+      req.log.info({ mode: narrativeArc.mode, name, beatCount }, "Narrative Architect done");
+      emit(res, "narrative_arc", "done", {
+        message: `${narrativeArc.mode === "detective" ? "Case" : "Quest"}: "${name}" · ${beatCount} beats drafted`,
+        mode: narrativeArc.mode,
+        name,
+        beatCount,
+      });
+    } catch (err) {
+      req.log.warn({ err }, "Narrative Architect failed — book ships without Solve-the-Story pages");
+      emit(res, "narrative_arc", "done", { message: "Narrative step skipped — book ships as standard puzzle collection" });
+      narrativeArc = null;
+    }
+  }
+
   // ─── Stage 11: Assemble & Save (+ Series Arc Planner in parallel) ───────────
   // Always persist actual finalStyle (not "photo") so theme+style+niche uniqueness is stable across runs.
   // AI cover presence is indicated by coverImageUrl being non-null.
@@ -977,6 +1018,7 @@ router.post("/agents/create-book", async (req, res) => {
         royaltyEstimate: listingRoyaltyUsd != null ? listingRoyaltyUsd.toFixed(2) : null,
         qaScore: qaGateScore,
         qaIssuesJson: qaGateIssues.length > 0 ? qaGateIssues : null,
+        narrativeArcJson: narrativeArc,
       }).returning(),
       runSeriesArcPlanner(
         market,
