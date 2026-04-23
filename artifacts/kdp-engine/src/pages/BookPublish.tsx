@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -238,7 +238,7 @@ function HeroCover({ book }: { book: BookRow }) {
           src={book.coverImageUrl!}
           alt=""
           className="absolute inset-0 w-full h-full object-cover"
-          style={{ imageRendering: "high-quality" as const }}
+          style={{ imageRendering: "crisp-edges" }}
         />
       )}
       {hasImage && (
