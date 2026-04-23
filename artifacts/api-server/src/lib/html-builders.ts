@@ -1,4 +1,4 @@
-﻿﻿﻿import {
+﻿﻿﻿﻿import {
   shuf, makeWordSearch, makeSudoku, makeMaze, makeNumberSearch,
   makeCryptogram, makeCrossword, generateCrosswordClues, applyCluesToCrossword, WORD_BANKS,
 } from "./puzzles";
@@ -18,12 +18,12 @@ export function computeTotalPages(opts: BuildOpts): number {
     : PT === "Number Search" ? (LP ? 9 : 12)
     : PT === "Crossword" ? (LP ? 4 : 6)
     : (LP ? 6 : 8);
-  // Front matter: title(1) + htp(2) + toc(3)
+  // Front matter: title(1) + copyright(2) + htp(3) + toc(4)
   // Optional: dedication (+1), tracker (+1), narrative preamble (+1 for detective/adventure)
   // Section dividers in progressive mode: always 1 Easy divider + Medium + Hard only when PC >= 3
   // Back matter: 4 notes pages (always) + answer key pages + narrative revelation (+1 for detective/adventure)
   const hasNarrative = Boolean(opts.narrativeArc);
-  const frontMatter = 3 + (opts.dedication ? 1 : 0) + (opts.challengeDays ? 1 : 0) + (hasNarrative ? 1 : 0);
+  const frontMatter = 4 + (opts.dedication ? 1 : 0) + (opts.challengeDays ? 1 : 0) + (hasNarrative ? 1 : 0);
   // Mirrors hasSections sec1/sec2 clamping: PC<3 means only Easy divider renders (1 divider)
   const dividers = progressive ? (PC < 3 ? 1 : 3) : 0;
   return frontMatter + 4 + PC + Math.ceil(PC / aPer) + dividers + (hasNarrative ? 1 : 0);
@@ -275,8 +275,8 @@ export async function buildInteriorHTML(opts: BuildOpts): Promise<BuildResult> {
   // Actual number of section divider pages rendered:
   // Progressive always renders an Easy divider (1); Medium/Hard dividers only if PC >= 3.
   const numDividers = hasSections ? (PC < 3 ? 1 : 3) : 0;
-  // Pages: title(1) + optional dedication + htp + toc + optional tracker + optional narrative preamble + section dividers + PC + notes(4) + aP
-  const frontMatter = 1 + (hasDedication ? 1 : 0) + 1 + 1 + (hasTracker ? 1 : 0) + (opts.narrativeArc ? 1 : 0);
+  // Pages: title(1) + copyright(2) + optional dedication + htp + toc + optional tracker + optional narrative preamble + section dividers + PC + notes(4) + aP
+  const frontMatter = 2 + (hasDedication ? 1 : 0) + 1 + 1 + (hasTracker ? 1 : 0) + (opts.narrativeArc ? 1 : 0);
   // Narrative arc (Solve-the-Story): present for detective/adventure modes.
   // Adds 1 page to frontMatter (preamble before puzzles) and +1 page between
   // last puzzle and answer key (revelation).
@@ -337,7 +337,7 @@ export async function buildInteriorHTML(opts: BuildOpts): Promise<BuildResult> {
     `.ft-pg{font-size:9px;font-weight:600;color:#444;letter-spacing:1px;}` +
     `</style></head><body>`;
 
-  // ── Title page (redesigned) ──────────────────────────────────────────────
+  // ── Title page (cleaner — legal text moved to its own copyright page) ────
   html += `<div class="pg in"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:${trimH}in;text-align:center;">` +
     `<div style="font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:4px;color:#666;text-transform:uppercase;margin-bottom:16px;">${PT} Collection</div>` +
     `<div style="font-family:'Source Code Pro',monospace;font-size:28px;color:#888;margin-bottom:14px;letter-spacing:6px;">✦</div>` +
@@ -345,18 +345,30 @@ export async function buildInteriorHTML(opts: BuildOpts): Promise<BuildResult> {
     `<div style="font-family:Lora,serif;font-size:15px;font-style:italic;color:#555;margin-bottom:24px;">${ST}</div>` +
     `<div style="width:56px;height:1px;background:#ccc;margin-bottom:24px;"></div>` +
     (AU ? `<div style="font-family:Lora,serif;font-size:13px;color:#444;margin-bottom:4px;">${AU}</div>` : "") +
-    `<div style="font-family:'Source Code Pro',monospace;font-size:9px;color:#999;margin-bottom:28px;">${AU ? AU + " Publishing" : "KDP Publishing"}</div>` +
-    `<div style="width:36px;height:1px;background:#ddd;margin-bottom:28px;"></div>` +
-    `<div style="font-family:'Source Code Pro',monospace;font-size:7.5px;color:#999;line-height:2.1;max-width:4.5in;">` +
-    `&copy; ${yr} ${AU}. All rights reserved.${vol ? " " + vol + "." : ""}<br/>` +
-    `No part of this publication may be reproduced, distributed, or transmitted in any form or by any means, including photocopying, recording, or other electronic or mechanical methods, without the prior written permission of the publisher.<br/>` +
-    `ISBN: [Pending]<br/>` +
-    `Published via Amazon KDP` +
+    `<div style="font-family:'Source Code Pro',monospace;font-size:9px;color:#999;margin-bottom:0;">${AU ? AU + " Publishing" : "KDP Publishing"}</div>` +
+    `</div></div>`;
+
+  // ── Copyright page (dedicated, professional) ────────────────────────────
+  // Legitimate books keep copyright separate. Sits on page 2 (the verso of
+  // the title page in a printed spread).
+  html += `<div class="pg in"><div style="display:flex;flex-direction:column;justify-content:space-between;min-height:${trimH}in;padding-top:1in;padding-bottom:1in;">` +
+    `<div></div>` +
+    `<div style="font-family:Lora,serif;font-size:11px;line-height:1.9;color:#444;max-width:4.8in;margin:0 auto;">` +
+    `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:4px;color:#888;text-transform:uppercase;margin-bottom:22px;text-align:center;">Copyright</div>` +
+    `<p style="margin-bottom:14px;"><b>${T}</b>${ST ? `<br/><i>${ST}</i>` : ""}</p>` +
+    (AU ? `<p style="margin-bottom:14px;">Written and compiled by ${AU}.</p>` : "") +
+    `<p style="margin-bottom:14px;">&copy; ${yr} ${AU || "KDP Publishing"}. All rights reserved.${vol ? ` ${vol}.` : ""}</p>` +
+    `<p style="margin-bottom:14px;font-size:10px;color:#666;">No part of this publication may be reproduced, distributed, or transmitted in any form or by any means — including photocopying, recording, or other electronic or mechanical methods — without the prior written permission of the publisher, except in the case of brief quotations embodied in critical reviews and certain other non-commercial uses permitted by copyright law.</p>` +
+    `<p style="margin-bottom:14px;font-size:10px;color:#666;">All puzzles are original works. Any resemblance to other published puzzle collections is coincidental.</p>` +
+    `<p style="margin-bottom:10px;font-size:10px;color:#666;">ISBN: ______________________</p>` +
+    `<p style="margin-bottom:0;font-size:10px;color:#666;">First Edition, ${yr}. Published independently via Amazon KDP.</p>` +
     `</div>` +
+    `<div style="text-align:center;font-family:'Source Code Pro',monospace;font-size:8px;letter-spacing:3px;color:#bbb;text-transform:uppercase;">— printed in the united states of america —</div>` +
     `</div></div>`;
 
   // ── Dedication page (optional) ────────────────────────────────────────────
-  let currentPage = 2;
+  // Title is page 1, copyright is page 2, so dedication (if present) is page 3.
+  let currentPage = 3;
   if (hasDedication) {
     const escapedDedication = escapeHtml(opts.dedication!);
     html += `<div class="pg in"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:${trimH}in;text-align:center;">` +
