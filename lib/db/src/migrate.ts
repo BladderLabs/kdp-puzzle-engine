@@ -83,6 +83,28 @@ ALTER TABLE books ADD COLUMN IF NOT EXISTS amazon_asin TEXT;
 CREATE INDEX IF NOT EXISTS books_asin_idx ON books (amazon_asin) WHERE amazon_asin IS NOT NULL;
 `,
   },
+  {
+    name: "003_council_cache",
+    sql: `
+-- Council output cache — memoizes niche-stable agent results across book
+-- generations. Dramatically cuts LLM cost when publishing multiple books in
+-- the same niche (the most common publishing pattern). 24h default TTL.
+CREATE TABLE IF NOT EXISTS council_cache (
+  id          SERIAL PRIMARY KEY,
+  agent       TEXT NOT NULL,
+  cache_key   TEXT NOT NULL,
+  output_json JSONB NOT NULL,
+  created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+  expires_at  TIMESTAMP NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS council_cache_lookup
+  ON council_cache (agent, cache_key);
+
+CREATE INDEX IF NOT EXISTS council_cache_expires
+  ON council_cache (expires_at);
+`,
+  },
 ];
 
 /**
