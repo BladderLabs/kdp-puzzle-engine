@@ -1,13 +1,37 @@
-import { Router, type IRouter } from "express";
+﻿import { Router, type IRouter } from "express";
 import { zipSync } from "fflate";
 import { GenerateBookBody, PreviewPuzzlesBody, CoverPreviewBody } from "@workspace/api-zod";
 import { buildInteriorHTML, buildCoverHTML, computeTotalPages, type BuildOpts, type CoverBuildOpts } from "../lib/html-builders";
 import { makeWordSearch, makeSudoku, makeMaze, makeNumberSearch, makeCryptogram, makeCrosswordAsync, shuf, DEFWORDS } from "../lib/puzzles";
 import { htmlToPdf } from "../lib/pdf";
+import type { NarrativeArc } from "../lib/agents/narrative-architect";
 
 const router: IRouter = Router();
 
-function toOpts(data: ReturnType<typeof GenerateBookBody.parse>): CoverBuildOpts {
+/**
+ * Map the parsed zod body into CoverBuildOpts. The `rawBody` second argument
+ * lets us thread through pipeline fields (experienceMode, narrativeArc) that
+ * aren't in the OpenAPI-generated zod schema yet.
+ */
+function toOpts(
+  data: ReturnType<typeof GenerateBookBody.parse>,
+  rawBody?: Record<string, unknown>,
+): CoverBuildOpts {
+  const extras = rawBody ?? {};
+  const rawNarrative = extras.narrativeArc;
+  // Only accept a narrativeArc with the expected discriminator — treat everything else as absent.
+  let narrativeArc: NarrativeArc | null = null;
+  if (
+    rawNarrative
+    && typeof rawNarrative === "object"
+    && "mode" in rawNarrative
+    && ((rawNarrative as { mode?: string }).mode === "detective"
+      || (rawNarrative as { mode?: string }).mode === "adventure")
+  ) {
+    narrativeArc = rawNarrative as NarrativeArc;
+  }
+  const experienceMode = typeof extras.experienceMode === "string" ? extras.experienceMode : undefined;
+
   return {
     title: data.title,
     subtitle: data.subtitle ?? undefined,
@@ -31,6 +55,9 @@ function toOpts(data: ReturnType<typeof GenerateBookBody.parse>): CoverBuildOpts
     accentHexOverride: data.accentHexOverride ?? undefined,
     casingOverride: data.casingOverride ?? undefined,
     fontStyleDirective: data.fontStyleDirective ?? undefined,
+    // Advanced pipeline fields (off-schema for now, threaded from raw body)
+    narrativeArc,
+    experienceMode,
   };
 }
 
@@ -42,7 +69,7 @@ function toOpts(data: ReturnType<typeof GenerateBookBody.parse>): CoverBuildOpts
  */
 router.post("/generate", async (req, res) => {
   try {
-    const opts = toOpts(GenerateBookBody.parse(req.body));
+    const opts = toOpts(GenerateBookBody.parse(req.body), req.body as Record<string, unknown>);
     const interior = await buildInteriorHTML(opts);
     const cover = buildCoverHTML(opts, interior.totalPages);
     res.json({
@@ -81,7 +108,7 @@ router.post("/pdf/interior", async (req, res) => {
       req.log.info(`Rendering interior PDF from HTML blob: ${w}"x${h}"`);
     } else {
       // Legacy / direct path: regenerate from opts
-      const opts = toOpts(GenerateBookBody.parse(req.body));
+      const opts = toOpts(GenerateBookBody.parse(req.body), req.body as Record<string, unknown>);
       const interior = await buildInteriorHTML(opts);
       html = interior.html;
       w = interior.trimW;
@@ -121,7 +148,7 @@ router.post("/pdf/cover", async (req, res) => {
       req.log.info(`Rendering cover PDF from HTML blob: ${fullW.toFixed(3)}"x${fullH.toFixed(3)}"`);
     } else {
       // Legacy / direct path: regenerate from opts
-      const opts = toOpts(GenerateBookBody.parse(req.body));
+      const opts = toOpts(GenerateBookBody.parse(req.body), req.body as Record<string, unknown>);
       const totalPages = computeTotalPages(opts);
       const cover = buildCoverHTML(opts, totalPages);
       html = cover.html;
@@ -225,7 +252,7 @@ router.post("/puzzles/preview", async (req, res) => {
  */
 router.post("/bundle", async (req, res) => {
   try {
-    const opts = toOpts(GenerateBookBody.parse(req.body));
+    const opts = toOpts(GenerateBookBody.parse(req.body), req.body as Record<string, unknown>);
     const interior = await buildInteriorHTML(opts);
     const cover = buildCoverHTML(opts, interior.totalPages);
 
