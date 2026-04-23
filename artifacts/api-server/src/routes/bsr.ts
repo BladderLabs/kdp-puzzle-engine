@@ -1,4 +1,4 @@
-/**
+﻿/**
  * BSR tracking routes.
  *
  * PUT /api/books/:id/asin      — Capture the Amazon ASIN for a published book
@@ -13,9 +13,12 @@
  */
 
 import { Router, type IRouter } from "express";
-import { sql, eq, desc, isNotNull, asc } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { z } from "zod";
-import { db, booksTable } from "@workspace/db";
+import { db } from "@workspace/db";
+// Note: ASIN + BSR columns are accessed via raw SQL so this file survives
+// a stale compiled @workspace/db dist (amazonAsin may not yet be in the
+// Drizzle-inferred schema type even though migration 002/004 ran).
 
 const router: IRouter = Router();
 
@@ -37,13 +40,15 @@ router.put("/books/:id/asin", async (req, res) => {
       return;
     }
 
-    const [updated] = await db
-      .update(booksTable)
-      .set({ amazonAsin: cleanAsin, updatedAt: new Date() } as Partial<typeof booksTable.$inferInsert>)
-      .where(eq(booksTable.id, id))
-      .returning();
-
-    if (!updated) {
+    // Raw SQL — dodges stale Drizzle type that doesn't yet know about amazon_asin
+    const updateResult = await db.execute(sql`
+      UPDATE books
+      SET amazon_asin = ${cleanAsin}, updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING id
+    `);
+    const updatedRows = ((updateResult as unknown as { rows?: Array<{ id: number }> }).rows) ?? [];
+    if (updatedRows.length === 0) {
       res.status(404).json({ error: "Book not found" });
       return;
     }
@@ -148,10 +153,11 @@ async function captureSnapshot(bookId: number, asin: string, marketplace = "US")
 
 router.post("/bsr/sync", async (req, res) => {
   try {
-    const books = await db
-      .select({ id: booksTable.id, asin: booksTable.amazonAsin })
-      .from(booksTable)
-      .where(isNotNull(booksTable.amazonAsin));
+    // Raw SQL — again, avoiding stale Drizzle type on amazon_asin
+    const booksResult = await db.execute(sql`
+      SELECT id, amazon_asin AS asin FROM books WHERE amazon_asin IS NOT NULL
+    `);
+    const books = ((booksResult as unknown as { rows?: Array<{ id: number; asin: string }> }).rows) ?? [];
 
     const results: Array<{ bookId: number; asin: string; ok: boolean; bsr?: number | null }> = [];
     // Serialize to avoid hammering Apify; typical library has <100 books
