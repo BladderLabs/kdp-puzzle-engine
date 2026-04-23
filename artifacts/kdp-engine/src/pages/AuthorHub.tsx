@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -392,7 +392,9 @@ export function AuthorHub() {
 
   function handleGenerationDone(bookId: number) {
     setGenerating(null);
-    setLocation(`/books/${bookId}`);
+    // Navigate to the publish screen — the closer that turns "book saved"
+    // into "book on KDP" with download + copy-listing + open-KDP buttons.
+    setLocation(`/publish/${bookId}`);
   }
 
   // No persona yet → Centered CTA
