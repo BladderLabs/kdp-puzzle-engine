@@ -1,4 +1,4 @@
-﻿import {
+﻿﻿import {
   shuf, makeWordSearch, makeSudoku, makeMaze, makeNumberSearch,
   makeCryptogram, makeCrossword, generateCrosswordClues, applyCluesToCrossword, WORD_BANKS,
 } from "./puzzles";
@@ -1489,7 +1489,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
   // no URL → themed CSS/SVG art for all 10 themes (buildThemeCoverArt)
   let imageBlock = "";
   if (safeImgUrl) {
-    imageBlock = `<div style="width:4.5in;height:4in;margin:0 auto 16px;border-radius:8px;overflow:hidden;border:2px solid ${ac};box-shadow:0 4px 24px rgba(0,0,0,0.35);flex-shrink:0;"><img src="${safeImgUrl}" alt="Cover Image" style="width:100%;height:100%;object-fit:cover;display:block;" /></div>`;
+    imageBlock = `<div style="width:4.5in;height:4in;margin:0 auto 16px;border-radius:8px;overflow:hidden;border:2px solid ${ac};box-shadow:0 4px 24px rgba(0,0,0,0.35);flex-shrink:0;"><img src="${safeImgUrl}" alt="Cover Image" style="width:100%;height:100%;object-fit:cover;display:block;image-rendering:high-quality;" /></div>`;
   } else {
     imageBlock = buildThemeCoverArt(opts.theme || "midnight", ac, bg);
   }
@@ -1673,7 +1673,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       ? `<div style="position:absolute;top:0;left:0;right:0;z-index:5;background:${ac};padding:6px 16px;text-align:center;letter-spacing:6px;font-family:'Source Code Pro',monospace;font-size:11px;font-weight:700;color:${bannerTx};text-transform:uppercase;">✦ LARGE PRINT EDITION ✦</div>`
       : "";
     const photoImageLayer = safeImgUrl
-      ? `<div style="position:absolute;top:0;left:0;right:0;bottom:0;z-index:0;overflow:hidden;"><img src="${safeImgUrl}" alt="Cover" style="width:100%;height:100%;object-fit:cover;object-position:center top;display:block;" /></div>`
+      ? `<div style="position:absolute;top:0;left:0;right:0;bottom:0;z-index:0;overflow:hidden;"><img src="${safeImgUrl}" alt="Cover" style="width:100%;height:100%;object-fit:cover;object-position:center top;display:block;image-rendering:high-quality;" /></div>`
       : `<div style="position:absolute;top:0;left:0;right:0;bottom:0;z-index:0;">${buildThemeCoverArt(opts.theme || "midnight", ac, bg)}</div>`;
     const photoGradient = `<div style="position:absolute;top:0;left:0;right:0;bottom:0;z-index:1;background:linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.58) 45%, rgba(0,0,0,0.18) 100%);"></div>`;
     const photoTextBlock = `<div style="position:absolute;bottom:0;left:0;right:0;z-index:4;padding:0.6in 0.6in 0.7in;text-align:center;">` +
