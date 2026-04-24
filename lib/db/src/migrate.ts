@@ -1,4 +1,4 @@
-﻿﻿/**
+﻿﻿﻿/**
  * Auto-migration runner.
  *
  * On server startup, creates a _schema_migrations tracking table and applies
@@ -129,6 +129,17 @@ CREATE INDEX IF NOT EXISTS bsr_snapshots_book_idx
 
 CREATE INDEX IF NOT EXISTS bsr_snapshots_asin_idx
   ON bsr_snapshots (asin);
+`,
+  },
+  {
+    name: "005_bespoke_palette",
+    sql: `
+-- Bespoke per-book palette. Cover Color Strategist now generates custom hex
+-- values tailored to the niche rather than picking from the 10 preset themes.
+-- accent_hex_override already exists from migration 001 — we add the other two
+-- components so every book carries its full custom palette through to render.
+ALTER TABLE books ADD COLUMN IF NOT EXISTS background_hex_override TEXT;
+ALTER TABLE books ADD COLUMN IF NOT EXISTS text_hex_override TEXT;
 `,
   },
 ];

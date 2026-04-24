@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿import { Router, type IRouter } from "express";
+﻿﻿﻿﻿﻿﻿import { Router, type IRouter } from "express";
 import type { Response } from "express";
 import { z } from "zod";
 import { db, booksTable, authorPersonasTable } from "@workspace/db";
@@ -628,6 +628,8 @@ router.post("/agents/create-book", async (req, res) => {
       largePrint: market.largePrint === true,
       audience: market.audienceProfile,
       authorPenName: activePersona?.penName,
+      authorVoiceTone: activePersona?.voiceTone,
+      authorVoiceVocabulary: activePersona?.voiceVocabulary,
       experienceMode,
       year: new Date().getFullYear(),
       volumeNumber: draft.volumeNumber ?? 1,
@@ -1065,6 +1067,8 @@ router.post("/agents/create-book", async (req, res) => {
         challengeDays: null,
         keywords: finalKeywords,
         accentHexOverride: bookSpec?.coverAccentHex ?? coverDesignSpec.accentHex ?? null,
+        backgroundHexOverride: coverDesignSpec.backgroundHex ?? null,
+        textHexOverride: (coverDesignSpec as unknown as { textHex?: string }).textHex ?? null,
         casingOverride: coverDesignSpec.casingDirective ?? null,
         fontStyleDirective: coverDesignSpec.fontStyleDirective ?? null,
         // ── Advanced pipeline fields ─────────────────────────────────────────

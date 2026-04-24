@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Listing Intelligence Agent.
  *
  * Produces every piece of the Amazon KDP product listing: title, subtitle, 7
@@ -38,6 +38,8 @@ export const ListingInputSchema = z.object({
   largePrint: z.boolean().default(true),
   audience: z.string().optional(),
   authorPenName: z.string().optional(),
+  authorVoiceTone: z.string().optional(),
+  authorVoiceVocabulary: z.string().optional(),
   experienceMode: z.string().default("standard"),
   year: z.number().int().min(2024).max(2030).default(new Date().getFullYear()),
   volumeNumber: z.number().int().min(0).max(10).default(0),
@@ -148,6 +150,8 @@ Book specification:
 - Format: ${lpTag}
 - Audience: ${input.audience || "(niche-default)"}
 - Author pen name: ${input.authorPenName || "(not set)"}
+- Author voice tone: ${input.authorVoiceTone || "(unset — use a warm, confident editorial voice)"}
+- Author voice vocabulary: ${input.authorVoiceVocabulary || "(unset)"}
 - Experience mode: ${input.experienceMode}
 - Year: ${input.year}
 ${volumeLine}
@@ -169,6 +173,7 @@ Produce a listing with:
 4. **keywords** — EXACTLY 7 KDP backend keywords, ranked strongest first. Each under 50 chars. Dedupe against title+subtitle tokens. Mix short-tail + long-tail. No single-word keywords.
 5. **categories** — 2 Amazon browse categories as full breadcrumbs (e.g. "Books > Humor & Entertainment > Puzzles & Games > Crosswords"). Include a "whyItRanks" rationale for each.
 6. **descriptionHtml** — Ogilvy-structured HTML, ready to paste into KDP:
+   - <p><em>"One-line voice opener — a single italicized sentence in the author's own voice (matching the authorVoiceTone and authorVoiceVocabulary above) that captures what this author believes about this KIND of book. Not a product claim — a philosophy or a feeling. Under 22 words. This must feel written by a human, not an AI. Skip this line ONLY if authorVoiceTone is unset."</em></p>
    - <h2>BENEFIT HEADLINE</h2>
    - <p><b>Hook sentence</b></p>
    - <p>Opening paragraph (2-3 sentences, benefit-led)</p>

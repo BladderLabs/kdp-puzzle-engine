@@ -1,4 +1,4 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import type { BuyerProfile } from "./buyer-psychology-profiler";
 import type { CoverDesignAnalysis } from "./cover-design-analyst";
@@ -121,15 +121,23 @@ Select the optimal color strategy for this KDP puzzle book:
 
 Apply the color psychology map and thumbnail contrast rules. Large print editions typically signal seniors — weight toward midnight or parchment unless the niche overrides this.
 
+CRITICAL: Generate a UNIQUE custom palette for THIS specific book — do NOT default to the preset theme's stock hex values. \`recommendedTheme\` is just the closest matching preset for categorization, but the three hex values you return MUST be bespoke colors chosen for this niche + buyer moment. A Mother's Day book and a Valentine's Day book may both map to "crimson" as closest-theme, but their palettes should differ visibly — every book in our library deserves its own colorway.
+
+Rules for the bespoke palette:
+- accentHex — the single most important decision; must pop at 160px thumbnail against the background
+- backgroundHex — the base color of the cover; should feel niche-appropriate
+- textHex — ensures WCAG contrast ≥ 4.5 against backgroundHex
+- Avoid re-using common preset values like #F5C842 / #0D1B3E verbatim unless they're genuinely the best choice. Nudge hues 5-15 degrees, shift saturation, find a signature tone.
+
 Return ONLY JSON (no markdown):
 {
-  "recommendedTheme": "midnight",
-  "accentHex": "#F5C842",
-  "backgroundHex": "#0D1B3E",
-  "textHex": "#FFFFFF",
+  "recommendedTheme": "closest preset label from the enum",
+  "accentHex": "#B8860B",
+  "backgroundHex": "#1C2940",
+  "textHex": "#FFF8E8",
   "thumbnailLegibilityScore": 9,
   "emotionalResonance": "1 sentence on what emotion this palette triggers for the target buyer",
-  "colorRationale": "2-3 sentences citing the specific color psychology principle and audience match",
+  "colorRationale": "2-3 sentences citing the specific color psychology principle and audience match — mention WHY these exact hexes, not the preset",
   "thumbnailContrastNote": "1 sentence on how this reads at 160px KDP thumbnail size"
 }`;
 

@@ -1,4 +1,4 @@
-﻿﻿﻿import { Router, type IRouter } from "express";
+﻿﻿﻿﻿import { Router, type IRouter } from "express";
 import { zipSync } from "fflate";
 import { GenerateBookBody, PreviewPuzzlesBody, CoverPreviewBody } from "@workspace/api-zod";
 import { buildInteriorHTML, buildCoverHTML, computeTotalPages, type BuildOpts, type CoverBuildOpts } from "../lib/html-builders";
@@ -56,6 +56,10 @@ function toOpts(
     accentHexOverride: data.accentHexOverride ?? undefined,
     casingOverride: data.casingOverride ?? undefined,
     fontStyleDirective: data.fontStyleDirective ?? undefined,
+    // Bespoke per-book palette — read from raw body (off-schema for Orval)
+    // and threaded through to buildCoverHTML's customBg/customText overrides.
+    customBg: typeof extras.backgroundHexOverride === "string" ? extras.backgroundHexOverride : undefined,
+    customText: typeof extras.textHexOverride === "string" ? extras.textHexOverride : undefined,
     // Advanced pipeline fields (off-schema for now, threaded from raw body)
     narrativeArc,
     experienceMode,

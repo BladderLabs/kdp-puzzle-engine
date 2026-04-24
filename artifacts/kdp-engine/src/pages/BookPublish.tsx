@@ -1,4 +1,4 @@
-﻿﻿﻿import { useEffect, useMemo, useState } from "react";
+﻿﻿﻿﻿import { useEffect, useMemo, useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -172,6 +172,8 @@ async function downloadPdf(kind: "interior" | "cover", book: BookRow): Promise<v
     difficultyMode: (rec.difficultyMode as string) ?? "uniform",
     challengeDays: (rec.challengeDays as number | null) ?? null,
     accentHexOverride: (rec.accentHexOverride as string | null) ?? null,
+    backgroundHexOverride: (rec.backgroundHexOverride as string | null) ?? null,
+    textHexOverride: (rec.textHexOverride as string | null) ?? null,
     casingOverride: (rec.casingOverride as string | null) ?? null,
     fontStyleDirective: (rec.fontStyleDirective as string | null) ?? null,
     experienceMode: book.experienceMode ?? "standard",

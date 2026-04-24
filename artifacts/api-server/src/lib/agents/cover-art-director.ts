@@ -1,4 +1,4 @@
-﻿import type { BuyerProfile } from "./buyer-psychology-profiler";
+﻿﻿import type { BuyerProfile } from "./buyer-psychology-profiler";
 
 export interface CoverArtResult {
   b64_json: string;
@@ -135,10 +135,20 @@ export async function runCoverArtDirector(
 
     let prompt: string;
 
-    const sketchMode = experienceMode === "sketch";
-    const sketchSuffix = sketchMode
-      ? " Render the entire illustration in a hand-drawn pencil sketch style: visible pencil strokes, crosshatching for shadows, charcoal smudging, raw sketchbook paper texture, monochromatic graphite tones with occasional sepia wash. The aesthetic should feel like an artist's working sketchbook."
-      : "";
+    // ── Signature illustration style per Experience Mode ─────────────────
+    // Every book in a given mode gets the SAME art style so a library of 20
+    // books from this publisher visibly belongs together. No competitor
+    // applies a consistent art-style suffix across a series.
+    const EXPERIENCE_STYLE_SUFFIX: Record<string, string> = {
+      sketch: " Render the entire illustration in a hand-drawn pencil sketch style: visible pencil strokes, crosshatching for shadows, charcoal smudging, raw sketchbook paper texture, monochromatic graphite tones with occasional sepia wash. The aesthetic should feel like an artist's working sketchbook.",
+      detective: " Render in a film-noir charcoal sketch style: heavy atmospheric shadows, dramatic single-light-source chiaroscuro, muted sepia and ink-black palette, soft graphite smudges, the feeling of a 1940s detective novel cover or a black-and-white mystery film still.",
+      adventure: " Render as a 19th-century engraved illustration in the style of classic adventure novels (Verne, Stevenson): hand-etched crosshatched lines, antique map cartography texture, sepia and aged-parchment tones, occasional compass or nautical flourishes, the feeling of opening a weathered leather-bound explorer's journal.",
+      darkacademia: " Render as a vintage academic etching or illuminated manuscript plate: muted ink-and-parchment palette with deep burgundy and forest green accents, Gothic architectural detailing, hand-drawn ornamental borders, classical subject framing (books, quills, astrolabes, Latin scrollwork), the feeling of an ancient library's rare book collection.",
+      cozycottage: " Render as a vintage watercolor botanical illustration in the style of Beatrix Potter or Sibylla Merian: soft pastel washes, pressed-flower aesthetic, hand-painted texture, warm creams and dusty roses and sages, delicate brush strokes, the feeling of a grandmother's beloved garden journal.",
+      mindful: " Render as a minimal Japanese zen brush painting: abundant negative space, single flowing brush strokes in sumi-e ink style, muted greens and soft neutrals, a meditative and uncluttered composition, the feeling of morning calm before sunrise.",
+      standard: " Render as a polished contemporary editorial illustration: balanced composition, professional color grading, museum-quality finish suitable for a trade paperback cover.",
+    };
+    const styleSuffix = EXPERIENCE_STYLE_SUFFIX[experienceMode ?? "standard"] ?? EXPERIENCE_STYLE_SUFFIX.standard;
 
     if (enrichedImagePrompt && enrichedImagePrompt.trim().length > 20) {
       // Use research-backed enriched prompt from Cover Design Council
@@ -147,7 +157,7 @@ export async function runCoverArtDirector(
         : "";
       prompt = [
         `Create a stunning professional book cover background illustration for a "${puzzleType}" puzzle book titled "${title}".`,
-        enrichedImagePrompt.trim() + psychHook + sketchSuffix,
+        enrichedImagePrompt.trim() + psychHook + styleSuffix,
         `CRITICAL COMPOSITION RULE: Use a strong VERTICAL portrait composition (2:3 aspect ratio, taller than wide).`,
         `Place the primary subject and visual interest in the UPPER TWO-THIRDS of the image.`,
         `The LOWER THIRD must be kept relatively clear — it will be overlaid with title text.`,
@@ -157,7 +167,7 @@ export async function runCoverArtDirector(
     } else {
       // Fallback: legacy basic prompt with expanded niche hints
       const themeDesc = THEME_DESCRIPTIONS[theme] || THEME_DESCRIPTIONS.midnight;
-      const styleDesc = sketchMode ? STYLE_MODIFIERS.sketch : (STYLE_MODIFIERS[coverStyle] || STYLE_MODIFIERS.classic);
+      const styleDesc = STYLE_MODIFIERS[coverStyle] || STYLE_MODIFIERS.classic;
       const nicheHint = niche ? buildNicheHint(niche) : "";
       const psychHook = buyerProfile
         ? ` The image must embody the visual metaphor "${buyerProfile.visualMetaphor}" and trigger "${buyerProfile.primaryEmotion}". Mood: ${buyerProfile.moodAdjectives.join(", ")}.`
@@ -170,7 +180,7 @@ export async function runCoverArtDirector(
 
       prompt = [
         `Create a stunning ${styleDesc} book cover background illustration for a "${puzzleType}" puzzle book titled "${title}".`,
-        subjectLine + sketchSuffix,
+        subjectLine + styleSuffix,
         `Atmosphere and color palette: ${themeDesc}.`,
         `CRITICAL COMPOSITION RULE: Use a strong VERTICAL portrait composition (2:3 aspect ratio, taller than wide).`,
         `Place the primary subject and visual interest in the UPPER TWO-THIRDS of the image.`,
