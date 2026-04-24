@@ -1,4 +1,4 @@
-﻿﻿import { Router, type IRouter } from "express";
+﻿﻿﻿import { Router, type IRouter } from "express";
 import { zipSync } from "fflate";
 import { GenerateBookBody, PreviewPuzzlesBody, CoverPreviewBody } from "@workspace/api-zod";
 import { buildInteriorHTML, buildCoverHTML, computeTotalPages, type BuildOpts, type CoverBuildOpts } from "../lib/html-builders";
@@ -92,7 +92,8 @@ router.post("/generate", async (req, res) => {
           audience: typeof rawBody.audience === "string" ? rawBody.audience : undefined,
         });
         if (pack.themedQuotes.length >= 10) {
-          (opts as BuildOpts).themedQuotes = pack.themedQuotes.map(q => ({ quote: q.quote, author: q.author }));
+          // Field name must be `text` — makeCryptogram reads quote.text per QuoteEntry contract
+          opts.themedQuotes = pack.themedQuotes.map(q => ({ text: q.text, author: q.author }));
           req.log.info({
             niche: nicheKey,
             quoteCount: pack.themedQuotes.length,
