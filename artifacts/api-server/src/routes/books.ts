@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+﻿import { Router, type IRouter } from "express";
 import { eq, desc } from "drizzle-orm";
 import { db, booksTable } from "@workspace/db";
 import {
@@ -9,6 +9,7 @@ import {
   DeleteBookParams,
   CloneBookParams,
 } from "@workspace/api-zod";
+import { runPublicationPreflight } from "../lib/agents/cover-qa-gate";
 
 const blankToNull = (v: string | null | undefined): string | null =>
   v && v.trim() ? v.trim() : null;
@@ -91,6 +92,40 @@ router.get("/books/:id", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to get book");
     res.status(500).json({ error: "Failed to get book" });
+  }
+});
+
+// GET /books/:id/preflight
+// Runs the KDP Publication Preflight (QA Gate + KDP-specific checks) against a
+// persisted book row. Used by BookPublish to surface fails before the user
+// invests time uploading. Returns QAResult { passed, score, issues, summary }.
+router.get("/books/:id/preflight", async (req, res) => {
+  try {
+    const { id } = GetBookParams.parse({ id: Number(req.params.id) });
+    const [book] = await db.select().from(booksTable).where(eq(booksTable.id, id));
+    if (!book) { res.status(404).json({ error: "Book not found" }); return; }
+    const rec = book as unknown as Record<string, unknown>;
+    const result = runPublicationPreflight({
+      title: book.title ?? "",
+      subtitle: book.subtitle ?? undefined,
+      author: book.author ?? undefined,
+      backDescription: book.backDescription ?? undefined,
+      puzzleType: book.puzzleType,
+      puzzleCount: book.puzzleCount,
+      difficulty: book.difficulty,
+      theme: book.theme,
+      coverStyle: book.coverStyle,
+      experienceMode: typeof rec.experienceMode === "string" ? rec.experienceMode : undefined,
+      keywords: book.keywords ?? [],
+      volumeNumber: book.volumeNumber ?? 0,
+      largePrint: book.largePrint,
+      coverImageUrl: book.coverImageUrl ?? undefined,
+      accentHexOverride: book.accentHexOverride ?? undefined,
+    });
+    res.json(result);
+  } catch (err) {
+    req.log.error({ err }, "Failed to run preflight");
+    res.status(500).json({ error: "Failed to run preflight" });
   }
 });
 
