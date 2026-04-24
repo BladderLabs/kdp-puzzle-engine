@@ -122,13 +122,27 @@ function buildKeywordSection(input: ListingInput): string {
 
 function buildPriceSection(input: ListingInput): string {
   if (input.avgCompetitorPrice != null) {
-    return `Average competitor price: $${input.avgCompetitorPrice.toFixed(2)}. Your price should be within 10% of this, strategically undercut only if the BSR data shows us winning on price-per-puzzle.`;
+    return `Average competitor price: $${input.avgCompetitorPrice.toFixed(2)}.
+Our books price at a PREMIUM vs competitors because ours carry: (1) bespoke per-book palette,
+(2) signature illustration style per Experience Mode, (3) Solve-the-Story narrative mechanic,
+(4) author-voice listing copy — none of which a Canva-tier competitor can match.
+Price $2–$3 ABOVE the competitor average unless the niche is intensely commoditised.
+Large-print floor: $12.99. Standard floor: $9.99. Never undercut unless scraper data shows
+our puzzle count is lower than top 3 competitors.`;
   }
-  return `No price anchor supplied — use standard KDP puzzle-book pricing by format:
-- Standard 6×9, 100 puzzles: $6.99–$8.99
-- Large print 8.5×11, 100 puzzles: $8.99–$12.99
-- Gift-SKU (large print, themed): +$1–$2 premium
-- Series volume 2+: match volume 1 pricing`;
+  return `No price anchor supplied — use premium KDP puzzle-book pricing by format:
+- Standard 6×9, 100 puzzles: $8.99–$11.99 (default $9.99)
+- Large print 8.5×11, 100 puzzles: $11.99–$14.99 (DEFAULT $12.99 — this is a hard anchor)
+- Themed / Solve-the-Story / niche-specialist SKUs: +$1 for the unique mechanic
+- Gift-SKU (large print, themed): $13.99–$14.99
+- Series volume 2+: match volume 1 pricing
+
+PRICING STRATEGY: We do NOT compete on price. We compete on (1) bespoke per-book palette,
+(2) signature illustration style per Experience Mode, (3) Solve-the-Story narrative mechanic,
+(4) author-voice listing copy. Our books carry premium price because the product IS premium.
+NEVER recommend below $12.99 for an LP SKU unless the top-3 competitors price below $10
+AND the niche is intensely commoditised. A $3 uplift vs competitors is defensible when the
+interior/cover/listing all telegraph superior craftsmanship.`;
 }
 
 function buildPrompt(input: ListingInput): string {
@@ -204,7 +218,7 @@ Return ONLY strict JSON (no markdown, no commentary):
   "categories": [ {"breadcrumb": "...", "rationale": "..."}, {"breadcrumb": "...", "rationale": "..."} ],
   "descriptionHtml": "<h2>...</h2>...",
   "descriptionPlain": "...",
-  "priceUsd": 9.99,
+  "priceUsd": 12.99,
   "priceRationale": "...",
   "competitorBrief": [ {"title": "...", "whyItRanks": "..."} ],
   "slug": "..."
@@ -262,7 +276,7 @@ export async function runListingIntelligence(
   // Compute royalty deterministically from price — the model chooses price, we
   // compute the royalty (don't trust the model with money math).
   const totalPages = 3 + input.puzzleCount + Math.ceil(input.puzzleCount / 6) + 4;
-  const priceUsd = Number(raw.priceUsd ?? (input.largePrint ? 9.99 : 7.99));
+  const priceUsd = Number(raw.priceUsd ?? (input.largePrint ? 12.99 : 9.99));
   const royaltyUsd = calcRoyalty(priceUsd, input.largePrint, totalPages);
 
   // Ensure categories has exactly 2 entries
