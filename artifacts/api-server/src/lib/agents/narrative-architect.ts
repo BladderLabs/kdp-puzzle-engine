@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Narrative Architect.
  *
  * When experienceMode is "detective" or "adventure", generates a narrative
@@ -200,7 +200,7 @@ function renderDetectivePreamble(arc: z.infer<typeof DetectiveArcSchema>, ac: st
   const suspectsList = arc.suspects
     .map(s => `<li><b>${escapeHtml(s.name)}</b> — motive: ${escapeHtml(s.motive)}. Alibi: ${escapeHtml(s.alibi)}</li>`)
     .join("");
-  return `<div class="pg" style="font-family:'Special Elite','Courier New',monospace;padding:0.8in 0.9in;">
+  return `<div style="font-family:'Special Elite','Courier New',monospace;">
   <div style="text-align:center;border-bottom:2px solid ${ac};padding-bottom:14px;margin-bottom:22px;">
     <div style="font-size:10px;letter-spacing:5px;color:${ac};margin-bottom:6px;">CASE FILE ${escapeHtml(arc.caseFileNumber)}</div>
     <div style="font-family:'Playfair Display',Georgia,serif;font-weight:900;font-size:28px;color:#1a1a1a;">${escapeHtml(arc.caseName)}</div>
@@ -217,7 +217,7 @@ function renderDetectivePreamble(arc: z.infer<typeof DetectiveArcSchema>, ac: st
 }
 
 function renderAdventurePreamble(arc: z.infer<typeof AdventureArcSchema>, ac: string): string {
-  return `<div class="pg" style="font-family:Georgia,serif;padding:0.8in 0.9in;">
+  return `<div style="font-family:Georgia,serif;">
   <div style="text-align:center;margin-bottom:26px;">
     <div style="font-size:10px;letter-spacing:6px;color:${ac};margin-bottom:8px;">✦ THE QUEST ✦</div>
     <div style="font-family:'Playfair Display',Georgia,serif;font-style:italic;font-weight:900;font-size:30px;color:#2a1a00;">${escapeHtml(arc.questName)}</div>
@@ -250,7 +250,7 @@ export function renderNarrativeRevelation(arc: NarrativeArc, accent: string): st
 }
 
 function renderDetectiveRevelation(arc: z.infer<typeof DetectiveArcSchema>, ac: string): string {
-  return `<div class="pg" style="font-family:'Special Elite','Courier New',monospace;padding:0.8in 0.9in;">
+  return `<div style="font-family:'Special Elite','Courier New',monospace;">
   <div style="text-align:center;border-bottom:2px solid ${ac};padding-bottom:14px;margin-bottom:22px;">
     <div style="font-size:10px;letter-spacing:5px;color:${ac};margin-bottom:6px;">CASE CLOSED</div>
     <div style="font-family:'Playfair Display',Georgia,serif;font-weight:900;font-size:26px;color:#1a1a1a;">The Culprit Revealed</div>
@@ -268,7 +268,7 @@ function renderDetectiveRevelation(arc: z.infer<typeof DetectiveArcSchema>, ac: 
 }
 
 function renderAdventureRevelation(arc: z.infer<typeof AdventureArcSchema>, ac: string): string {
-  return `<div class="pg" style="font-family:Georgia,serif;padding:0.8in 0.9in;">
+  return `<div style="font-family:Georgia,serif;">
   <div style="text-align:center;margin-bottom:26px;">
     <div style="font-size:10px;letter-spacing:6px;color:${ac};margin-bottom:8px;">✦ THE TREASURE ✦</div>
     <div style="font-family:'Playfair Display',Georgia,serif;font-style:italic;font-weight:900;font-size:26px;color:#2a1a00;">X Marks the Spot</div>
