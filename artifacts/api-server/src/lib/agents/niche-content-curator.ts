@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Niche Content Curator.
  *
  * Runs once per book (cached per niche+experienceMode). Produces every piece
@@ -16,8 +16,10 @@ import { cachedRun, stableKey } from "../council-cache";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
+// Field name `text` matches QuoteEntry in puzzles.ts — makeCryptogram reads
+// quote.text directly, so this cannot deviate from the puzzles-layer contract.
 export const ThemedQuoteSchema = z.object({
-  quote: z.string().min(10).max(280),
+  text: z.string().min(10).max(280),
   author: z.string().min(1).max(100),
 });
 export type ThemedQuote = z.infer<typeof ThemedQuoteSchema>;
@@ -82,7 +84,7 @@ Produce THREE content blocks:
 Return ONLY strict JSON:
 {
   "themedQuotes": [
-    { "quote": "...", "author": "..." },
+    { "text": "...", "author": "..." },
     ...
   ],
   "trivia": [
@@ -111,26 +113,26 @@ function fallbackPack(input: CuratorInput): ContentPack {
   // Minimum viable pack so the pipeline never breaks if Claude fails.
   return {
     themedQuotes: [
-      { quote: "The journey of a thousand miles begins with a single step.", author: "Lao Tzu" },
-      { quote: "Not all those who wander are lost.", author: "J.R.R. Tolkien" },
-      { quote: "The only way out is through.", author: "Robert Frost" },
-      { quote: "Courage is grace under pressure.", author: "Ernest Hemingway" },
-      { quote: "The unexamined life is not worth living.", author: "Socrates" },
-      { quote: "In the middle of difficulty lies opportunity.", author: "Albert Einstein" },
-      { quote: "The best way out is always through.", author: "Robert Frost" },
-      { quote: "Life is what happens when you're busy making other plans.", author: "John Lennon" },
-      { quote: "Hope is the thing with feathers that perches in the soul.", author: "Emily Dickinson" },
-      { quote: "We accept the love we think we deserve.", author: "Stephen Chbosky" },
-      { quote: "Do not go gentle into that good night.", author: "Dylan Thomas" },
-      { quote: "To live is the rarest thing in the world.", author: "Oscar Wilde" },
-      { quote: "Be the change you wish to see in the world.", author: "Mahatma Gandhi" },
-      { quote: "I have not failed. I've just found ten thousand ways that won't work.", author: "Thomas Edison" },
-      { quote: "That which does not kill us makes us stronger.", author: "Friedrich Nietzsche" },
-      { quote: "The only true wisdom is in knowing you know nothing.", author: "Socrates" },
-      { quote: "In three words I can sum up everything I've learned about life: it goes on.", author: "Robert Frost" },
-      { quote: "The future belongs to those who believe in the beauty of their dreams.", author: "Eleanor Roosevelt" },
-      { quote: "You must be the change you wish to see in the world.", author: "Mahatma Gandhi" },
-      { quote: "Do what you can, with what you have, where you are.", author: "Theodore Roosevelt" },
+      { text:"The journey of a thousand miles begins with a single step.", author: "Lao Tzu" },
+      { text:"Not all those who wander are lost.", author: "J.R.R. Tolkien" },
+      { text:"The only way out is through.", author: "Robert Frost" },
+      { text:"Courage is grace under pressure.", author: "Ernest Hemingway" },
+      { text:"The unexamined life is not worth living.", author: "Socrates" },
+      { text:"In the middle of difficulty lies opportunity.", author: "Albert Einstein" },
+      { text:"The best way out is always through.", author: "Robert Frost" },
+      { text:"Life is what happens when you're busy making other plans.", author: "John Lennon" },
+      { text:"Hope is the thing with feathers that perches in the soul.", author: "Emily Dickinson" },
+      { text:"We accept the love we think we deserve.", author: "Stephen Chbosky" },
+      { text:"Do not go gentle into that good night.", author: "Dylan Thomas" },
+      { text:"To live is the rarest thing in the world.", author: "Oscar Wilde" },
+      { text:"Be the change you wish to see in the world.", author: "Mahatma Gandhi" },
+      { text:"I have not failed. I've just found ten thousand ways that won't work.", author: "Thomas Edison" },
+      { text:"That which does not kill us makes us stronger.", author: "Friedrich Nietzsche" },
+      { text:"The only true wisdom is in knowing you know nothing.", author: "Socrates" },
+      { text:"In three words I can sum up everything I've learned about life: it goes on.", author: "Robert Frost" },
+      { text:"The future belongs to those who believe in the beauty of their dreams.", author: "Eleanor Roosevelt" },
+      { text:"You must be the change you wish to see in the world.", author: "Mahatma Gandhi" },
+      { text:"Do what you can, with what you have, where you are.", author: "Theodore Roosevelt" },
     ],
     trivia: [
       { heading: "A Note from the Publisher", body: `This collection was curated for ${input.nicheLabel} enthusiasts — every puzzle has been designed to reward careful solving. Take your time and enjoy the journey.` },
