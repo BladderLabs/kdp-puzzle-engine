@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿import {
+﻿﻿﻿﻿﻿﻿import {
   shuf, makeWordSearch, makeSudoku, makeMaze, makeNumberSearch,
   makeCryptogram, makeCrossword, generateCrosswordClues, applyCluesToCrossword, WORD_BANKS,
 } from "./puzzles";
@@ -68,7 +68,9 @@ export interface BuildOpts {
   // Niche-themed quote pool — replaces the static QUOTE_BANK for cryptograms
   // so a Mother's Day book gets quotes about mothers, a True Crime book gets
   // detective quotes, etc. Populated by the Niche Content Curator.
-  themedQuotes?: Array<{ quote: string; author: string }>;
+  // Field name must be `text` — matches QuoteEntry in puzzles.ts so
+  // makeCryptogram's `quote.text` access works at runtime.
+  themedQuotes?: Array<{ text: string; author: string }>;
 }
 
 export interface BuildResult {
