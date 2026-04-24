@@ -1,4 +1,4 @@
-﻿/**
+﻿﻿/**
  * Niche Content Curator.
  *
  * Runs once per book (cached per niche+experienceMode). Produces every piece
@@ -12,7 +12,7 @@
 
 import { z } from "zod";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
-import { cachedRun, stableKey } from "../council-cache";
+import { getCached, setCached, stableKey } from "../council-cache";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -158,10 +158,20 @@ export async function runNicheContentCurator(input: CuratorInput): Promise<Conte
     puzzleType: input.puzzleType,
   });
 
-  return cachedRun(
-    "niche-content-curator",
-    key,
-    async (): Promise<ContentPack> => {
+  // Self-healing cache: on cache HIT, validate against the CURRENT schema.
+  // If the cached entry was stored with an older shape (e.g. before the
+  // `quote`→`text` field rename), safeParse fails and we transparently
+  // regenerate. No manual cache-clear needed when schemas evolve.
+  const cached = await getCached<unknown>("niche-content-curator", key);
+  if (cached !== null && cached !== undefined) {
+    const revalidated = ContentPackSchema.safeParse(cached);
+    if (revalidated.success && revalidated.data.themedQuotes.length >= 10) {
+      return revalidated.data;
+    }
+    // Fall through — stale or malformed, treat as cache miss
+  }
+
+  const generate = async (): Promise<ContentPack> => {
       try {
         const msg = await anthropic.messages.create({
           model: "claude-sonnet-4-6",
@@ -198,7 +208,10 @@ export async function runNicheContentCurator(input: CuratorInput): Promise<Conte
       } catch {
         return fallbackPack(input);
       }
-    },
-    24 * 7,  // 7-day TTL — niche content doesn't change day-to-day
-  );
+    };
+
+  const fresh = await generate();
+  // Store in cache — 7-day TTL, niche content doesn't change day-to-day.
+  void setCached("niche-content-curator", key, fresh, 24 * 7);
+  return fresh;
 }
