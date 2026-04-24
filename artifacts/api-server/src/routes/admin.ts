@@ -1,9 +1,13 @@
 /**
  * Admin routes.
  *
- * Only includes one operation right now — a safe library wipe for resetting
- * test state. Requires the literal confirmation string in the body so a stray
- * POST can't delete your work.
+ * Library wipe endpoint for resetting test state. Two-factor protected:
+ *   1. Bearer token from the ADMIN_SECRET env var (required; endpoint is
+ *      503-disabled if the env var isn't set)
+ *   2. Confirmation string in the body
+ *
+ * Real transaction via db.transaction() — node-postgres pools split manual
+ * BEGIN/COMMIT across connections, so we let Drizzle manage the client.
  */
 
 import { Router, type IRouter } from "express";
@@ -13,19 +17,36 @@ import { db } from "@workspace/db";
 
 const router: IRouter = Router();
 
-// ── POST /api/admin/reset-library ─────────────────────────────────────────
-//
-// Wipes every book + BSR snapshot. Preserves author_personas (you keep the
-// pen name you've already set up) and council_cache (no need to re-pay for
-// the same niche research). Resets the books.id sequence back to 1.
-//
-// Requires { "confirm": "WIPE_ALL_BOOKS" } in the body. Anything else → 400.
-
 const ResetBody = z.object({
   confirm: z.literal("WIPE_ALL_BOOKS"),
 });
 
+// ── Auth helper ───────────────────────────────────────────────────────────
+// If ADMIN_SECRET isn't set in env, this entire router is inert — every
+// request 503s. This is intentional: admin endpoints must not be reachable
+// by default. Operator has to explicitly opt in by setting the secret.
+function requireAdmin(req: Parameters<Parameters<IRouter["post"]>[1]>[0], res: Parameters<Parameters<IRouter["post"]>[1]>[1]): boolean {
+  const secret = process.env.ADMIN_SECRET;
+  if (!secret || secret.length < 16) {
+    res.status(503).json({
+      error: "Admin endpoints are disabled. Set ADMIN_SECRET (≥16 chars) in Replit Secrets to enable.",
+    });
+    return false;
+  }
+  const header = req.headers.authorization;
+  const expected = `Bearer ${secret}`;
+  // Constant-time-ish comparison — not cryptographic but avoids trivial timing leak
+  if (!header || header.length !== expected.length || header !== expected) {
+    res.status(401).json({ error: "Unauthorized. Include Authorization: Bearer <ADMIN_SECRET>." });
+    return false;
+  }
+  return true;
+}
+
+// ── POST /api/admin/reset-library ─────────────────────────────────────────
 router.post("/admin/reset-library", async (req, res) => {
+  if (!requireAdmin(req, res)) return;
+
   try {
     ResetBody.parse(req.body);
   } catch {
@@ -36,14 +57,14 @@ router.post("/admin/reset-library", async (req, res) => {
   }
 
   try {
-    // Single transaction so either everything drops or nothing does.
-    await db.execute(sql`
-      BEGIN;
-      DELETE FROM bsr_snapshots;
-      DELETE FROM books;
-      ALTER SEQUENCE books_id_seq RESTART WITH 1;
-      COMMIT;
-    `);
+    // Real transaction — Drizzle borrows a single connection from the pool
+    // for the duration of the callback, then commits/rolls back atomically.
+    // This is the fix for manual BEGIN/COMMIT split across pooled connections.
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`DELETE FROM bsr_snapshots`);
+      await tx.execute(sql`DELETE FROM books`);
+      await tx.execute(sql`ALTER SEQUENCE books_id_seq RESTART WITH 1`);
+    });
 
     req.log.info("Library reset — all books and BSR snapshots wiped");
     res.json({
