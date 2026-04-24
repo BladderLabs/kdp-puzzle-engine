@@ -3,6 +3,25 @@ import { anthropic } from "@workspace/integrations-anthropic-ai";
 import type { BuyerProfile } from "./buyer-psychology-profiler";
 import type { CoverDesignAnalysis } from "./cover-design-analyst";
 import type { CoverTypographySpec } from "./cover-typography-director";
+import { contrastRatio } from "./cover-qa-gate";
+
+// Preset theme floors — used when the model's bespoke accent fails the WCAG
+// AA 4.5:1 contrast check against the chosen background. These are the 10
+// theme accents that ship by default; they all pass AA against their paired
+// bg. When the bespoke palette fails, we snap the accent to the preset that
+// matches the recommendedTheme (which the model has already chosen).
+const THEME_SAFE_ACCENT: Record<string, { accent: string; bg: string; text: string }> = {
+  midnight:  { accent: "#F5C842", bg: "#0D1B3E", text: "#FFFFFF" },
+  forest:    { accent: "#6DCC50", bg: "#1A3C1A", text: "#FFFFFF" },
+  crimson:   { accent: "#FF3838", bg: "#280808", text: "#FFFFFF" },
+  ocean:     { accent: "#1565A8", bg: "#C8E8F8", text: "#0A2040" },
+  violet:    { accent: "#C060FF", bg: "#180635", text: "#FFFFFF" },
+  slate:     { accent: "#FF8C38", bg: "#252E3A", text: "#FFFFFF" },
+  sunrise:   { accent: "#D44000", bg: "#FDF0E0", text: "#3A1800" },
+  teal:      { accent: "#18D0A0", bg: "#062020", text: "#FFFFFF" },
+  parchment: { accent: "#7B3A00", bg: "#F5E4C0", text: "#3A1800" },
+  sky:       { accent: "#2050B8", bg: "#E0EFFF", text: "#1A2A50" },
+};
 
 export const CoverColorStrategySchema = z.object({
   recommendedTheme: z.enum(["midnight", "forest", "crimson", "ocean", "violet", "slate", "sunrise", "teal", "parchment", "sky"]),
@@ -124,10 +143,10 @@ Apply the color psychology map and thumbnail contrast rules. Large print edition
 CRITICAL: Generate a UNIQUE custom palette for THIS specific book — do NOT default to the preset theme's stock hex values. \`recommendedTheme\` is just the closest matching preset for categorization, but the three hex values you return MUST be bespoke colors chosen for this niche + buyer moment. A Mother's Day book and a Valentine's Day book may both map to "crimson" as closest-theme, but their palettes should differ visibly — every book in our library deserves its own colorway.
 
 Rules for the bespoke palette:
-- accentHex — the single most important decision; must pop at 160px thumbnail against the background
+- accentHex — the single most important decision; must pop at 160px thumbnail against the background AND pass WCAG AA 4.5:1 contrast against backgroundHex. If contrast fails, we will auto-override to the preset theme's safe accent, so get it right the first time.
 - backgroundHex — the base color of the cover; should feel niche-appropriate
-- textHex — ensures WCAG contrast ≥ 4.5 against backgroundHex
-- Avoid re-using common preset values like #F5C842 / #0D1B3E verbatim unless they're genuinely the best choice. Nudge hues 5-15 degrees, shift saturation, find a signature tone.
+- textHex — HARD RULE: WCAG contrast ≥ 4.5 against backgroundHex (AA body text). White text on dark bg passes easily; dark text on light bg passes easily; middle-value backgrounds are treacherous — test mentally before committing.
+- Avoid re-using common preset values like #F5C842 / #0D1B3E verbatim unless they're genuinely the best choice. Nudge hues 5-15 degrees, shift saturation, find a signature tone. But never sacrifice contrast for uniqueness.
 
 Return ONLY JSON (no markdown):
 {
@@ -148,5 +167,19 @@ Return ONLY JSON (no markdown):
   });
 
   const text = message.content[0].type === "text" ? message.content[0].text : "{}";
-  return CoverColorStrategySchema.parse(parseModelJson(text));
+  const parsed = CoverColorStrategySchema.parse(parseModelJson(text));
+
+  // ── WCAG AA contrast enforcement ─────────────────────────────────────────
+  // The model occasionally picks a bespoke accent that fails 4.5:1 contrast
+  // against the background. Snap to the preset theme's safe accent in that
+  // case — still unique via backgroundHex/textHex which the model chose, but
+  // with a legible accent. Same check for textHex vs backgroundHex.
+  const safe = THEME_SAFE_ACCENT[parsed.recommendedTheme] ?? THEME_SAFE_ACCENT.midnight;
+  if (contrastRatio(parsed.accentHex, parsed.backgroundHex) < 4.5) {
+    parsed.accentHex = safe.accent;
+  }
+  if (contrastRatio(parsed.textHex, parsed.backgroundHex) < 4.5) {
+    parsed.textHex = safe.text;
+  }
+  return parsed;
 }

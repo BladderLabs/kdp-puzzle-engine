@@ -181,10 +181,10 @@ Pricing anchor:
 ${buildPriceSection(input)}
 
 Produce a listing with:
-1. **title** — primary keyword in the first 5 words. Year-branded when it helps (e.g. "2026"). Large-print tag if applicable. Max 200 chars, ideally 50-80.
+1. **title** — primary keyword in the first 5 words. Year-branded when it helps (e.g. "2026"). Large-print tag if applicable. HARD LIMITS: ≤12 words, prefer 6-9 words, ≤80 chars. Thumbnails become illegible beyond 12 words. Move detail into the subtitle if the title is getting long.
 2. **subtitle** — long-tail keyword + benefit statement. One sentence. No repetition of the title.
 3. **hookSentence** — one punchy opening line for the back cover (not the same as subtitle). Under 30 words.
-4. **keywords** — EXACTLY 7 KDP backend keywords, ranked strongest first. Each under 50 chars. Dedupe against title+subtitle tokens. Mix short-tail + long-tail. No single-word keywords.
+4. **keywords** — EXACTLY 7 KDP backend keywords, ranked strongest first. Each under 50 chars. HARD RULE: every keyword must contain at least ONE token that does NOT appear in the title or subtitle — Amazon indexes title+subtitle+keywords as a union, so a keyword whose every word already appears in the title is wasted slot. Mix short-tail + long-tail. No single-word keywords.
 5. **categories** — 2 Amazon browse categories as full breadcrumbs (e.g. "Books > Humor & Entertainment > Puzzles & Games > Crosswords"). Include a "whyItRanks" rationale for each.
 6. **descriptionHtml** — Ogilvy-structured HTML, ready to paste into KDP:
    - <p><em>"One-line voice opener — a single italicized sentence in the author's own voice (matching the authorVoiceTone and authorVoiceVocabulary above) that captures what this author believes about this KIND of book. Not a product claim — a philosophy or a feeling. Under 22 words. This must feel written by a human, not an AI. Skip this line ONLY if authorVoiceTone is unset."</em></p>
@@ -267,11 +267,49 @@ export async function runListingIntelligence(
   const text = msg.content[0].type === "text" ? msg.content[0].text : "{}";
   const raw = parseModelJson(text) as Record<string, unknown>;
 
-  // Coerce to full 7-keyword array if the model returned fewer, trim if more
-  const keywords = Array.isArray(raw.keywords)
-    ? (raw.keywords as unknown[]).map(String).slice(0, 7)
+  // ── Title: enforce ≤12 word hard limit (QA gate fails at 13+) ───────────
+  const rawTitle = String(raw.title || "").trim();
+  const titleWords = rawTitle.split(/\s+/).filter(Boolean);
+  const title = titleWords.length > 12
+    ? titleWords.slice(0, 12).join(" ")
+    : rawTitle;
+  const subtitle = String(raw.subtitle || "").trim();
+
+  // ── Keywords: drop any whose tokens are all already in title+subtitle ────
+  // Amazon indexes title+subtitle+keywords as a union, so a keyword whose every
+  // word is in the title is a wasted slot. QA gate warns on this.
+  const titleSubTokens = new Set(
+    (title + " " + subtitle)
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter(w => w.length >= 3),
+  );
+  const rawKws = Array.isArray(raw.keywords)
+    ? (raw.keywords as unknown[]).map(String).map(s => s.trim()).filter(Boolean)
     : [];
+  const fallbackPool = [
+    `${input.puzzleType.toLowerCase()} ${input.nicheLabel || input.niche}`,
+    `brain games activity book`,
+    `${input.largePrint ? "large print " : ""}${input.puzzleType.toLowerCase()} for adults`,
+    `${input.nicheLabel || input.niche} gift book`,
+    `puzzle book ${new Date().getFullYear()}`,
+    `${input.puzzleType.toLowerCase()} collection volume ${input.volumeNumber || 1}`,
+    `solve the story ${input.puzzleType.toLowerCase()}`,
+  ];
+  const keywords: string[] = [];
+  for (const kw of rawKws) {
+    const tokens = kw.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length >= 3);
+    if (tokens.length === 0) continue;
+    const novel = tokens.some(t => !titleSubTokens.has(t));
+    if (novel && !keywords.includes(kw)) keywords.push(kw);
+    if (keywords.length === 7) break;
+  }
+  for (const fb of fallbackPool) {
+    if (keywords.length === 7) break;
+    if (!keywords.includes(fb)) keywords.push(fb);
+  }
   while (keywords.length < 7) keywords.push(`${input.puzzleType.toLowerCase()} book ${input.niche}`);
+  keywords.length = 7;
 
   // Compute royalty deterministically from price — the model chooses price, we
   // compute the royalty (don't trust the model with money math).
@@ -318,8 +356,8 @@ export async function runListingIntelligence(
     : slugify(String(raw.title || input.puzzleType));
 
   const output: ListingOutput = {
-    title: String(raw.title || "").trim(),
-    subtitle: String(raw.subtitle || "").trim(),
+    title,
+    subtitle,
     hookSentence: String(raw.hookSentence || "").trim(),
     keywords,
     categories,
