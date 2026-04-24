@@ -1,4 +1,4 @@
-﻿﻿import { useEffect, useMemo, useState } from "react";
+﻿﻿﻿import { useEffect, useMemo, useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,28 @@ interface BookRow {
 async function fetchBook(id: number): Promise<BookRow> {
   const res = await fetch(`/api/books/${id}`);
   if (!res.ok) throw new Error(`Failed to load book (${res.status})`);
+  return res.json();
+}
+
+// ── Publication Preflight ───────────────────────────────────────────────────
+
+interface PreflightIssue {
+  code: string;
+  severity: "fail" | "warn" | "info";
+  message: string;
+  recommendation?: string;
+}
+
+interface PreflightResult {
+  passed: boolean;
+  score: number;
+  issues: PreflightIssue[];
+  summary: string;
+}
+
+async function fetchPreflight(id: number): Promise<PreflightResult> {
+  const res = await fetch(`/api/books/${id}/preflight`);
+  if (!res.ok) throw new Error(`Preflight failed (${res.status})`);
   return res.json();
 }
 
@@ -337,11 +359,20 @@ export function BookPublish() {
     queryFn: () => fetchBook(bookId),
     enabled: Number.isFinite(bookId) && bookId > 0,
   });
+  const { data: preflight } = useQuery({
+    queryKey: ["preflight", bookId],
+    queryFn: () => fetchPreflight(bookId),
+    enabled: Number.isFinite(bookId) && bookId > 0,
+  });
+  const preflightBlocking = Boolean(
+    preflight && preflight.issues.some(i => i.severity === "fail"),
+  );
 
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
   const [downloadingInterior, setDownloadingInterior] = useState(false);
   const [downloadingCover, setDownloadingCover] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [preflightExpanded, setPreflightExpanded] = useState(false);
 
   const listingText = useMemo(() => book ? buildKdpListingText(book) : "", [book]);
 
@@ -441,12 +472,79 @@ export function BookPublish() {
         <div className="space-y-6">
           <BadgeRow book={book} />
 
+          {/* ── Publication Preflight ────────────────────────────────────── */}
+          {preflight && (
+            <div
+              className={`rounded-xl border p-5 space-y-3 ${
+                preflightBlocking
+                  ? "border-destructive/40 bg-destructive/5"
+                  : preflight.passed
+                    ? "border-emerald-500/30 bg-emerald-500/5"
+                    : "border-amber-500/30 bg-amber-500/5"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs uppercase tracking-widest font-semibold">
+                    {preflightBlocking
+                      ? "✗ Publication Preflight — BLOCKERS"
+                      : preflight.passed
+                        ? "✓ Publication Preflight — PASSED"
+                        : "⚠ Publication Preflight — warnings"}
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">{preflight.summary}</div>
+                </div>
+                <div className="text-right">
+                  <div className={`text-3xl font-display font-bold ${
+                    preflight.score >= 85 ? "text-emerald-500"
+                    : preflight.score >= 70 ? "text-amber-500"
+                    : "text-destructive"
+                  }`}>{preflight.score}</div>
+                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground">/ 100</div>
+                </div>
+              </div>
+              {preflight.issues.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setPreflightExpanded(!preflightExpanded)}
+                  className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-4"
+                >
+                  {preflightExpanded ? "Hide" : "Show"} {preflight.issues.length} issue{preflight.issues.length === 1 ? "" : "s"}
+                </button>
+              )}
+              {preflightExpanded && (
+                <ul className="space-y-2 pt-2 border-t">
+                  {preflight.issues.map((issue, i) => (
+                    <li key={i} className="text-sm flex items-start gap-2">
+                      <span className={`font-mono text-[10px] uppercase tracking-widest px-1.5 py-0.5 rounded flex-shrink-0 ${
+                        issue.severity === "fail" ? "bg-destructive/20 text-destructive"
+                        : issue.severity === "warn" ? "bg-amber-500/20 text-amber-500"
+                        : "bg-sky-500/20 text-sky-400"
+                      }`}>{issue.severity}</span>
+                      <div className="flex-1">
+                        <div>{issue.message}</div>
+                        {issue.recommendation && (
+                          <div className="text-xs text-muted-foreground italic mt-0.5">→ {issue.recommendation}</div>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {preflightBlocking && (
+                <p className="text-xs text-destructive font-semibold pt-2 border-t">
+                  Fix the blockers above before downloading. KDP will reject books that violate these rules.
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="rounded-xl border bg-card/60 p-5 space-y-3">
             <div className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">Step 1 · Download</div>
             <div className="grid grid-cols-1 gap-2">
               <Button
                 onClick={handleDownloadInterior}
-                disabled={downloadingInterior}
+                disabled={downloadingInterior || preflightBlocking}
                 size="lg"
                 className="justify-start h-12 text-base"
               >
@@ -456,7 +554,7 @@ export function BookPublish() {
               </Button>
               <Button
                 onClick={handleDownloadCover}
-                disabled={downloadingCover}
+                disabled={downloadingCover || preflightBlocking}
                 size="lg"
                 className="justify-start h-12 text-base"
                 variant="secondary"
@@ -467,6 +565,7 @@ export function BookPublish() {
               </Button>
               <Button
                 onClick={handleDownloadListing}
+                disabled={preflightBlocking}
                 size="lg"
                 className="justify-start h-12 text-base"
                 variant="outline"
