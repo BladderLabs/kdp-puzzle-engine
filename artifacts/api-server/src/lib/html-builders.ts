@@ -1514,7 +1514,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
     "Cryptogram":    "A=Z B=Y C=X D=W E=V F=U G=T H=S I=R J=Q K=P L=O M=N N=M CIPHER CODE DECODE ",
   };
   const txLetters = txMap[opts.puzzleType || "Word Search"] || txMap["Word Search"];
-  const puzzleTexture = `<div style="position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden;z-index:0;pointer-events:none;font-family:'Source Code Pro',monospace;font-size:13px;letter-spacing:5px;line-height:2;padding:0.3in;opacity:0.05;color:${ac};word-break:break-all;">${txLetters.repeat(20)}</div>`;
+  const puzzleTexture = `<div style="position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden;z-index:0;pointer-events:none;font-family:'Source Code Pro',monospace;font-size:13px;letter-spacing:5px;line-height:2;padding:0.3in;opacity:0.02;color:${ac};word-break:break-all;">${txLetters.repeat(20)}</div>`;
 
   // Experience Mode decorative layers + author monogram — computed once, reused on front/spine/back
   const xLayers = experienceCoverLayers(opts.experienceMode, ac, bg);
@@ -1610,9 +1610,9 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
     `<div style="font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:3px;color:${bannerTx};opacity:0.95;text-transform:uppercase;margin-top:4px;">PUZZLES</div>` +
     `</div>`;
 
-  // Prominent LARGE PRINT banner — full-width accent-colored strip, clearly visible in thumbnail
+  // LARGE PRINT banner — compact accent strip, readable at thumbnail without crowding the title
   const lpBanner = isLargePrint
-    ? `<div style="background:${ac};padding:7px 16px;margin-bottom:16px;text-align:center;letter-spacing:6px;font-family:'Source Code Pro',monospace;font-size:13px;font-weight:700;color:${bannerTx};text-transform:uppercase;width:100%;box-sizing:border-box;">✦ LARGE PRINT EDITION ✦</div>`
+    ? `<div style="background:${ac};padding:4px 14px;margin-bottom:12px;text-align:center;letter-spacing:4px;font-family:'Source Code Pro',monospace;font-size:10px;font-weight:700;color:${bannerTx};text-transform:uppercase;width:100%;box-sizing:border-box;">LARGE PRINT</div>`
     : "";
 
   let front = "";
@@ -1629,10 +1629,9 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="font-family:${titleFont};font-size:${adaptiveTitlePx}px;font-weight:700;text-transform:${titleTransform};letter-spacing:4px;color:${tx};margin-bottom:14px;line-height:1.2;">${title}</div>` +
       `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:16px;">${sub}</div>` +
       `${imageBlock}` +
-      `${sellDiv}` +
+      `` +
       `<div style="width:40px;height:1px;background:${ac};margin:0 auto 14px;"></div>` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:11px;color:${tx}ee;margin-bottom:10px;">${author}</div>` +
-      `<div style="font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:3px;color:${tx}dd;">${meta}</div>` +
       `</div></div>`;
 
   } else if (cs === "geometric") {
@@ -1643,15 +1642,14 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="position:absolute;top:52%;left:-10%;width:130%;height:7%;background:${ac};transform:rotate(-30deg);opacity:0.4;"></div>` +
       `</div>` +
       `<div style="position:relative;z-index:1;text-align:left;width:100%;">` +
-      `${audienceCallout}` +
+      `` +
       `${lpBanner}` +
       `<div style="font-family:${titleFont};font-size:${adaptiveTitlePx}px;font-weight:700;text-transform:${titleTransform};color:${titleOnBg};line-height:1.05;margin-bottom:16px;text-shadow:2px 2px 12px rgba(0,0,0,0.4);">${title}</div>` +
       `<div style="font-size:19px;color:${tx}ee;letter-spacing:0.5px;margin-bottom:14px;">${sub}</div>` +
       `${imageBlock}` +
-      `${sellDiv}` +
+      `` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:11px;color:${tx}ee;">${author}</div>` +
       `</div>` +
-      `<div style="position:absolute;bottom:1in;left:1in;font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:3px;color:${tx}dd;z-index:1;">${meta}</div>` +
       `</div>`;
 
   } else if (cs === "bold") {
@@ -1663,12 +1661,12 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="width:58%;display:flex;flex-direction:column;justify-content:center;padding:1in 0.7in;position:relative;overflow:hidden;">` +
       `${puzzleTexture}` +
       `<div style="position:relative;z-index:1;">` +
-      `${audienceCallout}` +
+      `` +
       `${lpBanner}` +
       `<div style="font-family:${titleFont};font-size:${adaptiveTitlePx}px;font-weight:700;text-transform:${titleTransform};color:${titleOnBg};line-height:1.05;margin-bottom:14px;">${title}</div>` +
       `<div style="font-size:19px;color:${ac};font-style:italic;letter-spacing:0.5px;margin-bottom:12px;">${sub}</div>` +
       `${imageBlock}` +
-      `${sellDiv}` +
+      `` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:11px;color:${tx}ee;">${author}</div>` +
       `</div></div></div>`;
 
@@ -1681,14 +1679,13 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="width:40px;height:1px;background:${ac};opacity:0.6;margin-bottom:6px;"></div>` +
       `<div style="width:24px;height:1px;background:${ac};opacity:0.3;"></div>` +
       `</div>` +
-      `${audienceCallout}` +
+      `` +
       `${lpBanner}` +
       `<div style="font-family:${titleFont};font-size:${adaptiveTitlePx}px;font-weight:700;text-transform:${titleTransform};color:${tx};line-height:1.05;margin-bottom:20px;letter-spacing:1px;">${title}</div>` +
       `${sub ? `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:16px;">${sub}</div>` : ""}` +
       `${imageBlock}` +
-      `${sellDiv}` +
-      `<div style="font-family:'Source Code Pro',monospace;font-size:10px;color:${tx}ee;margin-bottom:16px;">${author}</div>` +
-      `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:3px;color:${tx}dd;">${meta}</div>` +
+      `` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:10px;color:${tx}ee;">${author}</div>` +
       `</div></div>`;
 
   } else if (cs === "retro") {
@@ -1696,15 +1693,14 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
     front = `<div style="${fb}padding:0.6in;text-align:center;">${puzzleTexture}${seriesBadge}${puzzlePill}` +
       `<div style="width:100%;height:100%;border:8px double ${ac};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0.5in;box-sizing:border-box;position:relative;">` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:6px;color:${ac};text-transform:uppercase;margin-bottom:12px;">★ &nbsp; ${opts.puzzleType || "Puzzles"} &nbsp; ★</div>` +
-      `${audienceCallout}` +
+      `` +
       `${lpBanner}` +
       `<div style="font-family:${titleFont};font-size:${adaptiveTitlePx}px;font-weight:700;color:${tx};line-height:1.05;margin-bottom:12px;text-transform:${titleTransform};letter-spacing:2px;">${title}</div>` +
       `${sub ? `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:12px;">${sub}</div>` : ""}` +
       `<div style="width:80px;height:2px;background:${ac};margin:8px auto 14px;"></div>` +
       `${imageBlock}` +
-      `${sellDiv}` +
+      `` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:10px;color:${tx}ee;">${author}</div>` +
-      `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:${tx}dd;margin-top:12px;">${meta}</div>` +
       `<div style="position:absolute;bottom:0.2in;left:0;right:0;text-align:center;font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:4px;color:${ac};opacity:0.7;">★ &nbsp; ★ &nbsp; ★</div>` +
       `</div></div>`;
 
@@ -1716,7 +1712,7 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `${seriesBadge}${puzzlePill}` +
       `<div style="position:relative;z-index:1;">` +
       `<div style="font-family:'Source Code Pro',monospace;font-size:22px;color:${ac};opacity:0.9;margin-bottom:20px;letter-spacing:4px;">✦</div>` +
-      `${audienceCallout}` +
+      `` +
       `${lpBanner}` +
       `<div style="font-family:${titleFont};font-size:${adaptiveTitlePx}px;font-weight:700;text-transform:${titleTransform};color:${isDark ? tx : ac};line-height:1.1;margin-bottom:22px;padding:0 0.2in;">${title}</div>` +
       `<div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:20px;">` +
@@ -1726,9 +1722,8 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `</div>` +
       `<div style="font-size:19px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:20px;">${sub}</div>` +
       `${imageBlock}` +
-      `${sellDiv}` +
-      `<div style="font-family:'Source Code Pro',monospace;font-size:12px;color:${tx}ee;margin-bottom:10px;letter-spacing:2px;">${author}</div>` +
-      `<div style="font-family:'Source Code Pro',monospace;font-size:9px;letter-spacing:2px;color:${tx}dd;">${meta}</div>` +
+      `` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:12px;color:${tx}ee;letter-spacing:2px;">${author}</div>` +
       `</div></div>`;
 
   } else if (cs === "photo") {
@@ -1769,10 +1764,9 @@ export function buildCoverHTML(opts: CoverBuildOpts, totalPages: number): CoverR
       `<div style="font-family:${titleFont};font-size:${adaptiveTitlePx}px;font-weight:700;text-transform:${titleTransform};color:${ac};line-height:1.1;margin-bottom:18px;padding:0 0.3in;">${title}</div>` +
       `<div style="font-size:18px;font-style:italic;color:${tx}ee;letter-spacing:0.5px;margin-bottom:16px;">${sub}</div>` +
       `${imageBlock}` +
-      `${sellDiv}` +
+      `` +
       `<div style="width:56px;height:2px;background:${ac};margin:0 auto 22px;"></div>` +
-      `<div style="font-family:'Source Code Pro',monospace;font-size:13px;letter-spacing:3px;color:${tx}ee;margin-bottom:16px;">${author}</div>` +
-      `<div style="font-family:'Source Code Pro',monospace;font-size:10px;letter-spacing:3px;color:${tx}dd;">${meta}</div>` +
+      `<div style="font-family:'Source Code Pro',monospace;font-size:13px;letter-spacing:3px;color:${tx}ee;">${author}</div>` +
       `</div></div>`;
   }
 
