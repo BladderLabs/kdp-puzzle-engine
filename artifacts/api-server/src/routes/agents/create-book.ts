@@ -739,6 +739,8 @@ router.post("/agents/create-book", async (req, res) => {
       largePrint: market.largePrint === true,
       coverImageUrl: coverImageDataUrl ?? undefined,
       accentHexOverride: bookSpec?.coverAccentHex ?? coverDesignSpec.accentHex,
+      backgroundHexOverride: coverDesignSpec.backgroundHex,
+      textHexOverride: (coverDesignSpec as unknown as { textHex?: string }).textHex,
     });
     qaGateScore = gate.score;
     qaGateIssues = gate.issues.map(i => ({ code: i.code, severity: i.severity, message: i.message }));

@@ -48,6 +48,8 @@ export interface QAInput {
   largePrint?: boolean;
   coverImageUrl?: string;
   accentHexOverride?: string;
+  backgroundHexOverride?: string;
+  textHexOverride?: string;
   totalPages?: number;
   paperType?: string;
 }
@@ -191,9 +193,11 @@ export function runCoverQAGate(input: QAInput): QAResult {
   }
 
   // ── Contrast (WCAG) ──────────────────────────────────────────────────
+  // Bespoke overrides win — accent and bg should be checked as the pair the
+  // cover renderer will actually composite, not against unrelated preset hex.
   const theme = (input.theme || "midnight").toLowerCase();
   const themeColors = THEME_COLORS[theme] || THEME_COLORS.midnight;
-  const bg = themeColors.bg;
+  const bg = input.backgroundHexOverride || themeColors.bg;
   const ac = input.accentHexOverride || themeColors.ac;
   const cRatio = contrastRatio(ac, bg);
   if (cRatio < 3) {
